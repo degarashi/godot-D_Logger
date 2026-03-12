@@ -20,6 +20,9 @@ func _enter_tree() -> void:
 func _setup_logger() -> void:
 	# Fetch settings with default values
 	var is_enabled: bool = ProjectSettings.get_setting(SETTING_ENABLE, true)
+	if not OS.is_debug_build():
+		is_enabled = false
+
 	var prefix_val: String = ProjectSettings.get_setting(SETTING_PREFIX, "D-Logger")
 	var min_lvl: int = ProjectSettings.get_setting(SETTING_MIN_LEVEL, 0)  # Default: DEBUG(0)
 
