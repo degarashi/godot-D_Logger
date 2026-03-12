@@ -34,21 +34,17 @@ func _setup_logger() -> void:
 	_logger.prefix = prefix_val
 
 
-func debug(msg: Variant) -> void:
-	if _logger:
-		_logger.debug(msg)
+func debug(msg: Variant, category: String = "") -> void:
+	_logger.debug(msg, category)
 
 
-func info(msg: Variant) -> void:
-	if _logger:
-		_logger.info(msg)
+func info(msg: Variant, category: String = "") -> void:
+	_logger.info(msg, category)
 
 
-func warn(msg: Variant) -> void:
-	if _logger:
-		_logger.warn(msg)
+func warn(msg: Variant, category: String = "") -> void:
+	_logger.warn(msg, category)
 
 
-func error(msg: Variant) -> void:
-	if _logger:
-		_logger.error(msg)
+func error(msg: Variant, category: String = "") -> void:
+	_logger.error(msg, category)

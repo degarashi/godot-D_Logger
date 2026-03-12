@@ -5,17 +5,17 @@ extends Object
 var prefix: String = "D-Logger"
 
 
-func debug(_msg: Variant) -> void:
+func debug(_msg: Variant, _category: String = "") -> void:
 	pass
 
 
-func info(_msg: Variant) -> void:
+func info(_msg: Variant, _category: String = "") -> void:
 	pass
 
 
-func warn(_msg: Variant) -> void:
+func warn(_msg: Variant, _category: String = "") -> void:
 	pass
 
 
-func error(_msg: Variant) -> void:
+func error(_msg: Variant, _category: String = "") -> void:
 	pass
