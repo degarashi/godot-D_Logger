@@ -8,7 +8,9 @@ It utilizes the **Factory Pattern** to switch between detailed logging during de
 ## ✨ Features
 
 * **Real-time Customization**: Change your log prefix and toggle logging on/off directly from **Project Settings**.
-* **Rich Text Output**: Uses `print_rich` for color-coded logs by level (Debug, Info, Warn, Error).
+* **Log Filtering**: Set a **Minimum Log Level** (Debug, Info, Warn, Error) to filter out noise during development.
+* **Category Support**: Organize logs by assigning optional categories (e.g., `Network`, `AI`, `UI`).
+* **Rich Text Output**: Uses `print_rich` for color-coded logs by level.
 * **Automated Stack Tracing**: Automatically appends the **filename** and **line number** of the caller for faster debugging.
 * **Factory Pattern**: Minimizes performance overhead by swapping the logger instance entirely when disabled.
 

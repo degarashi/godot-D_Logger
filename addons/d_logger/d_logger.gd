@@ -4,6 +4,7 @@ extends Node
 # Project Settings paths
 const SETTING_ENABLE := "debug/d_logger/enable_log"
 const SETTING_PREFIX := "debug/d_logger/prefix"
+const SETTING_MIN_LEVEL := "debug/d_logger/min_log_level"
 
 var _logger: DLoggerBase
 
@@ -20,8 +21,9 @@ func _setup_logger() -> void:
 	# Fetch settings with default values
 	var is_enabled: bool = ProjectSettings.get_setting(SETTING_ENABLE, true)
 	var prefix_val: String = ProjectSettings.get_setting(SETTING_PREFIX, "D-Logger")
+	var min_lvl: int = ProjectSettings.get_setting(SETTING_MIN_LEVEL, 0)  # Default: DEBUG(0)
 
-	# Clean up old logger instance if it exists to prevent memory leaks
+	# Clean up old logger instance
 	_logger = null
 
 	# Factory Pattern: Switch implementation based on 'is_enabled'
@@ -30,21 +32,28 @@ func _setup_logger() -> void:
 	else:
 		_logger = DLoggerQuiet.new()
 
-	# Inject the custom prefix into the logger instance
+	# Inject properties
 	_logger.prefix = prefix_val
+	_logger.min_level = min_lvl
 
 
 func debug(msg: Variant, category: String = "") -> void:
-	_logger.debug(msg, category)
+	if _logger and _logger.min_level <= DLoggerBase.LogLevel.DEBUG:
+		_logger.debug(msg, category)
 
 
 func info(msg: Variant, category: String = "") -> void:
-	_logger.info(msg, category)
+	if _logger and _logger.min_level <= DLoggerBase.LogLevel.INFO:
+		_logger.info(msg, category)
 
 
 func warn(msg: Variant, category: String = "") -> void:
-	_logger.warn(msg, category)
+	# Warnings and Errors are usually not filtered strictly,
+	# but we follow the min_level setting here for consistency.
+	if _logger and _logger.min_level <= DLoggerBase.LogLevel.WARN:
+		_logger.warn(msg, category)
 
 
 func error(msg: Variant, category: String = "") -> void:
-	_logger.error(msg, category)
+	if _logger and _logger.min_level <= DLoggerBase.LogLevel.ERROR:
+		_logger.error(msg, category)

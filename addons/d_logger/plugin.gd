@@ -6,6 +6,7 @@ const SETTING_ENABLE := "debug/d_logger/enable_log"
 const DEFAULT_PREFIX := "D-Logger"
 const AUTOLOAD_NAME := "DLogger"
 const AUTOLOAD_PATH := "res://addons/d_logger/d_logger.gd"
+const SETTING_MIN_LEVEL := "debug/d_logger/min_log_level"
 
 
 func _enter_tree() -> void:
@@ -45,6 +46,20 @@ func _initialize_settings() -> void:
 		}
 	)
 	ProjectSettings.set_initial_value(SETTING_ENABLE, true)
+
+	# --- MinLevel ---
+	if not ProjectSettings.has_setting(SETTING_MIN_LEVEL):
+		ProjectSettings.set_setting(SETTING_MIN_LEVEL, 0)  # Default: DEBUG
+
+	ProjectSettings.add_property_info(
+		{
+			"name": SETTING_MIN_LEVEL,
+			"type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Debug:0,Info:1,Warn:2,Error:3"
+		}
+	)
+	ProjectSettings.set_initial_value(SETTING_MIN_LEVEL, 0)
 
 	# Save changes to project.godot
 	ProjectSettings.save()
