@@ -4,11 +4,15 @@ extends DLoggerBase
 
 
 func _format_log(_msg: Variant, category: String, level: String) -> String:
+	# 秒単位に変換（1234ms -> 1.234s）
+	var seconds := Time.get_ticks_msec() / 1000.0
+
 	var cat_str := ""
 	if category != "":
 		cat_str = "[%s] " % category
 
-	return "%s %s%s [%s]" % [prefix, cat_str, _get_caller_info(), level]
+	# 全体で7文字分、小数点は3桁
+	return "[%7.3fs] %s %s%s [%s]" % [seconds, prefix, cat_str, _get_caller_info(), level]
 
 
 func _get_caller_info() -> String:
