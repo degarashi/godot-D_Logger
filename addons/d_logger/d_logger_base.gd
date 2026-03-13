@@ -9,17 +9,17 @@ var prefix: String = "D-Logger"
 var min_level: int = LogLevel.DEBUG
 
 
-func debug(_msg: Variant, _category: String = "") -> void:
+func debug(_msg: Variant, _category: String = "", _context: Object = null) -> void:
 	pass
 
 
-func info(_msg: Variant, _category: String = "") -> void:
+func info(_msg: Variant, _category: String = "", _context: Object = null) -> void:
 	pass
 
 
-func warn(_msg: Variant, _category: String = "") -> void:
+func warn(_msg: Variant, _category: String = "", _context: Object = null) -> void:
 	pass
 
 
-func error(_msg: Variant, _category: String = "") -> void:
+func error(_msg: Variant, _category: String = "", _context: Object = null) -> void:
 	pass

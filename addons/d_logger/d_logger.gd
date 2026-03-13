@@ -40,23 +40,23 @@ func _setup_logger() -> void:
 	_logger.min_level = min_lvl
 
 
-func debug(msg: Variant, category: String = "") -> void:
+func debug(msg: Variant, category: String = "", context: Object = null) -> void:
 	if _logger and _logger.min_level <= DLoggerBase.LogLevel.DEBUG:
-		_logger.debug(msg, category)
+		_logger.debug(msg, category, context)
 
 
-func info(msg: Variant, category: String = "") -> void:
+func info(msg: Variant, category: String = "", context: Object = null) -> void:
 	if _logger and _logger.min_level <= DLoggerBase.LogLevel.INFO:
-		_logger.info(msg, category)
+		_logger.info(msg, category, context)
 
 
-func warn(msg: Variant, category: String = "") -> void:
+func warn(msg: Variant, category: String = "", context: Object = null) -> void:
 	# Warnings and Errors are usually not filtered strictly,
 	# but we follow the min_level setting here for consistency.
 	if _logger and _logger.min_level <= DLoggerBase.LogLevel.WARN:
-		_logger.warn(msg, category)
+		_logger.warn(msg, category, context)
 
 
-func error(msg: Variant, category: String = "") -> void:
+func error(msg: Variant, category: String = "", context: Object = null) -> void:
 	if _logger and _logger.min_level <= DLoggerBase.LogLevel.ERROR:
-		_logger.error(msg, category)
+		_logger.error(msg, category, context)

@@ -5,7 +5,7 @@ extends DLoggerBase
 # debug and info do nothing
 
 
-func warn(msg: Variant, category: String = "") -> void:
+func warn(msg: Variant, category: String = "", _context: Object = null) -> void:
 	var seconds := Time.get_ticks_msec() / 1000.0
 	var cat_str := ""
 	if category != "":
@@ -14,7 +14,7 @@ func warn(msg: Variant, category: String = "") -> void:
 	push_warning("[%.3fs] %s %s[WARN] %s" % [seconds, prefix, cat_str, str(msg)])
 
 
-func error(msg: Variant, category: String = "") -> void:
+func error(msg: Variant, category: String = "", _context: Object = null) -> void:
 	var seconds := Time.get_ticks_msec() / 1000.0
 	var cat_str := ""
 	if category != "":
