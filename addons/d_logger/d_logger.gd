@@ -1,62 +1,84 @@
 @tool
 extends Node
 
-# Project Settings paths
-const SETTING_ENABLE := "debug/d_logger/enable_log"
-const SETTING_PREFIX := "debug/d_logger/prefix"
-const SETTING_MIN_LEVEL := "debug/d_logger/min_log_level"
+const _C = preload("uid://cwfe01280qmo7")
 
-var _logger: DLoggerBase
+# Array to hold multiple loggers
+var _loggers: Array[DLoggerBase] = []
+
+var _first_time := true
 
 
 func _enter_tree() -> void:
 	_setup_logger()
-	# Listen for setting changes in real-time
 	if not ProjectSettings.settings_changed.is_connected(_setup_logger):
 		ProjectSettings.settings_changed.connect(_setup_logger)
 
 
-## Initializes or updates the logger instance based on Project Settings.
+## Sets up the logger configuration (Factory & Multi-cast)
 func _setup_logger() -> void:
-	# Fetch settings with default values
-	var is_enabled: bool = ProjectSettings.get_setting(SETTING_ENABLE, true)
-	if not OS.is_debug_build():
-		is_enabled = false
-
-	var prefix_val: String = ProjectSettings.get_setting(SETTING_PREFIX, "D-Logger")
-	var min_lvl: int = ProjectSettings.get_setting(SETTING_MIN_LEVEL, 0)  # Default: DEBUG(0)
-
-	# Clean up old logger instance
-	_logger = null
-
-	# Factory Pattern: Switch implementation based on 'is_enabled'
-	if is_enabled:
-		_logger = DLoggerFull.new()
+	if _first_time:
+		_first_time = false
 	else:
-		_logger = DLoggerQuiet.new()
+		return
 
-	# Inject properties
-	_logger.prefix = prefix_val
-	_logger.min_level = min_lvl
+	_loggers.clear()
+
+	# Retrieve settings
+	var is_debug := OS.is_debug_build()
+	var console_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
+	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
+
+	var prefix_val: String = ProjectSettings.get_setting(_C.SETTING_PREFIX, "D-Logger")
+	var min_lvl: int = ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
+
+	# Construct console logger
+	if is_debug and console_enabled:
+		var console_logger := DLoggerFull.new()
+		_configure_logger(console_logger, prefix_val, min_lvl)
+		_loggers.append(console_logger)
+
+	# Construct file output logger
+	if is_debug and file_enabled:
+		var file_path: String = ProjectSettings.get_setting(
+			_C.SETTING_FILE_PATH, "user://debug.log"
+		)
+		var file_logger := DLoggerFile.new(file_path)
+		_configure_logger(file_logger, prefix_val, min_lvl)
+		_loggers.append(file_logger)
+
+	# Fallback for when all are disabled (Quiet)
+	if _loggers.is_empty():
+		var quiet_logger := DLoggerQuiet.new()
+		_configure_logger(quiet_logger, prefix_val, min_lvl)
+		_loggers.append(quiet_logger)
 
 
+func _configure_logger(logger: DLoggerBase, p_prefix: String, p_min_lvl: int) -> void:
+	logger.prefix = p_prefix
+	logger.min_level = p_min_lvl
+
+
+# ------------- [Logging Methods] -------------
 func debug(msg: Variant, category: String = "", context: Object = null) -> void:
-	if _logger and _logger.min_level <= DLoggerBase.LogLevel.DEBUG:
-		_logger.debug(msg, category, context)
+	for logger in _loggers:
+		if logger.min_level <= DLoggerBase.LogLevel.DEBUG:
+			logger.debug(msg, category, context)
 
 
 func info(msg: Variant, category: String = "", context: Object = null) -> void:
-	if _logger and _logger.min_level <= DLoggerBase.LogLevel.INFO:
-		_logger.info(msg, category, context)
+	for logger in _loggers:
+		if logger.min_level <= DLoggerBase.LogLevel.INFO:
+			logger.info(msg, category, context)
 
 
 func warn(msg: Variant, category: String = "", context: Object = null) -> void:
-	# Warnings and Errors are usually not filtered strictly,
-	# but we follow the min_level setting here for consistency.
-	if _logger and _logger.min_level <= DLoggerBase.LogLevel.WARN:
-		_logger.warn(msg, category, context)
+	for logger in _loggers:
+		if logger.min_level <= DLoggerBase.LogLevel.WARN:
+			logger.warn(msg, category, context)
 
 
 func error(msg: Variant, category: String = "", context: Object = null) -> void:
-	if _logger and _logger.min_level <= DLoggerBase.LogLevel.ERROR:
-		_logger.error(msg, category, context)
+	for logger in _loggers:
+		if logger.min_level <= DLoggerBase.LogLevel.ERROR:
+			logger.error(msg, category, context)
