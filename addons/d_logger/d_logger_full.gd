@@ -4,14 +4,14 @@ extends DLoggerBase
 
 
 func _format_log(msg: Variant, category: String, level: String) -> String:
-	# 秒単位に変換（1234ms -> 1.234s）
+	# Convert to seconds (e.g., 1234ms -> 1.234s)
 	var seconds := Time.get_ticks_msec() / 1000.0
 
 	var cat_str := ""
 	if category != "":
 		cat_str = category
 
-	# 全体で7文字分、小数点は3桁
+	# 7 characters total, 3 decimal places
 	return (
 		"[%7.3fs][%s]%s %s - [%s] %s"
 		% [
@@ -27,7 +27,7 @@ func _format_log(msg: Variant, category: String, level: String) -> String:
 
 func _get_caller_info() -> String:
 	var stack := get_stack()
-	if stack.size() >= 4:  # DLogger経由なので階層が1つ深くなる
+	if stack.size() >= 4:  # Stack depth is one deeper due to DLogger
 		var caller: Dictionary = stack[3]
 		return "[%s:%d]" % [caller.source.get_file(), caller.line]
 	return ""
