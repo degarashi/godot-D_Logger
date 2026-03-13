@@ -27,9 +27,10 @@ func _format_log(msg: Variant, category: String, level: String) -> String:
 
 func _get_caller_info() -> String:
 	var stack := get_stack()
-	if stack.size() >= 4:  # Stack depth is one deeper due to DLogger
-		var caller: Dictionary = stack[3]
-		return "[%s:%d]" % [caller.source.get_file(), caller.line]
+	if stack.size() >= 5:  # Stack depth is one deeper due to DLogger
+		var caller: Dictionary = stack[4]
+		var caller_path: String = caller.source
+		return "[%s:%d]" % [caller_path.get_file(), caller.line]
 	return ""
 
 
