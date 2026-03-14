@@ -1,6 +1,5 @@
 @tool
 ## Constant definitions used throughout D-Logger
-class_name DLoggerConstants
 extends Object
 
 # --- Project Settings Paths ---
