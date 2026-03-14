@@ -1,39 +1,50 @@
 extends Node2D
 
 const DLOGGER = preload("res://addons/d_logger/d_logger.gd")
-var _logger: Node
+const _C = preload("uid://cwfe01280qmo7")
 
 
 func _ready() -> void:
-	_logger = DLOGGER.new()
-	_logger.info("Test started! Checking logger functionality.")
+	# Test with default settings (Follows ProjectSettings)
+	var logger_default: DLOGGER = DLOGGER.new()
+	logger_default.info("Default: Logging info")
+	logger_default.warn("Default: Logging warning")
 
-	# Test different log levels without category
-	_test_log_levels()
+	# Override prefix
+	var logger_custom_prefix: DLOGGER = DLOGGER.new("CUSTOM_APP")
+	logger_custom_prefix.warn("Custom Prefix: Warning with new prefix")
 
-	# Test category functionality
-	_test_categories()
+	# Set log level to DEBUG (All logs should be visible)
+	var logger_debug: DLOGGER = DLOGGER.new("DEBUG_TEST", _C.LogLevel.DEBUG)
+	logger_debug.debug("Debug: Visible")
+	logger_debug.info("Info: Visible")
+	logger_debug.warn("Warn: Visible")
 
-	# Wait briefly then call from another function to verify stack trace
+	# Set log level to WARN (INFO and below hidden, WARN and above visible)
+	var logger_warn_limit: DLOGGER = DLOGGER.new("WARN_LIMIT", _C.LogLevel.WARN)
+	logger_warn_limit.info("Warn Limit: Info should NOT be visible")
+	logger_warn_limit.warn("Warn Limit: Warning should be visible")
+	logger_warn_limit.error("Warn Limit: Error should be visible")
+
+	# Set log level to ERROR (Confirm WARN is hidden)
+	var logger_error_only: DLOGGER = DLOGGER.new("ERROR_ONLY", _C.LogLevel.ERROR)
+	logger_error_only.warn("Error Only: Warning should NOT be visible")
+	logger_error_only.error("Error Only: Error should be visible")
+
+	# Test with console disabled (Nothing should be output)
+	var logger_no_console: DLOGGER = DLOGGER.new("SILENT", -1, false)
+	logger_no_console.warn("Silent: Warning should NOT appear in console")
+
+	# Test warning with category
+	var logger_cat: DLOGGER = DLOGGER.new("CATEGORY_TEST")
+	logger_cat.warn("Low memory detected!", "System")
+
+	# Verify stack trace and caller info
 	await get_tree().create_timer(0.5).timeout
-	_check_caller_info()
+	_check_caller_info(logger_custom_prefix)
 
-	_logger.info("Test complete. Please check the output panel.")
-
-
-func _test_log_levels() -> void:
-	_logger.debug("This is for debug (gray)")
-	_logger.info("This is general info (cyan, bold)")
-	_logger.warn("This is a warning (yellow, bold, with system notification)")
-	_logger.error("This is an error (red, bold, with system notification)")
+	print("--- Test complete. Please check the output panel above. ---")
 
 
-func _test_categories() -> void:
-	_logger.info("Spawning player...", "GameLogic")
-	_logger.debug("Handshake successful", "Network")
-	_logger.warn("Heavy frame drop detected", "Performance")
-	_logger.error("Failed to load user profile", "Database")
-
-
-func _check_caller_info() -> void:
-	_logger.info("Checking line number when called from a different function")
+func _check_caller_info(p_logger: DLOGGER) -> void:
+	p_logger.warn("Checking line number/caller for warning from sub-function")
