@@ -11,6 +11,39 @@ var _loggers: Array[Object] = []
 
 var _first_time := true
 
+# Override values with specific types
+var _override_file_path: String = ""
+var _override_console_enabled: bool = true
+var _override_prefix: String = ""
+var _override_min_level: int = -1  # -1 indicates "no override"
+
+# Flag to check if bool/string overrides are active
+var _has_console_override: bool = false
+var _has_prefix_override: bool = false
+
+
+func _init(
+	file_path: String = "",
+	console_enabled: Variant = null,
+	prefix_val: Variant = null,
+	min_lvl: int = -1
+) -> void:
+	_override_file_path = file_path
+
+	if console_enabled is bool:
+		_override_console_enabled = console_enabled
+		_has_console_override = true
+
+	if prefix_val is String:
+		_override_prefix = prefix_val
+		_has_prefix_override = true
+
+	_override_min_level = min_lvl
+
+	# Force re-setup if already initialized
+	_first_time = true
+	_setup_logger()
+
 
 func _enter_tree() -> void:
 	_setup_logger()
@@ -27,13 +60,29 @@ func _setup_logger() -> void:
 
 	_loggers.clear()
 
-	# Retrieve settings
-	var is_debug := OS.is_debug_build()
-	var console_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
+
+	var console_enabled: bool = (
+		_override_console_enabled
+		if _has_console_override
+		else ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
+	)
+
 	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
 
-	var prefix_val: String = ProjectSettings.get_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
-	var min_lvl: int = ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
+	var prefix_val: String = (
+		_override_prefix
+		if _has_prefix_override
+		else ProjectSettings.get_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
+	)
+
+	var min_lvl: int = (
+		_override_min_level
+		if _override_min_level != -1
+		else ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
+	)
+
+	# Retrieve settings with potential overrides
+	var is_debug := OS.is_debug_build()
 
 	# Construct console logger
 	if is_debug and console_enabled:
@@ -43,8 +92,10 @@ func _setup_logger() -> void:
 
 	# Construct file output logger
 	if is_debug and file_enabled:
-		var file_path: String = ProjectSettings.get_setting(
-			_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH
+		var file_path: String = (
+			_override_file_path
+			if not _override_file_path.is_empty()
+			else ProjectSettings.get_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
 		)
 		var file_logger := _DLOGGER_FILE.new(file_path)
 		_configure_logger(file_logger, prefix_val, min_lvl)
