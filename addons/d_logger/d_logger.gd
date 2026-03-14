@@ -23,22 +23,22 @@ var _has_prefix_override: bool = false
 
 
 func _init(
-	file_path: String = "",
-	console_enabled: Variant = null,
-	prefix_val: Variant = null,
-	min_lvl: int = -1
+	p_prefix: Variant = null,
+	p_min_lvl: int = -1,
+	p_console_enabled: Variant = null,
+	p_file_path: String = ""
 ) -> void:
-	_override_file_path = file_path
-
-	if console_enabled is bool:
-		_override_console_enabled = console_enabled
-		_has_console_override = true
-
-	if prefix_val is String:
-		_override_prefix = prefix_val
+	if p_prefix is String:
+		_override_prefix = p_prefix
 		_has_prefix_override = true
 
-	_override_min_level = min_lvl
+	_override_min_level = p_min_lvl
+
+	if p_console_enabled is bool:
+		_override_console_enabled = p_console_enabled
+		_has_console_override = true
+
+	_override_file_path = p_file_path
 
 	# Force re-setup if already initialized
 	_first_time = true
@@ -59,7 +59,6 @@ func _setup_logger() -> void:
 		return
 
 	_loggers.clear()
-
 
 	var console_enabled: bool = (
 		_override_console_enabled
