@@ -1,6 +1,5 @@
 @tool
-class_name DLoggerQuiet
-extends DLoggerBase
+extends "res://addons/d_logger/d_logger_base.gd"
 
 # debug and info do nothing
 

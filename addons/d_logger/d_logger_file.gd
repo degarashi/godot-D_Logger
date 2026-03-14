@@ -1,6 +1,5 @@
 @tool
-class_name DLoggerFile
-extends DLoggerFull
+extends "res://addons/d_logger/d_logger_full.gd"
 
 var _file_path: String
 
