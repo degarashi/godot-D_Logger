@@ -20,3 +20,5 @@ const AUTOLOAD_PATH := "res://addons/d_logger/d_logger.gd"
 # --- Log Level Labels ---
 # For Enum display in settings
 const MIN_LEVEL_HINT_STRING := "Debug:0,Info:1,Warn:2,Error:3"
+
+enum LogLevel { DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 }

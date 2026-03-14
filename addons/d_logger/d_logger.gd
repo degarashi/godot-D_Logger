@@ -5,7 +5,6 @@ const _C = preload("uid://cwfe01280qmo7")
 const _DLOGGER_FILE = preload("uid://b3v27qs0f6a5e")
 const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
-const _DLOGGER_BASE = preload("uid://cbrhmi0wx4qn6")
 
 # Array to hold multiple loggers
 var _loggers: Array[Object] = []
@@ -66,23 +65,23 @@ func _configure_logger(logger: Object, p_prefix: String, p_min_lvl: int) -> void
 # ------------- [Logging Methods] -------------
 func debug(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
-		if logger.min_level <= _DLOGGER_BASE.LogLevel.DEBUG:
+		if logger.min_level <= _C.LogLevel.DEBUG:
 			logger.debug(msg, category, context)
 
 
 func info(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
-		if logger.min_level <= _DLOGGER_BASE.LogLevel.INFO:
+		if logger.min_level <= _C.LogLevel.INFO:
 			logger.info(msg, category, context)
 
 
 func warn(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
-		if logger.min_level <= _DLOGGER_BASE.LogLevel.WARN:
+		if logger.min_level <= _C.LogLevel.WARN:
 			logger.warn(msg, category, context)
 
 
 func error(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
-		if logger.min_level <= _DLOGGER_BASE.LogLevel.ERROR:
+		if logger.min_level <= _C.LogLevel.ERROR:
 			logger.error(msg, category, context)

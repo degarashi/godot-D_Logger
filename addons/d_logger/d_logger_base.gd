@@ -1,11 +1,11 @@
 @tool
 extends Object
 
-enum LogLevel { DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 }
+const _C = preload("uid://cwfe01280qmo7")
 
 var prefix: String = "D-Logger"
 # Do not output logs less than this number
-var min_level: int = LogLevel.DEBUG
+var min_level: int = _C.LogLevel.DEBUG
 
 
 func debug(_msg: Variant, _category: String = "", _context: Object = null) -> void:
