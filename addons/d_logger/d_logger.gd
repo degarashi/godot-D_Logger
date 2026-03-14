@@ -33,7 +33,7 @@ func _setup_logger() -> void:
 	var console_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
 	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
 
-	var prefix_val: String = ProjectSettings.get_setting(_C.SETTING_PREFIX, "D-Logger")
+	var prefix_val: String = ProjectSettings.get_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
 	var min_lvl: int = ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
 
 	# Construct console logger
@@ -45,7 +45,7 @@ func _setup_logger() -> void:
 	# Construct file output logger
 	if is_debug and file_enabled:
 		var file_path: String = ProjectSettings.get_setting(
-			_C.SETTING_FILE_PATH, "user://debug.log"
+			_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH
 		)
 		var file_logger := _DLOGGER_FILE.new(file_path)
 		_configure_logger(file_logger, prefix_val, min_lvl)
