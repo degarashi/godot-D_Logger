@@ -1,30 +1,31 @@
 # D-Logger for Godot 4.x
 
-A simple yet powerful custom logging plugin for Godot 4.3+.
-It utilizes the **Factory Pattern** to switch between detailed logging during development and a high-performance "quiet" mode for release builds.
+A simple yet powerful custom logging plugin for Godot 4.3+.  
+It utilizes the **Factory Pattern** and **Multicast** approach to support multiple output targets (Console, File) while providing flexible per-instance configuration.
 
 ---
 
 ## ✨ Features
 
-* **Real-time Customization**: Change your log prefix and toggle logging on/off directly from **Project Settings**.
-* **Log Filtering**: Set a **Minimum Log Level** (Debug, Info, Warn, Error) to filter out noise during development.
-* **Category Support**: Organize logs by assigning optional categories (e.g., `Network`, `AI`, `UI`).
-* **Rich Text Output**: Uses `print_rich` for color-coded logs by level.
-* **Automated Stack Tracing**: Automatically appends the **filename** and **line number** of the caller for faster debugging.
-* **Factory Pattern**: Minimizes performance overhead by swapping the logger instance entirely when disabled.
+* **Multicast Logging**: Simultaneously output to the **Console** and a **File** (`user://debug.log` by default).
+* **Per-Instance Overrides**: Customize the prefix, log level, and console visibility for specific logger instances via `_init()`.
+* **Project Settings Integration**: Manage global defaults (Prefix, Log Level, File Path, Enable/Disable) directly from Godot's Project Settings.
+* **Rich Text Output**: Color-coded console logs for quick visual identification.
+* **Automated Stack Tracing**: Displays the **filename** and **line number** of the caller for effortless debugging.
+* **Category & Context Support**: Pass optional categories or object contexts to trace logs back to specific systems or nodes.
 
 ## 📁 Directory Structure
 
 ```text
 res://addons/d_logger/
 ├── plugin.cfg          # Plugin definition
-├── plugin.gd           # Plugin lifecycle and settings registration
-├── d_logger.gd         # Singleton entry point (Autoload)
-├── d_logger_base.gd    # Base class for logging implementations
-├── d_logger_full.gd    # Implementation for detailed logging
-└── d_logger_quiet.gd   # Implementation for minimal/silent logging
-
+├── plugin.gd           # Lifecycle and ProjectSettings registration
+├── constants.gd        # Shared constants and LogLevel enums
+├── d_logger.gd         # Singleton entry point & Factory logic
+├── d_logger_base.gd    # Base interface
+├── d_logger_full.gd    # Console rich text implementation
+├── d_logger_file.gd    # File system output implementation
+└── d_logger_quiet.gd   # Fallback silent implementation
 ## Usage
 
 1. Installation
