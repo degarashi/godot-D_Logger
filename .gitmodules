@@ -1,0 +1,3 @@
+[submodule "asub/d_interface"]
+	path = asub/d_interface
+	url = ../d_interface
