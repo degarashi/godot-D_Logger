@@ -112,25 +112,33 @@ func _configure_logger(logger: Object, p_prefix: String, p_min_lvl: int) -> void
 	logger.min_level = p_min_lvl
 
 
+static func implements_list() -> Array[Script]:
+	return [ILogger]
+
+
 # ------------- [Logging Methods] -------------
+## from [ILogger]
 func debug(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
 		if logger.min_level <= _C.LogLevel.DEBUG:
 			logger.debug(msg, category, context)
 
 
+## from [ILogger]
 func info(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
 		if logger.min_level <= _C.LogLevel.INFO:
 			logger.info(msg, category, context)
 
 
+## from [ILogger]
 func warn(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
 		if logger.min_level <= _C.LogLevel.WARN:
 			logger.warn(msg, category, context)
 
 
+## from [ILogger]
 func error(msg: Variant, category: String = "", context: Object = null) -> void:
 	for logger in _loggers:
 		if logger.min_level <= _C.LogLevel.ERROR:
