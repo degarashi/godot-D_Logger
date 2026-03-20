@@ -1,22 +1,26 @@
 @tool
-extends "./d_logger_base.gd"
+
+const _C = preload("uid://cwfe01280qmo7")
+
 
 # debug and info do nothing
+func debug(
+	_msg: String, _category: String = "", _context: Object = null, _prefix: String = ""
+) -> void:
+	pass
 
 
-func warn(msg: Variant, category: String = "", _context: Object = null) -> void:
-	var seconds := Time.get_ticks_msec() / 1000.0
-	var cat_str := ""
-	if category != "":
-		cat_str = "[%s] " % category
-
-	push_warning("[%.3fs] %s %s[WARN] %s" % [seconds, prefix, cat_str, str(msg)])
+func info(
+	_msg: String, _category: String = "", _context: Object = null, _prefix: String = ""
+) -> void:
+	pass
 
 
-func error(msg: Variant, category: String = "", _context: Object = null) -> void:
-	var seconds := Time.get_ticks_msec() / 1000.0
-	var cat_str := ""
-	if category != "":
-		cat_str = "[%s] " % category
+func warn(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+	var header := _C.format_log(msg, category, "WARN", context, prefix)
+	push_warning(header)
 
-	push_error("[%.3fs] %s %s[ERROR] %s" % [seconds, prefix, cat_str, str(msg)])
+
+func error(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+	var header := _C.format_log(msg, category, "ERROR", context, prefix)
+	push_error(header)

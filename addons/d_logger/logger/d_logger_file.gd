@@ -1,6 +1,6 @@
 @tool
-extends "./d_logger_full.gd"
 
+const _C = preload("uid://cwfe01280qmo7")
 var _file_path: String
 
 
@@ -32,17 +32,19 @@ func _write_line(line: String) -> void:
 
 
 # ------------- [Log Methods Overrides] -------------
-func debug(msg: Variant, category: String = "", context: Object = null) -> void:
-	_write_line(_format_log(msg, category, "DEBUG", context))
+func debug(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+	_write_line(_C.format_log(msg, category, "DEBUG", context, prefix))
 
 
-func info(msg: Variant, category: String = "", context: Object = null) -> void:
-	_write_line(_format_log(msg, category, "INFO", context))
+func info(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+	_write_line(_C.format_log(msg, category, "INFO", context, prefix))
 
 
-func warn(msg: Variant, category: String = "", context: Object = null) -> void:
-	_write_line(_format_log(msg, category, "WARN", context))
+func warn(msg: Variant, category: String = "", context: Object = null, prefix: String = "") -> void:
+	_write_line(_C.format_log(msg, category, "WARN", context, prefix))
 
 
-func error(msg: Variant, category: String = "", context: Object = null) -> void:
-	_write_line(_format_log(msg, category, "ERROR", context))
+func error(
+	msg: Variant, category: String = "", context: Object = null, prefix: String = ""
+) -> void:
+	_write_line(_C.format_log(msg, category, "ERROR", context, prefix))
