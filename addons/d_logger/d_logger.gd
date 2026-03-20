@@ -5,24 +5,23 @@ const _C = preload("uid://cwfe01280qmo7")
 const _DLOGGER_FILE = preload("uid://b3v27qs0f6a5e")
 const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
+const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 
-# Array to hold multiple loggers
-var _loggers: Array[RefCounted] = []
+var _dispatcher := _LOG_ARRAY.new()
 
 var _first_time := true
 
-# Override values with specific types
+# Override variables
 var _override_file_path: String = ""
 var _override_console_enabled: bool = true
 var _override_prefix: String = ""
 var _override_min_level: int = -1
 
-# Flag to check if bool/string overrides are active
-var _has_console_override: bool = false
-var _has_prefix_override: bool = false
+var _has_console_override := false
+var _has_prefix_override := false
 
-var _prefix: String
-var _min_level: int
+var _prefix: String = ""
+var _min_level: int = 0
 
 
 func _init(
@@ -43,7 +42,6 @@ func _init(
 
 	_override_file_path = p_file_path
 
-	# Force re-setup if already initialized
 	_first_time = true
 	_setup_logger()
 
@@ -66,40 +64,42 @@ func get_min_level() -> int:
 	return ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
 
 
-## Sets up the logger configuration (Factory & Multi-cast)
+## Sets up the logger configuration
 func _setup_logger() -> void:
 	if not _first_time:
 		return
 
 	_first_time = false
-	_loggers.clear()
+	_dispatcher.clear()
 
-	var console_enabled: bool = (
+	var console_enabled := (
 		_override_console_enabled
 		if _has_console_override
 		else ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
 	)
 
-	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
-	# Retrieve settings with potential overrides
+	var file_enabled := ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
 	var is_debug := OS.is_debug_build()
 
-	# Construct console logger
+	# Add Console Logger
 	if is_debug and console_enabled:
-		_loggers.append(_DLOGGER_FULL.new())
+		_dispatcher.add(_DLOGGER_FULL.new())
 
-	# Construct file output logger
+	# Add File Logger
 	if is_debug and file_enabled:
-		var file_path: String = (
-			_override_file_path
-			if not _override_file_path.is_empty()
-			else ProjectSettings.get_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
+		var file_path := (
+			(
+				_override_file_path
+				if not _override_file_path.is_empty()
+				else ProjectSettings.get_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
+			)
+			as String
 		)
-		_loggers.append(_DLOGGER_FILE.new(file_path))
+		_dispatcher.add(_DLOGGER_FILE.new(file_path))
 
-	# Fallback for when all are disabled (Quiet)
-	if _loggers.is_empty():
-		_loggers.append(_DLOGGER_QUIET.new())
+	# Fallback if none are enabled
+	if _dispatcher.is_empty():
+		_dispatcher.add(_DLOGGER_QUIET.new())
 
 	_prefix = get_prefix()
 	_min_level = get_min_level()
@@ -110,41 +110,33 @@ static func implements_list() -> Array[Script]:
 
 
 # ------------- [Logging Methods] -------------
-## from [ILogger]
 func debug(
-	msg: String, category: String = "", context: Object = null, _p_prefix: String = ""
+	msg: String, category: String = "", context: Object = null, p_prefix: String = ""
 ) -> void:
-	if _min_level > _C.LogLevel.DEBUG:
-		return
-	for logger: Object in _loggers:
-		logger.debug(msg, category, context, _prefix)
+	if _min_level <= _C.LogLevel.DEBUG:
+		var pref := p_prefix if not p_prefix.is_empty() else _prefix
+		_dispatcher.debug(msg, category, context, pref)
 
 
-## from [ILogger]
 func info(
-	msg: String, category: String = "", context: Object = null, _p_prefix: String = ""
+	msg: String, category: String = "", context: Object = null, p_prefix: String = ""
 ) -> void:
-	if _min_level > _C.LogLevel.INFO:
-		return
-	for logger: Object in _loggers:
-		logger.info(msg, category, context, _prefix)
+	if _min_level <= _C.LogLevel.INFO:
+		var pref := p_prefix if not p_prefix.is_empty() else _prefix
+		_dispatcher.info(msg, category, context, pref)
 
 
-## from [ILogger]
 func warn(
-	msg: String, category: String = "", context: Object = null, _p_prefix: String = ""
+	msg: String, category: String = "", context: Object = null, p_prefix: String = ""
 ) -> void:
-	if _min_level > _C.LogLevel.WARN:
-		return
-	for logger: Object in _loggers:
-		logger.warn(msg, category, context, _prefix)
+	if _min_level <= _C.LogLevel.WARN:
+		var pref := p_prefix if not p_prefix.is_empty() else _prefix
+		_dispatcher.warn(msg, category, context, pref)
 
 
-## from [ILogger]
 func error(
-	msg: String, category: String = "", context: Object = null, _p_prefix: String = ""
+	msg: String, category: String = "", context: Object = null, p_prefix: String = ""
 ) -> void:
-	if _min_level > _C.LogLevel.ERROR:
-		return
-	for logger: Object in _loggers:
-		logger.error(msg, category, context, _prefix)
+	if _min_level <= _C.LogLevel.ERROR:
+		var pref := p_prefix if not p_prefix.is_empty() else _prefix
+		_dispatcher.error(msg, category, context, pref)
