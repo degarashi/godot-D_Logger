@@ -1,10 +1,15 @@
 @tool
+extends RefCounted
 
-const _C = preload("uid://cwfe01280qmo7")
+# ------------- [Constants] -------------
+const _C := preload("uid://cwfe01280qmo7")
+
+# ------------- [Private Variable] -------------
 var _file_path: String
 
+# ------------- [Callbacks] -------------
 
-# DLoggerFile.gd's _init
+
 func _init(path: String) -> void:
 	_file_path = path
 	# Instead of WRITE, just create if it doesn't exist
@@ -17,6 +22,12 @@ func _init(path: String) -> void:
 	_write_line("=== New Session Started: %s ===" % Time.get_datetime_string_from_system())
 
 
+# ------------- [Public Static Method] -------------
+static func implements_list() -> Array[Script]:
+	return [ILogger]
+
+
+# ------------- [Private Method] -------------
 func _write_line(line: String) -> void:
 	# Open with READ_WRITE, seek to end and write
 	# If this fails, first check if this mode is supported
@@ -31,20 +42,66 @@ func _write_line(line: String) -> void:
 		push_error("DLoggerFile: Failed to open file for appending: " + _file_path)
 
 
-# ------------- [Log Methods Overrides] -------------
-func debug(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+# ------------- [Public Method] -------------
+## from [ILogger]
+func is_debug_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_info_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_warn_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_error_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func debug(
+	msg: String,
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	_write_line(_C.format_log(msg, category, "DEBUG", context, prefix))
 
 
-func info(msg: String, category: String = "", context: Object = null, prefix: String = "") -> void:
+## from [ILogger]
+func info(
+	msg: String,
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	_write_line(_C.format_log(msg, category, "INFO", context, prefix))
 
 
-func warn(msg: Variant, category: String = "", context: Object = null, prefix: String = "") -> void:
+## from [ILogger]
+func warn(
+	msg: String,
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	_write_line(_C.format_log(msg, category, "WARN", context, prefix))
 
 
+## from [ILogger]
 func error(
-	msg: Variant, category: String = "", context: Object = null, prefix: String = ""
+	msg: String,
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
 ) -> void:
 	_write_line(_C.format_log(msg, category, "ERROR", context, prefix))

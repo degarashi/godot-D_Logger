@@ -1,8 +1,16 @@
 @tool
+extends RefCounted
 
+# ------------- [Public Variable] -------------
 var _list: Array[RefCounted] = []
 
 
+# ------------- [Public Static Method] -------------
+static func implements_list() -> Array[Script]:
+	return [ILogger]
+
+
+# ------------- [Public Method] -------------
 func clear() -> void:
 	_list.clear()
 
@@ -15,21 +23,69 @@ func is_empty() -> bool:
 	return _list.is_empty()
 
 
-func debug(msg: String, cat: String, ctx: Object, pref: String) -> void:
+## from [ILogger]
+func is_debug_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_info_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_warn_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func is_error_enabled() -> bool:
+	return true
+
+
+## from [ILogger]
+func debug(
+	msg: String,
+	values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	for l: Object in _list:
-		l.debug(msg, cat, ctx, pref)
+		l.debug(msg, values, category, context, prefix)
 
 
-func info(msg: String, cat: String, ctx: Object, pref: String) -> void:
+## from [ILogger]
+func info(
+	msg: String,
+	values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	for l: Object in _list:
-		l.info(msg, cat, ctx, pref)
+		l.info(msg, values, category, context, prefix)
 
 
-func warn(msg: String, cat: String, ctx: Object, pref: String) -> void:
+## from [ILogger]
+func warn(
+	msg: String,
+	values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	for l: Object in _list:
-		l.warn(msg, cat, ctx, pref)
+		l.warn(msg, values, category, context, prefix)
 
 
-func error(msg: String, cat: String, ctx: Object, pref: String) -> void:
+## from [ILogger]
+func error(
+	msg: String,
+	values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = ""
+) -> void:
 	for l: Object in _list:
-		l.error(msg, cat, ctx, pref)
+		l.error(msg, values, category, context, prefix)
