@@ -1,5 +1,5 @@
 @tool
-extends "res://addons/d_logger/d_logger_base.gd"
+extends "./d_logger_base.gd"
 
 
 func _format_log(msg: Variant, category: String, level: String, context: Object) -> String:

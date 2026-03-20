@@ -1,5 +1,5 @@
 @tool
-extends "res://addons/d_logger/d_logger_full.gd"
+extends "./d_logger_full.gd"
 
 var _file_path: String
 
