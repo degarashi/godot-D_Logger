@@ -26,11 +26,17 @@ const MIN_LEVEL_HINT_STRING := "Debug:0,Info:1,Warn:2,Error:3"
 
 static func _get_caller_info() -> String:
 	var stack := get_stack()
-	if stack.size() >= 5:  # Stack depth is one deeper due to DLogger
-		var caller: Dictionary = stack[4]
-		var caller_path: String = caller.source
-		return "[%s:%d]" % [caller_path.get_file(), caller.line]
-	return ""
+	var caller_info := ""
+	for i in range(stack.size()):
+		var entry: Dictionary = stack[i]
+		var source: String = entry.get("source", "")
+		if not source.begins_with("res://addons/d_logger/"):
+			caller_info = "[{file}:{line}]".format(
+				{"file": source.get_file(), "line": entry.get("line", 0)}
+			)
+			break
+
+	return caller_info
 
 
 static func format_log(
