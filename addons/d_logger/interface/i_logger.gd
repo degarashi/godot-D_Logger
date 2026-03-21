@@ -56,3 +56,7 @@ func is_warn_enabled() -> bool:
 
 func is_error_enabled() -> bool:
 	return _impl.is_error_enabled()
+
+
+static func cast(obj: Object) -> ILogger:
+	return Interface.as_interface(obj, ILogger)
