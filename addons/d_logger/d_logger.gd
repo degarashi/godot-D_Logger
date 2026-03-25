@@ -1,6 +1,5 @@
-@tool
-class_name DLoggerNode
-extends Node
+class_name DLoggerClass
+extends RefCounted
 
 # ------------- [Constants] -------------
 const _C = preload("uid://cwfe01280qmo7")
@@ -9,9 +8,9 @@ const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
 const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 
-# ------------- [Private Variable] -------------
+# ------------- [Private Variables] -------------
 var _dispatcher := _LOG_ARRAY.new()
-var _first_time := true
+var _initialized := false
 
 # Override variables
 var _override_file_path: String = ""
@@ -26,7 +25,7 @@ var _prefix: String = ""
 var _min_level: int = 0
 
 
-# ------------- [Callbacks] -------------
+# ------------- [Constructor] -------------
 func _init(
 	p_prefix: Variant = null,
 	p_min_lvl: int = -1,
@@ -45,32 +44,22 @@ func _init(
 
 	_override_file_path = p_file_path
 
-	_first_time = true
-	_setup_logger()
+	setup_logger()
 
 
-func _enter_tree() -> void:
-	_setup_logger()
-	if not ProjectSettings.settings_changed.is_connected(_setup_logger):
-		ProjectSettings.settings_changed.connect(_setup_logger)
-
-
-# ------------- [Private Method] -------------
+# ------------- [Internal Methods] -------------
 ## Sets up the logger configuration
-func _setup_logger() -> void:
-	if not _first_time:
-		return
-
-	_first_time = false
+func setup_logger() -> void:
+	# Reset dispatcher state
 	_dispatcher.clear()
 
-	var console_enabled := (
+	var console_enabled: bool = (
 		_override_console_enabled
 		if _has_console_override
 		else ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
 	)
 
-	var file_enabled := ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
+	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
 	var is_debug := OS.is_debug_build()
 
 	# Add Console Logger
@@ -79,7 +68,7 @@ func _setup_logger() -> void:
 
 	# Add File Logger
 	if is_debug and file_enabled:
-		var file_path := (
+		var file_path: String = (
 			_override_file_path
 			if not _override_file_path.is_empty()
 			else ProjectSettings.get_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
@@ -92,6 +81,7 @@ func _setup_logger() -> void:
 
 	_prefix = get_prefix()
 	_min_level = get_min_level()
+	_initialized = true
 
 
 func _dispatch(
@@ -116,7 +106,7 @@ func _dispatch(
 			_dispatcher.error(final_msg, [], category, context, pref)
 
 
-# ------------- [Public Method] -------------
+# ------------- [Public Methods] -------------
 func get_prefix() -> String:
 	if _has_prefix_override:
 		return _override_prefix
@@ -145,50 +135,36 @@ func is_error_enabled() -> bool:
 	return _min_level <= _C.LogLevel.ERROR
 
 
-# --- Use assert(log.debug(...)) if you want to disable output in release builds. ---
+# Use assert(log.debug(...)) if you want to disable output in release builds.
+
+
 func debug(
-	msg: String,
-	values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	p_prefix: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_debug_enabled():
-		_dispatch(_C.LogLevel.DEBUG, msg, values, category, context, p_prefix)
+		_dispatch(_C.LogLevel.DEBUG, msg, v, cat, ctx, p)
 	return true
 
 
 func info(
-	msg: String,
-	values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	p_prefix: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_info_enabled():
-		_dispatch(_C.LogLevel.INFO, msg, values, category, context, p_prefix)
+		_dispatch(_C.LogLevel.INFO, msg, v, cat, ctx, p)
 	return true
 
 
 func warn(
-	msg: String,
-	values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	p_prefix: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_warn_enabled():
-		_dispatch(_C.LogLevel.WARN, msg, values, category, context, p_prefix)
+		_dispatch(_C.LogLevel.WARN, msg, v, cat, ctx, p)
 	return true
 
 
 func error(
-	msg: String,
-	values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	p_prefix: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_error_enabled():
-		_dispatch(_C.LogLevel.ERROR, msg, values, category, context, p_prefix)
+		_dispatch(_C.LogLevel.ERROR, msg, v, cat, ctx, p)
 	return true

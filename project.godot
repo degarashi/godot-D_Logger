@@ -23,7 +23,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-DLogger="*uid://damy77hys0ig4"
+DLogger="*uid://co142rftxrv40"
 
 [editor_plugins]
 
