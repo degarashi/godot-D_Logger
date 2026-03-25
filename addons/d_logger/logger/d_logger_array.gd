@@ -41,7 +41,7 @@ func debug(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	for l: Object in _list:
+	for l in _list:
 		l.debug(msg, values, category, context, prefix)
 	return true
 
@@ -53,7 +53,7 @@ func info(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	for l: Object in _list:
+	for l in _list:
 		l.info(msg, values, category, context, prefix)
 	return true
 
@@ -65,7 +65,7 @@ func warn(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	for l: Object in _list:
+	for l in _list:
 		l.warn(msg, values, category, context, prefix)
 	return true
 
@@ -77,6 +77,6 @@ func error(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	for l: Object in _list:
+	for l in _list:
 		l.error(msg, values, category, context, prefix)
 	return true
