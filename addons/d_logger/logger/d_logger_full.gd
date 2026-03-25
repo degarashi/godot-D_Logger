@@ -28,8 +28,9 @@ func debug(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	print_rich("[color=gray]%s[/color]" % [_C.format_log(msg, category, "DEBUG", context, prefix)])
+	return true
 
 
 func info(
@@ -38,10 +39,11 @@ func info(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	print_rich(
 		"[b][color=cyan]%s[/color][/b]" % [_C.format_log(msg, category, "INFO", context, prefix)]
 	)
+	return true
 
 
 func warn(
@@ -50,10 +52,11 @@ func warn(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	var header: String = _C.format_log(msg, category, "WARN", context, prefix)
 	print_rich("[b][color=yellow]%s[/color][/b]" % [header])
 	push_warning(header)
+	return true
 
 
 func error(
@@ -62,7 +65,8 @@ func error(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	var header: String = _C.format_log(msg, category, "ERROR", context, prefix)
 	print_rich("[b][color=red]%s[/color][/b]" % [header])
 	push_error(header)
+	return true

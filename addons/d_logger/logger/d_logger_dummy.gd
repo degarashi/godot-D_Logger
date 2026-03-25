@@ -25,8 +25,8 @@ func debug(
 	_category: String = "",
 	_context: Object = null,
 	_prefix: String = ""
-) -> void:
-	pass
+) -> bool:
+	return true
 
 
 func info(
@@ -35,8 +35,8 @@ func info(
 	_category: String = "",
 	_context: Object = null,
 	_prefix: String = ""
-) -> void:
-	pass
+) -> bool:
+	return true
 
 
 func warn(
@@ -45,8 +45,8 @@ func warn(
 	_category: String = "",
 	_context: Object = null,
 	_prefix: String = ""
-) -> void:
-	pass
+) -> bool:
+	return true
 
 
 func error(
@@ -55,5 +55,5 @@ func error(
 	_category: String = "",
 	_context: Object = null,
 	_prefix: String = ""
-) -> void:
-	pass
+) -> bool:
+	return true

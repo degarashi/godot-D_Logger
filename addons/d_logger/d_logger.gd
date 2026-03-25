@@ -145,15 +145,17 @@ func is_error_enabled() -> bool:
 	return _min_level <= _C.LogLevel.ERROR
 
 
+# --- Use assert(log.debug(...)) if you want to disable output in release builds. ---
 func debug(
 	msg: String,
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
 	p_prefix: String = ""
-) -> void:
+) -> bool:
 	if is_debug_enabled():
 		_dispatch(_C.LogLevel.DEBUG, msg, values, category, context, p_prefix)
+	return true
 
 
 func info(
@@ -162,9 +164,10 @@ func info(
 	category: String = "",
 	context: Object = null,
 	p_prefix: String = ""
-) -> void:
+) -> bool:
 	if is_info_enabled():
 		_dispatch(_C.LogLevel.INFO, msg, values, category, context, p_prefix)
+	return true
 
 
 func warn(
@@ -173,9 +176,10 @@ func warn(
 	category: String = "",
 	context: Object = null,
 	p_prefix: String = ""
-) -> void:
+) -> bool:
 	if is_warn_enabled():
 		_dispatch(_C.LogLevel.WARN, msg, values, category, context, p_prefix)
+	return true
 
 
 func error(
@@ -184,6 +188,7 @@ func error(
 	category: String = "",
 	context: Object = null,
 	p_prefix: String = ""
-) -> void:
+) -> bool:
 	if is_error_enabled():
 		_dispatch(_C.LogLevel.ERROR, msg, values, category, context, p_prefix)
+	return true

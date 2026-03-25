@@ -59,8 +59,9 @@ func debug(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	_write_line(_C.format_log(msg, category, "DEBUG", context, prefix))
+	return true
 
 
 func info(
@@ -69,8 +70,9 @@ func info(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	_write_line(_C.format_log(msg, category, "INFO", context, prefix))
+	return true
 
 
 func warn(
@@ -79,8 +81,9 @@ func warn(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	_write_line(_C.format_log(msg, category, "WARN", context, prefix))
+	return true
 
 
 func error(
@@ -89,5 +92,6 @@ func error(
 	category: String = "",
 	context: Object = null,
 	prefix: String = ""
-) -> void:
+) -> bool:
 	_write_line(_C.format_log(msg, category, "ERROR", context, prefix))
+	return true
