@@ -10,7 +10,8 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	remove_autoload_singleton(_C.AUTOLOAD_NAME)
+	if ProjectSettings.has_setting(_C.AUTOLOAD_NAME):
+		remove_autoload_singleton(_C.AUTOLOAD_NAME)
 
 
 func _initialize_settings() -> void:
