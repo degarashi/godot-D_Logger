@@ -27,7 +27,7 @@ DLogger="*uid://damy77hys0ig4"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/d_interface/plugin.cfg", "res://addons/d_logger/plugin.cfg")
+enabled=PackedStringArray("res://addons/d_logger/plugin.cfg")
 
 [rendering]
 
