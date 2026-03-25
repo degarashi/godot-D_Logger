@@ -7,9 +7,8 @@ const _C := preload("uid://cwfe01280qmo7")
 # ------------- [Private Variable] -------------
 var _file_path: String
 
+
 # ------------- [Callbacks] -------------
-
-
 func _init(path: String) -> void:
 	_file_path = path
 	# Instead of WRITE, just create if it doesn't exist
@@ -20,11 +19,6 @@ func _init(path: String) -> void:
 
 	# Append the session separator line on startup using READ_WRITE
 	_write_line("=== New Session Started: %s ===" % Time.get_datetime_string_from_system())
-
-
-# ------------- [Public Static Method] -------------
-static func implements_list() -> Array[Script]:
-	return [ILogger]
 
 
 # ------------- [Private Method] -------------
@@ -43,27 +37,22 @@ func _write_line(line: String) -> void:
 
 
 # ------------- [Public Method] -------------
-## from [ILogger]
 func is_debug_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_info_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_warn_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_error_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func debug(
 	msg: String,
 	_values: Variant = [],
@@ -74,7 +63,6 @@ func debug(
 	_write_line(_C.format_log(msg, category, "DEBUG", context, prefix))
 
 
-## from [ILogger]
 func info(
 	msg: String,
 	_values: Variant = [],
@@ -85,7 +73,6 @@ func info(
 	_write_line(_C.format_log(msg, category, "INFO", context, prefix))
 
 
-## from [ILogger]
 func warn(
 	msg: String,
 	_values: Variant = [],
@@ -96,7 +83,6 @@ func warn(
 	_write_line(_C.format_log(msg, category, "WARN", context, prefix))
 
 
-## from [ILogger]
 func error(
 	msg: String,
 	_values: Variant = [],

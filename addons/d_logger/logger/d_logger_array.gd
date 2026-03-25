@@ -5,11 +5,6 @@ extends RefCounted
 var _list: Array[RefCounted] = []
 
 
-# ------------- [Public Static Method] -------------
-static func implements_list() -> Array[Script]:
-	return [ILogger]
-
-
 # ------------- [Public Method] -------------
 func clear() -> void:
 	_list.clear()
@@ -23,27 +18,22 @@ func is_empty() -> bool:
 	return _list.is_empty()
 
 
-## from [ILogger]
 func is_debug_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_info_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_warn_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func is_error_enabled() -> bool:
 	return true
 
 
-## from [ILogger]
 func debug(
 	msg: String,
 	values: Variant = [],
@@ -55,7 +45,6 @@ func debug(
 		l.debug(msg, values, category, context, prefix)
 
 
-## from [ILogger]
 func info(
 	msg: String,
 	values: Variant = [],
@@ -67,7 +56,6 @@ func info(
 		l.info(msg, values, category, context, prefix)
 
 
-## from [ILogger]
 func warn(
 	msg: String,
 	values: Variant = [],
@@ -79,7 +67,6 @@ func warn(
 		l.warn(msg, values, category, context, prefix)
 
 
-## from [ILogger]
 func error(
 	msg: String,
 	values: Variant = [],

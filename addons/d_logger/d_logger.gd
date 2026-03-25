@@ -54,11 +54,6 @@ func _enter_tree() -> void:
 		ProjectSettings.settings_changed.connect(_setup_logger)
 
 
-# ------------- [Public Static Method] -------------
-static func implements_list() -> Array[Script]:
-	return [ILogger]
-
-
 # ------------- [Private Method] -------------
 ## Sets up the logger configuration
 func _setup_logger() -> void:
@@ -133,27 +128,22 @@ func get_min_level() -> int:
 	return ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
 
 
-## from [ILogger]
 func is_debug_enabled() -> bool:
 	return _min_level <= _C.LogLevel.DEBUG
 
 
-## from [ILogger]
 func is_info_enabled() -> bool:
 	return _min_level <= _C.LogLevel.INFO
 
 
-## from [ILogger]
 func is_warn_enabled() -> bool:
 	return _min_level <= _C.LogLevel.WARN
 
 
-## from [ILogger]
 func is_error_enabled() -> bool:
 	return _min_level <= _C.LogLevel.ERROR
 
 
-## from [ILogger]
 func debug(
 	msg: String,
 	values: Variant = [],
@@ -165,7 +155,6 @@ func debug(
 		_dispatch(_C.LogLevel.DEBUG, msg, values, category, context, p_prefix)
 
 
-## from [ILogger]
 func info(
 	msg: String,
 	values: Variant = [],
@@ -177,7 +166,6 @@ func info(
 		_dispatch(_C.LogLevel.INFO, msg, values, category, context, p_prefix)
 
 
-## from [ILogger]
 func warn(
 	msg: String,
 	values: Variant = [],
@@ -189,7 +177,6 @@ func warn(
 		_dispatch(_C.LogLevel.WARN, msg, values, category, context, p_prefix)
 
 
-## from [ILogger]
 func error(
 	msg: String,
 	values: Variant = [],
