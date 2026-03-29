@@ -17,7 +17,7 @@ var _initialized := false
 var _override_file_path: String = ""
 var _override_console_enabled: bool = true
 var _override_prefix: String = ""
-var _override_min_level: int = -1
+var _override_min_level: int = _C.LogLevel.NOT_SPECIFIED
 
 var _has_console_override := false
 var _has_prefix_override := false
@@ -29,7 +29,7 @@ var _min_level: int = 0
 # ------------- [Constructor] -------------
 func _init(
 	p_prefix: Variant = null,
-	p_min_lvl: int = -1,
+	p_min_lvl: int = _C.LogLevel.NOT_SPECIFIED,
 	p_console_enabled: Variant = null,
 	p_file_path: String = ""
 ) -> void:
@@ -116,7 +116,7 @@ func get_prefix() -> String:
 
 
 func get_min_level() -> int:
-	if _override_min_level != -1:
+	if _override_min_level != _C.LogLevel.NOT_SPECIFIED:
 		return _override_min_level
 	return ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
 

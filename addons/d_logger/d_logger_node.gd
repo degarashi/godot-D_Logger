@@ -3,11 +3,12 @@ class_name DLoggerNode
 extends Node
 
 # ------------- [Constants] -------------
+const _C = preload("uid://cwfe01280qmo7")
 const _CF = preload("uid://c6bg8penols5r")
 
 # ------------- [Exports] -------------
 @export var prefix_override: String = ""
-@export var min_level_override: int = -1
+@export var min_level_override := _C.LogLevel.NOT_SPECIFIED
 @export var console_enabled_override: bool = true
 @export var file_path_override: String = ""
 
