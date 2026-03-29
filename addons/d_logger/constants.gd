@@ -21,7 +21,7 @@ const AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.gd"
 
 # --- Log Level Labels ---
 # For Enum display in settings
-const MIN_LEVEL_HINT_STRING := "Debug:0,Info:1,Warn:2,Error:3"
+const MIN_LEVEL_HINT_STRING = "DEBUG:0,INFO:1,WARN:2,ERROR:3"
 
 
 static func _get_caller_info() -> String:
