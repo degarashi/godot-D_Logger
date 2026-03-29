@@ -3,6 +3,7 @@ extends RefCounted
 
 # ------------- [Constants] -------------
 const _C := preload("uid://cwfe01280qmo7")
+const _CF = preload("uid://c6bg8penols5r")
 
 # ------------- [Private Variable] -------------
 var _file_path: String
@@ -10,6 +11,8 @@ var _file_path: String
 
 # ------------- [Callbacks] -------------
 func _init(path: String) -> void:
+	assert(_CF.is_logger(self))
+
 	_file_path = path
 	# Instead of WRITE, just create if it doesn't exist
 	if not FileAccess.file_exists(_file_path):

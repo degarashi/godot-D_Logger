@@ -2,6 +2,7 @@
 class_name DLoggerNode
 extends Node
 
+const _CF = preload("uid://c6bg8penols5r")
 ## The underlying RefCounted logger instance
 var logger: DLoggerClass
 
@@ -12,6 +13,8 @@ var logger: DLoggerClass
 
 
 func _init() -> void:
+	assert(_CF.is_logger(self))
+
 	# We initialize it here, but can be updated via exports or setup
 	_create_logger()
 
@@ -38,6 +41,20 @@ func _create_logger() -> void:
 
 # ------------- [Forwarding Methods] -------------
 # These allow using the node directly as a logger if needed
+func is_debug_enabled() -> bool:
+	return logger.is_debug_enabled()
+
+
+func is_info_enabled() -> bool:
+	return logger.is_info_enabled()
+
+
+func is_warn_enabled() -> bool:
+	return logger.is_warn_enabled()
+
+
+func is_error_enabled() -> bool:
+	return logger.is_error_enabled()
 
 
 func debug(

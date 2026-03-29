@@ -7,6 +7,7 @@ const _DLOGGER_FILE = preload("uid://b3v27qs0f6a5e")
 const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
 const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
+const _CF = preload("uid://c6bg8penols5r")
 
 # ------------- [Private Variables] -------------
 var _dispatcher := _LOG_ARRAY.new()
@@ -32,6 +33,7 @@ func _init(
 	p_console_enabled: Variant = null,
 	p_file_path: String = ""
 ) -> void:
+	assert(_CF.is_logger(self))
 	if p_prefix is String:
 		_override_prefix = p_prefix
 		_has_prefix_override = true

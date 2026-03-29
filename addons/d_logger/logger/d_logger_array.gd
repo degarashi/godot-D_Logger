@@ -1,11 +1,16 @@
 @tool
 extends RefCounted
 
+const _CF = preload("uid://c6bg8penols5r")
 # ------------- [Public Variable] -------------
 var _list: Array[RefCounted] = []
 
 
 # ------------- [Public Method] -------------
+func _init() -> void:
+	assert(_CF.is_logger(self))
+
+
 func clear() -> void:
 	_list.clear()
 
