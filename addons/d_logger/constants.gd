@@ -39,6 +39,12 @@ static func _get_caller_info() -> String:
 	return caller_info
 
 
+static func get_object_string(obj: Object) -> String:
+	if obj is Node:
+		return "[{0}]".format([obj.name])
+	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
+
+
 static func format_log(
 	msg: String, category: String, level: String, context: Object, prefix: String
 ) -> String:
@@ -49,8 +55,7 @@ static func format_log(
 	# Build context information
 	var ctx_str := ""
 	if context:
-		# Display object name and hash (ID)
-		ctx_str = "[%s:%d]" % [context.get_class(), context.get_instance_id()]
+		ctx_str = get_object_string(context)
 
 	# 7 characters total, 3 decimal places
 	return (
