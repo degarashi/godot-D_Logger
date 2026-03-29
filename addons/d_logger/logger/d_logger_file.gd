@@ -106,4 +106,9 @@ func error(
 	prefix: String = ""
 ) -> bool:
 	_write_line(_C.format_log(msg, category, "ERROR", context, prefix))
+
+	# Flush the file buffer to ensure the error log is physically written to disk
+	if _file:
+		_file.flush()
+
 	return true
