@@ -2,16 +2,21 @@
 class_name DLoggerNode
 extends Node
 
+# ------------- [Constants] -------------
 const _CF = preload("uid://c6bg8penols5r")
-## The underlying RefCounted logger instance
-var logger: DLoggerClass
 
+# ------------- [Exports] -------------
 @export var prefix_override: String = ""
 @export var min_level_override: int = -1
 @export var console_enabled_override: bool = true
 @export var file_path_override: String = ""
 
+# ------------- [Public Variable] -------------
+## The underlying RefCounted logger instance
+var logger: DLoggerClass
 
+
+# ------------- [Callbacks] -------------
 func _init() -> void:
 	assert(_CF.is_logger(self))
 
@@ -25,6 +30,7 @@ func _enter_tree() -> void:
 	_on_settings_changed()
 
 
+# ------------- [Private Method] -------------
 func _on_settings_changed() -> void:
 	if logger:
 		logger.setup_logger()
