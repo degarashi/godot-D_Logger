@@ -20,14 +20,15 @@ var logger: DLoggerClass
 func _init() -> void:
 	assert(DLoggerFunc.is_logger(self))
 
-	# We initialize it here, but can be updated via exports or setup
-	_create_logger()
-
 
 func _enter_tree() -> void:
 	if not ProjectSettings.settings_changed.is_connected(_on_settings_changed):
 		ProjectSettings.settings_changed.connect(_on_settings_changed)
 	_on_settings_changed()
+
+
+func _ready() -> void:
+	_create_logger()
 
 
 # ------------- [Private Method] -------------
