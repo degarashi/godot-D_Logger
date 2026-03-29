@@ -1,12 +1,10 @@
 @tool
 extends RefCounted
 
-const _CF = preload("uid://c6bg8penols5r")
-
 
 # ------------- [Public Method] -------------
 func _init() -> void:
-	assert(_CF.is_logger(self))
+	assert(DLoggerFunc.is_logger(self))
 
 
 func is_debug_enabled() -> bool:
