@@ -2,7 +2,7 @@
 ## Constant definitions used throughout D-Logger
 extends Object
 
-enum LogLevel { DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 }
+enum LogLevel { NOT_SPECIFIED = -1, DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 }
 
 # --- Project Settings Paths ---
 const SETTING_PREFIX := "debug/d_logger/prefix"
