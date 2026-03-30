@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://cqsm5r2h1ih37"]
+
+[ext_resource type="Script" uid="uid://cf2mxkqw5dxsj" path="res://test_scene/test2.gd" id="1_j0872"]
+[ext_resource type="Script" uid="uid://0xioyfyuuyol" path="res://addons/d_logger/d_logger_finder_node.gd" id="2_vy8pg"]
+[ext_resource type="Script" uid="uid://co142rftxrv40" path="res://addons/d_logger/d_logger_node.gd" id="3_7xv3q"]
+
+[node name="Test2" type="Node" unique_id=2118779868]
+script = ExtResource("1_j0872")
+
+[node name="DLoggerNode" type="Node" parent="." unique_id=2039675047]
+script = ExtResource("3_7xv3q")
+metadata/_custom_type_script = "uid://co142rftxrv40"
+
+[node name="DLoggerFinder" type="Node" parent="." unique_id=1188593098]
+unique_name_in_owner = true
+script = ExtResource("2_vy8pg")
+metadata/_custom_type_script = "uid://0xioyfyuuyol"
