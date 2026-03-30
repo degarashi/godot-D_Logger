@@ -1,4 +1,4 @@
-extends Node2D
+extends Node
 
 const DLOGGER = preload("res://addons/d_logger/d_logger.gd")
 const _C = preload("uid://cwfe01280qmo7")
