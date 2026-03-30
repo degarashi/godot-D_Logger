@@ -56,8 +56,9 @@ static func find_logger_from_ancestor(start_node: Node) -> Object:
 	var current := start_node
 	while current:
 		for child: Node in current.get_children():
-			if is_logger(child):
-				return child
+			var logger := get_logger(child)
+			if logger:
+				return logger
 		current = current.get_parent()
 
 	return null
