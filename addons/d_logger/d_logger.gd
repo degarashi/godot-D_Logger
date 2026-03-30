@@ -91,10 +91,17 @@ func _dispatch(
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
 	var final_msg := msg
 
-	if values is Dictionary or values is Array:
-		final_msg = msg.format(values)
-	elif values != null:
-		final_msg = msg.format([values])
+	match typeof(values):
+		TYPE_DICTIONARY:
+			if not (values as Dictionary).is_empty():
+				final_msg = msg.format(values)
+		TYPE_ARRAY:
+			if not (values as Array).is_empty():
+				final_msg = msg.format(values)
+		_:
+			# If not null and a primitive value is passed
+			if values != null:
+				final_msg = msg.format([values])
 
 	match level:
 		_C.LogLevel.DEBUG:
