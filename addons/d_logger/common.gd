@@ -71,9 +71,10 @@ static func get_object_string(obj: Object) -> String:
 	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
 
 
-static func _get_caller_info() -> String:
+static func _get_caller_info(level: String) -> String:
 	# Release builds cannot use get_stack(), so we skip it entirely
-	if not OS.is_debug_build():
+	# Also skip for high-frequency logs (DEBUG, INFO) to maintain performance
+	if not OS.is_debug_build() or level == "DEBUG" or level == "INFO":
 		return ""
 
 	var stack := get_stack()
@@ -105,13 +106,15 @@ static func format_log(
 	if context:
 		ctx_str = get_object_string(context)
 
-	var caller_str := _get_caller_info()
+	# Pass the log level to determine if we should fetch stack trace
+	var caller_str := _get_caller_info(level)
 
 	# To maintain a clean visual output, add a trailing space only if we have caller info
 	if not caller_str.is_empty():
 		caller_str += " "
 
-	# [001.234s][D-Logger][main.gd:10] [MyNode] MyCategory - [DEBUG] Message
+	# [001.234s][D-Logger][main.gd:10] [MyNode] MyCategory - [WARN] Message
+	# [001.234s][D-Logger] [MyNode] MyCategory - [DEBUG] Message
 	return (
 		"[%7.3fs][%s]%s%s %s - [%s] %s"
 		% [
