@@ -72,16 +72,23 @@ static func get_object_string(obj: Object) -> String:
 
 
 static func _get_caller_info() -> String:
+	# Release builds cannot use get_stack(), so we skip it entirely
+	if not OS.is_debug_build():
+		return ""
+
 	var stack := get_stack()
 	var caller_info := ""
+
+	# Loop through the stack to find the first file outside the logger addon
 	for i in range(stack.size()):
 		var entry: Dictionary = stack[i]
 		var source: String = entry.get("source", "")
+
 		if not source.begins_with("res://addons/d_logger/"):
 			caller_info = "[{file}:{line}]".format(
 				{"file": source.get_file(), "line": entry.get("line", 0)}
 			)
-			break
+			break  # Found the caller, no need to inspect the rest of the stack
 
 	return caller_info
 
@@ -98,13 +105,19 @@ static func format_log(
 	if context:
 		ctx_str = get_object_string(context)
 
-	# 7 characters total, 3 decimal places
+	var caller_str := _get_caller_info()
+
+	# To maintain a clean visual output, add a trailing space only if we have caller info
+	if not caller_str.is_empty():
+		caller_str += " "
+
+	# [001.234s][D-Logger][main.gd:10] [MyNode] MyCategory - [DEBUG] Message
 	return (
 		"[%7.3fs][%s]%s%s %s - [%s] %s"
 		% [
 			seconds,
 			prefix,
-			_get_caller_info(),
+			caller_str,
 			ctx_str,
 			cat_str,
 			level,
