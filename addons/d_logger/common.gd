@@ -34,10 +34,9 @@ static func get_logger(logger: Object) -> Object:
 
 	if logger is Node:
 		if logger.has_method("get_logger"):
-			logger = logger.get_logger()
-
-		if not logger:
-			return null
+			var internal_logger: Object = logger.get_logger()
+			if has_logger_interface(internal_logger):
+				return internal_logger
 
 	return null
 
