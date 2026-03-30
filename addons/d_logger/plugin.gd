@@ -16,9 +16,7 @@ func _exit_tree() -> void:
 
 func _initialize_settings() -> void:
 	# --- Prefix Settings ---
-	if not ProjectSettings.has_setting(_C.SETTING_PREFIX):
-		ProjectSettings.set_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
-
+	_set_default_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
 	ProjectSettings.add_property_info(
 		{
 			"name": _C.SETTING_PREFIX,
@@ -27,12 +25,9 @@ func _initialize_settings() -> void:
 			"hint_string": "The prefix label displayed at the beginning of each log."
 		}
 	)
-	ProjectSettings.set_initial_value(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
 
 	# --- Enable Console Logging ---
-	if not ProjectSettings.has_setting(_C.SETTING_ENABLE):
-		ProjectSettings.set_setting(_C.SETTING_ENABLE, true)
-
+	_set_default_setting(_C.SETTING_ENABLE, true)
 	ProjectSettings.add_property_info(
 		{
 			"name": _C.SETTING_ENABLE,
@@ -41,12 +36,9 @@ func _initialize_settings() -> void:
 			"hint_string": "Toggle to enable or disable detailed console logging."
 		}
 	)
-	ProjectSettings.set_initial_value(_C.SETTING_ENABLE, true)
 
 	# --- MinLevel ---
-	if not ProjectSettings.has_setting(_C.SETTING_MIN_LEVEL):
-		ProjectSettings.set_setting(_C.SETTING_MIN_LEVEL, 0)  # Default: DEBUG
-
+	_set_default_setting(_C.SETTING_MIN_LEVEL, 0)  # Default: DEBUG
 	ProjectSettings.add_property_info(
 		{
 			"name": _C.SETTING_MIN_LEVEL,
@@ -55,12 +47,9 @@ func _initialize_settings() -> void:
 			"hint_string": "Debug:0,Info:1,Warn:2,Error:3"
 		}
 	)
-	ProjectSettings.set_initial_value(_C.SETTING_MIN_LEVEL, 0)
 
 	# --- Enable File Logging ---
-	if not ProjectSettings.has_setting(_C.SETTING_ENABLE_FILE):
-		ProjectSettings.set_setting(_C.SETTING_ENABLE_FILE, false)
-
+	_set_default_setting(_C.SETTING_ENABLE_FILE, false)
 	ProjectSettings.add_property_info(
 		{
 			"name": _C.SETTING_ENABLE_FILE,
@@ -69,12 +58,9 @@ func _initialize_settings() -> void:
 			"hint_string": "Toggle to enable or disable logging to a file."
 		}
 	)
-	ProjectSettings.set_initial_value(_C.SETTING_ENABLE_FILE, false)
 
 	# --- File Path ---
-	if not ProjectSettings.has_setting(_C.SETTING_FILE_PATH):
-		ProjectSettings.set_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
-
+	_set_default_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
 	ProjectSettings.add_property_info(
 		{
 			"name": _C.SETTING_FILE_PATH,
@@ -83,7 +69,13 @@ func _initialize_settings() -> void:
 			"hint_string": "*.log, *.txt;Log Files"
 		}
 	)
-	ProjectSettings.set_initial_value(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
 
-	# Save changes to project.godot
-	ProjectSettings.save()
+
+## Helper function to safely set default values
+func _set_default_setting(setting_path: String, default_value: Variant) -> void:
+	# Set the initial value only if the setting does not exist yet
+	if not ProjectSettings.has_setting(setting_path):
+		ProjectSettings.set_setting(setting_path, default_value)
+
+	# Define the default value used when clicking the reset button
+	ProjectSettings.set_initial_value(setting_path, default_value)
