@@ -2,7 +2,6 @@ class_name DLoggerClass
 extends RefCounted
 
 # ------------- [Constants] -------------
-const _C = preload("uid://cwfe01280qmo7")
 const _DLOGGER_FILE = preload("uid://b3v27qs0f6a5e")
 const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
@@ -16,7 +15,7 @@ var _initialized := false
 var _override_file_path: String = ""
 var _override_console_enabled: bool = true
 var _override_prefix: String = ""
-var _override_min_level: int = _C.LogLevel.NOT_SPECIFIED
+var _override_min_level: int = DLoggerConstants.LogLevel.NOT_SPECIFIED
 
 var _has_console_override := false
 var _has_prefix_override := false
@@ -28,7 +27,7 @@ var _min_level: int = 0
 # ------------- [Constructor] -------------
 func _init(
 	p_prefix: Variant = null,
-	p_min_lvl: int = _C.LogLevel.NOT_SPECIFIED,
+	p_min_lvl: int = DLoggerConstants.LogLevel.NOT_SPECIFIED,
 	p_console_enabled: Variant = null,
 	p_file_path: String = ""
 ) -> void:
@@ -57,10 +56,12 @@ func setup_logger() -> void:
 	var console_enabled: bool = (
 		_override_console_enabled
 		if _has_console_override
-		else ProjectSettings.get_setting(_C.SETTING_ENABLE, true)
+		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE, true)
 	)
 
-	var file_enabled: bool = ProjectSettings.get_setting(_C.SETTING_ENABLE_FILE, false)
+	var file_enabled: bool = ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_ENABLE_FILE, false
+	)
 	var is_debug := OS.is_debug_build()
 
 	# Add Console Logger
@@ -72,7 +73,9 @@ func setup_logger() -> void:
 		var file_path: String = (
 			_override_file_path
 			if not _override_file_path.is_empty()
-			else ProjectSettings.get_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
+			else ProjectSettings.get_setting(
+				DLoggerConstants.SETTING_FILE_PATH, DLoggerConstants.DEFAULT_FILE_PATH
+			)
 		)
 		_dispatcher.add(_DLOGGER_FILE.new(file_path))
 
@@ -104,13 +107,13 @@ func _dispatch(
 				final_msg = msg.format([values])
 
 	match level:
-		_C.LogLevel.DEBUG:
+		DLoggerConstants.LogLevel.DEBUG:
 			_dispatcher.debug(final_msg, [], category, context, pref)
-		_C.LogLevel.INFO:
+		DLoggerConstants.LogLevel.INFO:
 			_dispatcher.info(final_msg, [], category, context, pref)
-		_C.LogLevel.WARN:
+		DLoggerConstants.LogLevel.WARN:
 			_dispatcher.warn(final_msg, [], category, context, pref)
-		_C.LogLevel.ERROR:
+		DLoggerConstants.LogLevel.ERROR:
 			_dispatcher.error(final_msg, [], category, context, pref)
 
 
@@ -118,29 +121,31 @@ func _dispatch(
 func get_prefix() -> String:
 	if _has_prefix_override:
 		return _override_prefix
-	return ProjectSettings.get_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
+	return ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_PREFIX, DLoggerConstants.DEFAULT_PREFIX
+	)
 
 
 func get_min_level() -> int:
-	if _override_min_level != _C.LogLevel.NOT_SPECIFIED:
+	if _override_min_level != DLoggerConstants.LogLevel.NOT_SPECIFIED:
 		return _override_min_level
-	return ProjectSettings.get_setting(_C.SETTING_MIN_LEVEL, 0)
+	return ProjectSettings.get_setting(DLoggerConstants.SETTING_MIN_LEVEL, 0)
 
 
 func is_debug_enabled() -> bool:
-	return _min_level <= _C.LogLevel.DEBUG
+	return _min_level <= DLoggerConstants.LogLevel.DEBUG
 
 
 func is_info_enabled() -> bool:
-	return _min_level <= _C.LogLevel.INFO
+	return _min_level <= DLoggerConstants.LogLevel.INFO
 
 
 func is_warn_enabled() -> bool:
-	return _min_level <= _C.LogLevel.WARN
+	return _min_level <= DLoggerConstants.LogLevel.WARN
 
 
 func is_error_enabled() -> bool:
-	return _min_level <= _C.LogLevel.ERROR
+	return _min_level <= DLoggerConstants.LogLevel.ERROR
 
 
 # Use assert(log.debug(...)) if you want to disable output in release builds.
@@ -150,7 +155,7 @@ func debug(
 	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_debug_enabled():
-		_dispatch(_C.LogLevel.DEBUG, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p)
 	return true
 
 
@@ -158,7 +163,7 @@ func info(
 	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_info_enabled():
-		_dispatch(_C.LogLevel.INFO, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p)
 	return true
 
 
@@ -166,7 +171,7 @@ func warn(
 	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_warn_enabled():
-		_dispatch(_C.LogLevel.WARN, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p)
 	return true
 
 
@@ -174,5 +179,5 @@ func error(
 	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
 ) -> bool:
 	if is_error_enabled():
-		_dispatch(_C.LogLevel.ERROR, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p)
 	return true

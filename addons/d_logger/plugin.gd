@@ -1,14 +1,13 @@
 @tool
 extends EditorPlugin
 
-const _C = preload("uid://cwfe01280qmo7")
 const PANEL_SCENE = preload("res://addons/d_logger/panel/d_logger_panel.tscn")
 var _panel_instance: Control
 
 
 func _enter_tree() -> void:
 	_initialize_settings()
-	add_autoload_singleton(_C.AUTOLOAD_NAME, _C.AUTOLOAD_PATH)
+	add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
 
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
@@ -16,8 +15,8 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	if ProjectSettings.has_setting(_C.AUTOLOAD_NAME):
-		remove_autoload_singleton(_C.AUTOLOAD_NAME)
+	if ProjectSettings.has_setting(DLoggerConstants.AUTOLOAD_NAME):
+		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
 
 	# --- bottom panel ---
 	if _panel_instance:
@@ -27,10 +26,10 @@ func _exit_tree() -> void:
 
 func _initialize_settings() -> void:
 	# --- Prefix Settings ---
-	_set_default_setting(_C.SETTING_PREFIX, _C.DEFAULT_PREFIX)
+	_set_default_setting(DLoggerConstants.SETTING_PREFIX, DLoggerConstants.DEFAULT_PREFIX)
 	ProjectSettings.add_property_info(
 		{
-			"name": _C.SETTING_PREFIX,
+			"name": DLoggerConstants.SETTING_PREFIX,
 			"type": TYPE_STRING,
 			"hint": PROPERTY_HINT_NONE,
 			"hint_string": "The prefix label displayed at the beginning of each log."
@@ -38,10 +37,10 @@ func _initialize_settings() -> void:
 	)
 
 	# --- Enable Console Logging ---
-	_set_default_setting(_C.SETTING_ENABLE, true)
+	_set_default_setting(DLoggerConstants.SETTING_ENABLE, true)
 	ProjectSettings.add_property_info(
 		{
-			"name": _C.SETTING_ENABLE,
+			"name": DLoggerConstants.SETTING_ENABLE,
 			"type": TYPE_BOOL,
 			"hint": PROPERTY_HINT_NONE,
 			"hint_string": "Toggle to enable or disable detailed console logging."
@@ -49,10 +48,10 @@ func _initialize_settings() -> void:
 	)
 
 	# --- MinLevel ---
-	_set_default_setting(_C.SETTING_MIN_LEVEL, 0)  # Default: DEBUG
+	_set_default_setting(DLoggerConstants.SETTING_MIN_LEVEL, 0)  # Default: DEBUG
 	ProjectSettings.add_property_info(
 		{
-			"name": _C.SETTING_MIN_LEVEL,
+			"name": DLoggerConstants.SETTING_MIN_LEVEL,
 			"type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Debug:0,Info:1,Warn:2,Error:3"
@@ -60,10 +59,10 @@ func _initialize_settings() -> void:
 	)
 
 	# --- Enable File Logging ---
-	_set_default_setting(_C.SETTING_ENABLE_FILE, false)
+	_set_default_setting(DLoggerConstants.SETTING_ENABLE_FILE, false)
 	ProjectSettings.add_property_info(
 		{
-			"name": _C.SETTING_ENABLE_FILE,
+			"name": DLoggerConstants.SETTING_ENABLE_FILE,
 			"type": TYPE_BOOL,
 			"hint": PROPERTY_HINT_NONE,
 			"hint_string": "Toggle to enable or disable logging to a file."
@@ -71,10 +70,10 @@ func _initialize_settings() -> void:
 	)
 
 	# --- File Path ---
-	_set_default_setting(_C.SETTING_FILE_PATH, _C.DEFAULT_FILE_PATH)
+	_set_default_setting(DLoggerConstants.SETTING_FILE_PATH, DLoggerConstants.DEFAULT_FILE_PATH)
 	ProjectSettings.add_property_info(
 		{
-			"name": _C.SETTING_FILE_PATH,
+			"name": DLoggerConstants.SETTING_FILE_PATH,
 			"type": TYPE_STRING,
 			"hint": PROPERTY_HINT_FILE,
 			"hint_string": "*.log, *.txt;Log Files"
