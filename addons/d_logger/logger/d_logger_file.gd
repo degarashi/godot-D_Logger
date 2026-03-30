@@ -97,6 +97,9 @@ func warn(
 	prefix: String = ""
 ) -> bool:
 	_write_line(DLoggerFunc.format_log(msg, category, "WARN", context, prefix))
+	# Immediate reflection on warning
+	if _file:
+		_file.flush()
 	return true
 
 
