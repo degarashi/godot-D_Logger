@@ -116,6 +116,29 @@ func _dispatch(
 		DLoggerConstants.LogLevel.ERROR:
 			_dispatcher.error(final_msg, [], category, context, pref)
 
+	# --- Process of sending to the editor debugger ---
+	if OS.is_debug_build() and EngineDebugger.is_active():
+		var level_str := "DEBUG"
+		match level:
+			DLoggerConstants.LogLevel.INFO:
+				level_str = "INFO"
+			DLoggerConstants.LogLevel.WARN:
+				level_str = "WARN"
+			DLoggerConstants.LogLevel.ERROR:
+				level_str = "ERROR"
+
+		# Pack the message to be sent to the editor side into a dictionary
+		var debug_data: Dictionary = {
+			"message": final_msg,
+			"category": category,
+			"level": level_str,
+			"context_str": DLoggerFunc.get_object_string(context) if context else "",
+			"prefix": pref
+		}
+
+		# Send data through a unique communication channel named 'd_logger:log'
+		EngineDebugger.send_message("d_logger:log", [debug_data])
+
 
 # ------------- [Public Methods] -------------
 func get_prefix() -> String:

@@ -2,7 +2,9 @@
 extends EditorPlugin
 
 const PANEL_SCENE = preload("res://addons/d_logger/panel/d_logger_panel.tscn")
+const DEBUGGER_PLUGIN = preload("uid://1wnkr07kpq7c")
 var _panel_instance: Control
+var _debugger_instance: EditorDebuggerPlugin
 
 
 func _enter_tree() -> void:
@@ -13,10 +15,18 @@ func _enter_tree() -> void:
 	_panel_instance = PANEL_SCENE.instantiate()
 	add_control_to_bottom_panel(_panel_instance, "D-Logger")
 
+	# --- Registering the debugger plugin ---
+	_debugger_instance = DEBUGGER_PLUGIN.new(_panel_instance)
+	add_debugger_plugin(_debugger_instance)
+
 
 func _exit_tree() -> void:
 	if ProjectSettings.has_setting(DLoggerConstants.AUTOLOAD_NAME):
 		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
+
+	# --- Delete debugger plugin ---
+	if _debugger_instance:
+		remove_debugger_plugin(_debugger_instance)
 
 	# --- bottom panel ---
 	if _panel_instance:
