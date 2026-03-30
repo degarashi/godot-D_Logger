@@ -41,12 +41,12 @@ func info(
 func warn(
 	msg: String, _v: Variant = [], cat: String = "", ctx: Object = null, pref: String = ""
 ) -> bool:
-	push_warning(_C.format_log(msg, cat, "WARN", ctx, pref))
+	push_warning(DLoggerFunc.format_log(msg, cat, "WARN", ctx, pref))
 	return true
 
 
 func error(
 	msg: String, _v: Variant = [], cat: String = "", ctx: Object = null, pref: String = ""
 ) -> bool:
-	push_error(_C.format_log(msg, cat, "ERROR", ctx, pref))
+	push_error(DLoggerFunc.format_log(msg, cat, "ERROR", ctx, pref))
 	return true

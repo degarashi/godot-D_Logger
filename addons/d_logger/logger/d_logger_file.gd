@@ -72,7 +72,7 @@ func debug(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	_write_line(_C.format_log(msg, category, "DEBUG", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix))
 	return true
 
 
@@ -83,7 +83,7 @@ func info(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	_write_line(_C.format_log(msg, category, "INFO", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "INFO", context, prefix))
 	return true
 
 
@@ -94,7 +94,7 @@ func warn(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	_write_line(_C.format_log(msg, category, "WARN", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "WARN", context, prefix))
 	return true
 
 
@@ -105,7 +105,7 @@ func error(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	_write_line(_C.format_log(msg, category, "ERROR", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "ERROR", context, prefix))
 
 	# Flush the file buffer to ensure the error log is physically written to disk
 	if _file:

@@ -64,3 +64,51 @@ static func find_logger_from_ancestor(start_node: Node) -> Object:
 		current = current.get_parent()
 
 	return null
+
+
+static func get_object_string(obj: Object) -> String:
+	if obj is Node:
+		return "[{0}]".format([obj.name])
+	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
+
+
+static func _get_caller_info() -> String:
+	var stack := get_stack()
+	var caller_info := ""
+	for i in range(stack.size()):
+		var entry: Dictionary = stack[i]
+		var source: String = entry.get("source", "")
+		if not source.begins_with("res://addons/d_logger/"):
+			caller_info = "[{file}:{line}]".format(
+				{"file": source.get_file(), "line": entry.get("line", 0)}
+			)
+			break
+
+	return caller_info
+
+
+static func format_log(
+	msg: String, category: String, level: String, context: Object, prefix: String
+) -> String:
+	# Convert to seconds (e.g., 1234ms -> 1.234s)
+	var seconds := Time.get_ticks_msec() / 1000.0
+	var cat_str := category
+
+	# Build context information
+	var ctx_str := ""
+	if context:
+		ctx_str = get_object_string(context)
+
+	# 7 characters total, 3 decimal places
+	return (
+		"[%7.3fs][%s]%s%s %s - [%s] %s"
+		% [
+			seconds,
+			prefix,
+			_get_caller_info(),
+			ctx_str,
+			cat_str,
+			level,
+			msg,
+		]
+	)

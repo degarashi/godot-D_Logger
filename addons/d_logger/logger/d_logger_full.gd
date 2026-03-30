@@ -1,9 +1,6 @@
 @tool
 extends RefCounted
 
-# ------------- [Constants] -------------
-const _C = preload("uid://cwfe01280qmo7")
-
 
 # ------------- [Public Method] -------------
 func _init() -> void:
@@ -33,7 +30,9 @@ func debug(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	print_rich("[color=gray]%s[/color]" % [_C.format_log(msg, category, "DEBUG", context, prefix)])
+	print_rich(
+		"[color=gray]%s[/color]" % [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix)]
+	)
 	return true
 
 
@@ -45,7 +44,10 @@ func info(
 	prefix: String = ""
 ) -> bool:
 	print_rich(
-		"[b][color=cyan]%s[/color][/b]" % [_C.format_log(msg, category, "INFO", context, prefix)]
+		(
+			"[b][color=cyan]%s[/color][/b]"
+			% [DLoggerFunc.format_log(msg, category, "INFO", context, prefix)]
+		)
 	)
 	return true
 
@@ -57,7 +59,7 @@ func warn(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	var header: String = _C.format_log(msg, category, "WARN", context, prefix)
+	var header: String = DLoggerFunc.format_log(msg, category, "WARN", context, prefix)
 	print_rich("[b][color=yellow]%s[/color][/b]" % [header])
 	push_warning(header)
 	return true
@@ -70,7 +72,7 @@ func error(
 	context: Object = null,
 	prefix: String = ""
 ) -> bool:
-	var header: String = _C.format_log(msg, category, "ERROR", context, prefix)
+	var header: String = DLoggerFunc.format_log(msg, category, "ERROR", context, prefix)
 	print_rich("[b][color=red]%s[/color][/b]" % [header])
 	push_error(header)
 	return true
