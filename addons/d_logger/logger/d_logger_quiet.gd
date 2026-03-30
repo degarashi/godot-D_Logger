@@ -1,9 +1,6 @@
 @tool
 extends RefCounted
 
-# ------------- [Constants] -------------
-const _C = preload("uid://cwfe01280qmo7")
-
 
 # ------------- [Public Method] -------------
 func _init() -> void:

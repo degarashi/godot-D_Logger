@@ -2,9 +2,6 @@
 class_name DLoggerNodeBase
 extends Node
 
-# ------------- [Constants] -------------
-const _C = preload("uid://cwfe01280qmo7")
-
 # ------------- [Public Variable] -------------
 ## The underlying RefCounted _logger instance
 var _logger: Object
