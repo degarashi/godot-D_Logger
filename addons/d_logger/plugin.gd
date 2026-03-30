@@ -2,16 +2,27 @@
 extends EditorPlugin
 
 const _C = preload("uid://cwfe01280qmo7")
+const PANEL_SCENE = preload("res://addons/d_logger/panel/d_logger_panel.tscn")
+var _panel_instance: Control
 
 
 func _enter_tree() -> void:
 	_initialize_settings()
 	add_autoload_singleton(_C.AUTOLOAD_NAME, _C.AUTOLOAD_PATH)
 
+	# --- add bottom panel ---
+	_panel_instance = PANEL_SCENE.instantiate()
+	add_control_to_bottom_panel(_panel_instance, "D-Logger")
+
 
 func _exit_tree() -> void:
 	if ProjectSettings.has_setting(_C.AUTOLOAD_NAME):
 		remove_autoload_singleton(_C.AUTOLOAD_NAME)
+
+	# --- bottom panel ---
+	if _panel_instance:
+		remove_control_from_bottom_panel(_panel_instance)
+		_panel_instance.queue_free()
 
 
 func _initialize_settings() -> void:
