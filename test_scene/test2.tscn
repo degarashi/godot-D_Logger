@@ -3,12 +3,17 @@
 [ext_resource type="Script" uid="uid://cf2mxkqw5dxsj" path="res://test_scene/test2.gd" id="1_j0872"]
 [ext_resource type="Script" uid="uid://0xioyfyuuyol" path="res://addons/d_logger/d_logger_finder_node.gd" id="2_vy8pg"]
 [ext_resource type="Script" uid="uid://co142rftxrv40" path="res://addons/d_logger/d_logger_node.gd" id="3_7xv3q"]
+[ext_resource type="Script" uid="uid://hs72y3tn0npc" path="res://addons/d_logger/d_logger_init_param.gd" id="3_xeyx1"]
+
+[sub_resource type="Resource" id="Resource_74unx"]
+script = ExtResource("3_xeyx1")
 
 [node name="Test2" type="Node" unique_id=2118779868]
 script = ExtResource("1_j0872")
 
 [node name="DLoggerNode" type="Node" parent="." unique_id=2039675047]
 script = ExtResource("3_7xv3q")
+_init_param = SubResource("Resource_74unx")
 metadata/_custom_type_script = "uid://co142rftxrv40"
 
 [node name="DLoggerFinder" type="Node" parent="." unique_id=1188593098]

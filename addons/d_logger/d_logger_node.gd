@@ -3,10 +3,7 @@ class_name DLoggerNode
 extends DLoggerNodeBase
 
 # ------------- [Exports] -------------
-@export var prefix_override: String = ""
-@export var min_level_override := _C.LogLevel.NOT_SPECIFIED
-@export var console_enabled_override: bool = true
-@export var file_path_override: String = ""
+@export var _init_param: DLoggerInitParam
 
 
 # ------------- [Callbacks] -------------
@@ -17,6 +14,8 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	if not _init_param:
+		_init_param = DLoggerInitParam.new()
 	_create_logger()
 
 
@@ -28,8 +27,8 @@ func _on_settings_changed() -> void:
 
 func _create_logger() -> void:
 	_logger = DLoggerClass.new(
-		prefix_override if not prefix_override.is_empty() else null,
-		min_level_override,
-		console_enabled_override,
-		file_path_override
+		_init_param.prefix_override if not _init_param.prefix_override.is_empty() else null,
+		_init_param.min_level_override,
+		_init_param.console_enabled_override,
+		_init_param.file_path_override
 	)
