@@ -33,6 +33,10 @@ func _ready() -> void:
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
+
+	# Assign shortcuts
+	_setup_shortcuts()
+
 	_add_time_filter_buttons()
 	_add_level_filter_buttons()
 
@@ -54,6 +58,34 @@ func add_log(log_data: Dictionary) -> void:
 
 
 # ------------- [Private Method] -------------
+func _setup_shortcuts() -> void:
+	# Ctrl + L (or Cmd + L) to clear logs
+	clear_button.shortcut = _create_shortcut(KEY_L, true)
+	clear_button.tooltip_text = "Clear Logs (Ctrl+L)"
+
+	# Ctrl + C (or Cmd + C) to copy logs
+	copy_button.shortcut = _create_shortcut(KEY_C, true)
+	copy_button.tooltip_text = "Copy Logs (Ctrl+C)"
+
+
+## Helper function to dynamically generate shortcut resources
+func _create_shortcut(p_keycode: Key, p_require_ctrl: bool = false) -> Shortcut:
+	var shortcut := Shortcut.new()
+	var event := InputEventKey.new()
+
+	event.keycode = p_keycode
+
+	if p_require_ctrl:
+		# Require Cmd key on macOS, Ctrl key on other OS
+		if OS.get_name() == "macOS":
+			event.command = true
+		else:
+			event.ctrl_pressed = true
+
+	shortcut.events.append(event)
+	return shortcut
+
+
 func _add_filter_button(category: String) -> void:
 	_active_filters[category] = true
 	var btn := Button.new()
