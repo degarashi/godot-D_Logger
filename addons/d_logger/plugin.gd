@@ -3,10 +3,9 @@ extends EditorPlugin
 
 const PANEL_SCENE = preload("uid://c4ge4lhdk2crn")
 const DEBUGGER_PLUGIN = preload("uid://1wnkr07kpq7c")
-var _panel_instance: Control
-var _debugger_instance: EditorDebuggerPlugin
 
 
+# ------------- [Defines] -------------
 # --- Settings Management ---
 class SettingsEntry:
 	var sys_name: String
@@ -34,6 +33,10 @@ class SettingsEntry:
 		prop_hint_str = p_hint_str
 		is_editor_setting = p_is_editor_setting
 
+
+# ------------- [Private Variable] -------------
+var _panel_instance: Control
+var _debugger_instance: EditorDebuggerPlugin
 
 var _settings_entries: Array[SettingsEntry] = [
 	SettingsEntry.new(
@@ -88,6 +91,7 @@ var _settings_entries: Array[SettingsEntry] = [
 ]
 
 
+# ------------- [Callbacks] -------------
 func _enter_tree() -> void:
 	_initialize_settings()
 	add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
@@ -120,6 +124,7 @@ func _exit_tree() -> void:
 		_panel_instance.queue_free()
 
 
+# ------------- [Private Method] -------------
 func _initialize_settings() -> void:
 	var es := get_editor_interface().get_editor_settings()
 
