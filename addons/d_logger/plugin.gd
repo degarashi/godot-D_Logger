@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-const PANEL_SCENE = preload("res://addons/d_logger/panel/d_logger_panel.tscn")
+const PANEL_SCENE = preload("uid://c4ge4lhdk2crn")
 const DEBUGGER_PLUGIN = preload("uid://1wnkr07kpq7c")
 var _panel_instance: Control
 var _debugger_instance: EditorDebuggerPlugin
