@@ -37,6 +37,22 @@ func _ready() -> void:
 	_add_level_filter_buttons()
 
 
+# ------------- [Public Method called by Debugger Plugin] -------------
+func add_log(log_data: Dictionary) -> void:
+	var category: String = log_data.get("category", "")
+	if category.is_empty():
+		category = "Default"
+
+	# Add new category button if it doesn't exist yet
+	if not _active_filters.has(category):
+		_add_filter_button(category)
+
+	_all_logs.append(log_data)
+
+	if _should_display_log(log_data):
+		_append_formatted_log(log_data)
+
+
 # ------------- [Private Method] -------------
 func _add_filter_button(category: String) -> void:
 	_active_filters[category] = true
@@ -293,50 +309,31 @@ func _on_copy_pressed() -> void:
 
 
 func _get_formatted_logs() -> String:
-	var result: String = ""
-	var has_logs: bool = false
-
+	var output_text := ""
 	for log_data: Dictionary in _all_logs:
 		if _should_display_log(log_data):
-			has_logs = true
 			var time: float = log_data.get("time", 0.0)
 			var frame: int = log_data.get("frame", 0)
-			var prefix: String = log_data.get("prefix", "")
-			var context_str: String = log_data.get("context_str", "")
-			var category: String = log_data.get("category", "")
-			var level: String = log_data.get("level", "")
-			var message: String = log_data.get("message", "")
-
-			var line: String = (
+			var raw_msg: String = (
 				"[%7.3fs][F:%d][%s] %s %s - [%s] %s"
-				% [time, frame, prefix, context_str, category, level, message]
+				% [
+					time,
+					frame,
+					log_data.get("prefix", ""),
+					log_data.get("context_str", ""),
+					log_data.get("category", ""),
+					log_data.get("level", ""),
+					log_data.get("message", "")
+				]
 			)
-			result += line + "\n"
-
-	return result if has_logs else ""
+			output_text += raw_msg + "\n"
+	return output_text
 
 
 func _copy_to_clipboard(text: String) -> void:
 	DisplayServer.clipboard_set(text)
 
-
-# ------------- [Public Method] -------------
-## stream logs from outside (legacy/raw string support)
-func append_log(bbcode_text: String) -> void:
-	if log_display:
-		log_display.append_text(bbcode_text + "\n")
-
-
-## add log with data for filtering
-func add_log(log_data: Dictionary) -> void:
-	_all_logs.append(log_data)
-
-	var category: String = log_data.get("category", "")
-	if category.is_empty():
-		category = "Default"
-
-	if not _active_filters.has(category):
-		_add_filter_button(category)
-
-	if _should_display_log(log_data):
-		_append_formatted_log(log_data)
+	var original_text := copy_button.text
+	copy_button.text = "Copied!"
+	await get_tree().create_timer(1.0).timeout
+	copy_button.text = original_text
