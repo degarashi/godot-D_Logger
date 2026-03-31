@@ -37,6 +37,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Clear"
 
+[node name="SaveButton" type="Button" parent="VBoxContainer/Header" unique_id=1502570971]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
 [node name="FilterBar" type="HBoxContainer" parent="VBoxContainer" unique_id=1075478648]
 layout_mode = 2
 

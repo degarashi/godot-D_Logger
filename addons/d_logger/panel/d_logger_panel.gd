@@ -20,6 +20,7 @@ var _current_level_filter_button: Button = null
 
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
+@onready var save_button: Button = %SaveButton
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var time_filter_container: HBoxContainer = %TimeFilterContainer
@@ -30,6 +31,7 @@ var _current_level_filter_button: Button = null
 func _ready() -> void:
 	clear_button.pressed.connect(_on_clear_pressed)
 	copy_button.pressed.connect(_on_copy_pressed)
+	save_button.pressed.connect(_on_save_pressed)
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
@@ -97,6 +99,10 @@ func _setup_shortcuts() -> void:
 	# Ctrl + C (or Cmd + C) to copy logs
 	copy_button.shortcut = _create_shortcut(KEY_C, true)
 	copy_button.tooltip_text = "Copy Logs (Ctrl+C)"
+
+	# Ctrl + S (or Cmd + S) to save logs
+	save_button.shortcut = _create_shortcut(KEY_S, true)
+	save_button.tooltip_text = "Save Logs (Ctrl+S)"
 
 
 ## Helper function to dynamically generate shortcut resources
@@ -423,3 +429,36 @@ func _copy_to_clipboard(text: String) -> void:
 	copy_button.text = "Copied!"
 	await get_tree().create_timer(1.0).timeout
 	copy_button.text = original_text
+
+
+func _on_save_pressed() -> void:
+	var formatted_logs: String = _get_formatted_logs()
+	if formatted_logs.is_empty():
+		return
+
+	# Generate filename with timestamp
+	var now = Time.get_datetime_dict_from_system()
+	var filename = (
+		"logs_%04d%02d%02d_%02d%02d%02d.txt"
+		% [now.year, now.month, now.day, now.hour, now.minute, now.second]
+	)
+
+	# Save to user:// directory (project user data directory)
+	var file_path = "user://%s" % filename
+	var result = _save_to_file(file_path, formatted_logs)
+
+	if result == OK:
+		var original_text := save_button.text
+		save_button.text = "Saved!"
+		await get_tree().create_timer(1.0).timeout
+		save_button.text = original_text
+	else:
+		push_error("Failed to save logs to %s" % file_path)
+
+
+func _save_to_file(file_path: String, content: String) -> int:
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(content)
+	return OK
