@@ -9,6 +9,8 @@ A lightweight, powerful, and extensible logging system for Godot. It supports si
 ## ✨ Features
 
 - 📢 **Multicast Logging**: Simultaneously output logs to the Godot console and a file.
+- 🔍 **Interactive Filtering**: Filter logs by category in the editor panel with dynamic toggle buttons.
+- ⚡ **Solo Mode**: `Alt + Click` a category button to show only that category (solo), or toggle all back.
 - ⚙️ **Project Settings Integration**: Manage global defaults (prefix, log level, file path) directly from Godot's Project Settings UI.
 - 🧩 **Per-Instance Configuration**: Create specialized loggers for specific subsystems with their own prefix or log level overrides.
 - 🎨 **Rich Text Output**: Color-coded console logs for instant visual feedback.
