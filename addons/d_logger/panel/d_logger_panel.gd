@@ -19,6 +19,7 @@ var _active_level_filter: int = 0
 var _current_level_filter_button: Button = null
 
 @onready var clear_button: Button = %ClearButton
+@onready var copy_button: Button = %CopyButton
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var time_filter_container: HBoxContainer = %TimeFilterContainer
@@ -28,6 +29,7 @@ var _current_level_filter_button: Button = null
 # ------------- [Callbacks] -------------
 func _ready() -> void:
 	clear_button.pressed.connect(_on_clear_pressed)
+	copy_button.pressed.connect(_on_copy_pressed)
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
@@ -281,6 +283,41 @@ func _on_clear_pressed() -> void:
 			_current_level_filter_button = btn
 			_update_level_filter_button_style(btn, true)
 			break
+
+
+func _on_copy_pressed() -> void:
+	var formatted_logs: String = _get_formatted_logs()
+	if formatted_logs.is_empty():
+		return
+	_copy_to_clipboard(formatted_logs)
+
+
+func _get_formatted_logs() -> String:
+	var result: String = ""
+	var has_logs: bool = false
+
+	for log_data: Dictionary in _all_logs:
+		if _should_display_log(log_data):
+			has_logs = true
+			var time: float = log_data.get("time", 0.0)
+			var frame: int = log_data.get("frame", 0)
+			var prefix: String = log_data.get("prefix", "")
+			var context_str: String = log_data.get("context_str", "")
+			var category: String = log_data.get("category", "")
+			var level: String = log_data.get("level", "")
+			var message: String = log_data.get("message", "")
+
+			var line: String = (
+				"[%7.3fs][F:%d][%s] %s %s - [%s] %s"
+				% [time, frame, prefix, context_str, category, level, message]
+			)
+			result += line + "\n"
+
+	return result if has_logs else ""
+
+
+func _copy_to_clipboard(text: String) -> void:
+	DisplayServer.clipboard_set(text)
 
 
 # ------------- [Public Method] -------------
