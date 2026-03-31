@@ -9,9 +9,11 @@ A lightweight, powerful, and extensible logging system for Godot. It supports si
 ## ✨ Features
 
 - 📢 **Multicast Logging**: Simultaneously output logs to the Godot console and a file.
-- 🔍 **Interactive Filtering**: Filter logs by category in the editor panel with dynamic toggle buttons.
-- ⚡ **Solo Mode**: `Alt + Click` a category button to show only that category (solo), or toggle all back.
-- ⚙️ **Project Settings Integration**: Manage global defaults (prefix, log level, file path) directly from Godot's Project Settings UI.
+- 🔍 **Interactive Filtering**: A bottom panel appears under "D-Logger" that displays logs with dynamic category filtering.
+  - Click category buttons to toggle visibility
+  - `Alt + Click` a category button to show only that category (solo mode)
+  - `Alt + Click` again to return to previous filter state
+- ⚙️ **Project Settings Integration**: Manage global defaults (prefix, log level, file path) directly from Godot's Editor Settings UI.
 - 🧩 **Per-Instance Configuration**: Create specialized loggers for specific subsystems with their own prefix or log level overrides.
 - 🎨 **Rich Text Output**: Color-coded console logs for instant visual feedback.
 - 🔍 **Context & Categories**: Tag logs with object references or category strings for effortless traceability.
@@ -67,12 +69,12 @@ DLogger.debug("Player jumped", [], "gameplay", self)
 
 ## ⚙️ Project Settings
 
-Change global defaults in **Project Settings > Debug > D-Logger**:
+Change global defaults in **Editor > Editor Layout > Editor Settings > D-Logger** section:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `prefix` | String | `"D-Logger"` | Global prefix for all logs. |
-| `enable_log` | Boolean | `true` | Enable console output (Debug builds only). |
+| `enable_console_log` | Boolean | `false` | Enable console output (Debug builds only). |
 | `min_log_level` | Enum | `DEBUG` | Minimum level to display (DEBUG, INFO, WARN, ERROR). |
 | `enable_file_log` | Boolean | `false` | Enable logging to a file (Debug builds only). |
 | `log_file_path` | String | `user://debug.log` | Destination path for the log file. |
@@ -222,12 +224,12 @@ func set_health(value: int) -> void:
 
 ### No logs appear in the console
 - **Check 1**: Is D-Logger enabled in **Project Settings > Plugins**?
-- **Check 2**: Is `enable_log` set to `true` in **Project Settings > Debug > D-Logger**?
+- **Check 2**: Is `enable_console_log` set to `true` in **Editor Settings > D-Logger**?
 - **Check 3**: Is your log level at or above `min_log_level`? (e.g., if `min_log_level` is INFO, DEBUG logs won't show)
 - **Check 4**: Is this a release build? (Logs are disabled in release builds by default)
 
 ### File log is not being created
-- **Check 1**: Is `enable_file_log` enabled in **Project Settings > Debug > D-Logger**?
+- **Check 1**: Is `enable_file_log` enabled in **Editor Settings > D-Logger**?
 - **Check 2**: Do you have write permissions to the `log_file_path` directory?
 - **Check 3**: Try setting `log_file_path` to `user://debug.log` first to ensure the `user://` directory exists
 - **Check 4**: Is this a debug build? (File logging is disabled in release builds by default)
