@@ -1,13 +1,15 @@
 @tool
 extends EditorDebuggerPlugin
 
+# ------------- [Signal] -------------
+signal on_session_started
+
+# ------------- [Private Variable] -------------
 var _panel: Control
+var _plugin: EditorPlugin
 
 
-func _init(panel: Control) -> void:
-	_panel = panel
-
-
+# ------------- [Callbacks] -------------
 ## Tells the engine that this plugin captures communication with the "d_logger" prefix
 func _has_capture(prefix: String) -> bool:
 	return prefix == "d_logger"
@@ -26,3 +28,13 @@ func _capture(message: String, data: Array, _session_id: int) -> bool:
 		return true  # Tells the engine that the message was processed successfully
 
 	return false  # Not a message this plugin should handle
+
+
+# ------------- [Private Method] -------------
+func _init(panel: Control) -> void:
+	_panel = panel
+
+
+func _setup_session(session_id: int) -> void:
+	var session := get_session(session_id)
+	session.started.connect(func() -> void: on_session_started.emit())

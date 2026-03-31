@@ -76,6 +76,14 @@ var _settings_entries: Array[SettingsEntry] = [
 		DLoggerConstants.DEFAULT_FILE_PATH,
 		PROPERTY_HINT_FILE,
 		"*.log, *.txt;Log Files"
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL,
+		"",
+		TYPE_BOOL,
+		true,
+		PROPERTY_HINT_NONE,
+		"Automatically activate the D-Logger panel when a debug session starts."
 	)
 ]
 
@@ -90,6 +98,7 @@ func _enter_tree() -> void:
 
 	# --- Registering the debugger plugin ---
 	_debugger_instance = DEBUGGER_PLUGIN.new(_panel_instance)
+	_debugger_instance.on_session_started.connect(_on_debugger_session_started)
 	add_debugger_plugin(_debugger_instance)
 
 
@@ -148,6 +157,14 @@ func _initialize_settings() -> void:
 
 	# Initial sync
 	_sync_settings_to_runtime()
+
+
+func _on_debugger_session_started() -> void:
+	# Show the panel when debug session starts
+	var es := get_editor_interface().get_editor_settings()
+	var auto_activate: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL)
+	if _panel_instance and auto_activate:
+		call_deferred("make_bottom_panel_item_visible", _panel_instance)
 
 
 func _sync_settings_to_runtime() -> void:

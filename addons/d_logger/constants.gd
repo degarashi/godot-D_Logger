@@ -13,6 +13,7 @@ const EDITOR_SETTING_ENABLE_CONSOLE := "d_logger/enable_console_log"
 const EDITOR_SETTING_MIN_LEVEL := "d_logger/min_log_level"
 const EDITOR_SETTING_ENABLE_FILE := "d_logger/enable_file_log"
 const EDITOR_SETTING_FILE_PATH := "d_logger/log_file_path"
+const EDITOR_SETTING_AUTO_ACTIVATE_PANEL := "d_logger/auto_activate_panel"
 
 # --- Runtime Settings Paths (Accessed via ProjectSettings, but may be synced from EditorSettings) ---
 const SETTING_ENABLE_CONSOLE := "debug/d_logger/enable_console_log"
