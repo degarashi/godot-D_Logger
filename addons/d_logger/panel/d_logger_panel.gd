@@ -6,10 +6,15 @@ var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
 var _is_rebuilding: bool = false
+# Time presets: name -> duration in seconds (-1.0 = show all)
+var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0}
+var _active_time_filter: float = -1.0
+var _current_time_filter_button: Button = null
 
 @onready var clear_button: Button = %ClearButton
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
+@onready var time_filter_container: HBoxContainer = %TimeFilterContainer
 
 
 # ------------- [Callbacks] -------------
@@ -18,6 +23,7 @@ func _ready() -> void:
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
+	_add_time_filter_buttons()
 
 
 # ------------- [Private Method] -------------
@@ -31,6 +37,20 @@ func _add_filter_button(category: String) -> void:
 	btn.gui_input.connect(_on_filter_gui_input.bind(category))
 	_update_button_style(btn, true)
 	filter_container.add_child(btn)
+
+
+func _add_time_filter_buttons() -> void:
+	for preset_name: String in _time_presets.keys():
+		var btn := Button.new()
+		btn.text = preset_name
+		btn.toggle_mode = true
+		if preset_name == "All":
+			btn.button_pressed = true
+		btn.pressed.connect(_on_time_filter_pressed.bind(_time_presets[preset_name], btn))
+		_update_time_filter_button_style(btn, preset_name == "All")
+		time_filter_container.add_child(btn)
+		if preset_name == "All":
+			_current_time_filter_button = btn
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
@@ -85,6 +105,27 @@ func _update_button_style(btn: Button, is_pressed: bool) -> void:
 		btn.modulate = Color(1, 1, 1, 0.5)
 
 
+func _update_time_filter_button_style(btn: Button, is_active: bool) -> void:
+	if is_active:
+		# Use a green color for active time filter
+		btn.modulate = Color(0.3, 1.0, 0.3, 1.0)
+	else:
+		# Reset to default
+		btn.modulate = Color(1, 1, 1, 0.5)
+
+
+func _on_time_filter_pressed(duration: float, button: Button) -> void:
+	# Update previous button style
+	if _current_time_filter_button:
+		_update_time_filter_button_style(_current_time_filter_button, false)
+
+	# Set new active filter
+	_active_time_filter = duration
+	_current_time_filter_button = button
+	_update_time_filter_button_style(button, true)
+	_rebuild_log_display()
+
+
 func _append_formatted_log(log_data: Dictionary) -> void:
 	if log_display:
 		var bbcode_msg := _format_log(log_data)
@@ -121,14 +162,35 @@ func _format_log(log_data: Dictionary) -> String:
 	return formatted_msg
 
 
+func _get_max_log_time() -> float:
+	if _all_logs.is_empty():
+		return 0.0
+	return _all_logs[-1].get("time", 0.0)
+
+
+func _should_display_log(log_data: Dictionary) -> bool:
+	# Check category filter
+	var category: String = log_data.get("category", "")
+	if category.is_empty():
+		category = "Default"
+
+	if not _active_filters.get(category, true):
+		return false
+
+	# Check time filter
+	if _active_time_filter > 0.0:
+		var log_time: float = log_data.get("time", 0.0)
+		var max_time: float = _get_max_log_time()
+		if max_time - log_time > _active_time_filter:
+			return false
+
+	return true
+
+
 func _rebuild_log_display() -> void:
 	log_display.clear()
 	for log_data: Dictionary in _all_logs:
-		var category: String = log_data.get("category", "")
-		if category.is_empty():
-			category = "Default"
-
-		if _active_filters.get(category, true):
+		if _should_display_log(log_data):
 			_append_formatted_log(log_data)
 
 
@@ -139,6 +201,19 @@ func _on_clear_pressed() -> void:
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
+
+	# Reset time filter to "All"
+	_active_time_filter = -1.0
+	if _current_time_filter_button:
+		_update_time_filter_button_style(_current_time_filter_button, false)
+
+	# Find and activate the "All" button
+	for child: Node in time_filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == "All":
+			_current_time_filter_button = btn
+			_update_time_filter_button_style(btn, true)
+			break
 
 
 # ------------- [Public Method] -------------
@@ -159,5 +234,5 @@ func add_log(log_data: Dictionary) -> void:
 	if not _active_filters.has(category):
 		_add_filter_button(category)
 
-	if _active_filters.get(category, true):
+	if _should_display_log(log_data):
 		_append_formatted_log(log_data)
