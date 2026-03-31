@@ -56,7 +56,7 @@ func setup_logger() -> void:
 	var console_enabled: bool = (
 		_override_console_enabled
 		if _has_console_override
-		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE, false)
+		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE_CONSOLE, false)
 	)
 
 	var file_enabled: bool = ProjectSettings.get_setting(

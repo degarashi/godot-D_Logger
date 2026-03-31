@@ -46,8 +46,8 @@ var _settings_entries: Array[SettingsEntry] = [
 		false  # Project Setting
 	),
 	SettingsEntry.new(
-		DLoggerConstants.EDITOR_SETTING_ENABLE,
-		DLoggerConstants.SETTING_ENABLE,
+		DLoggerConstants.EDITOR_SETTING_ENABLE_CONSOLE,
+		DLoggerConstants.SETTING_ENABLE_CONSOLE,
 		TYPE_BOOL,
 		false,
 		PROPERTY_HINT_NONE,

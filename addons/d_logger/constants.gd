@@ -9,13 +9,13 @@ enum LogLevel { NOT_SPECIFIED = -1, DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 }
 const SETTING_PREFIX := "debug/d_logger/prefix"
 
 # --- Editor Settings Paths (Saved in editor_settings-4.x.tres) ---
-const EDITOR_SETTING_ENABLE := "d_logger/enable_log"
+const EDITOR_SETTING_ENABLE_CONSOLE := "d_logger/enable_console_log"
 const EDITOR_SETTING_MIN_LEVEL := "d_logger/min_log_level"
 const EDITOR_SETTING_ENABLE_FILE := "d_logger/enable_file_log"
 const EDITOR_SETTING_FILE_PATH := "d_logger/log_file_path"
 
 # --- Runtime Settings Paths (Accessed via ProjectSettings, but may be synced from EditorSettings) ---
-const SETTING_ENABLE := "debug/d_logger/enable_log"
+const SETTING_ENABLE_CONSOLE := "debug/d_logger/enable_console_log"
 const SETTING_MIN_LEVEL := "debug/d_logger/min_log_level"
 const SETTING_ENABLE_FILE := "debug/d_logger/enable_file_log"
 const SETTING_FILE_PATH := "debug/d_logger/log_file_path"
