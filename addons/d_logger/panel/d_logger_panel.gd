@@ -11,10 +11,18 @@ var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 
 var _active_time_filter: float = -1.0
 var _current_time_filter_button: Button = null
 
+# Log level filtering
+var _log_levels: Array[String] = ["DEBUG", "INFO", "WARN", "ERROR"]
+var _log_level_values: Dictionary[String, int] = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
+var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3}
+var _active_level_filter: int = 0
+var _current_level_filter_button: Button = null
+
 @onready var clear_button: Button = %ClearButton
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var time_filter_container: HBoxContainer = %TimeFilterContainer
+@onready var level_filter_container: HBoxContainer = %LevelFilterContainer
 
 
 # ------------- [Callbacks] -------------
@@ -24,6 +32,7 @@ func _ready() -> void:
 	# enable automatic scrolling
 	log_display.scroll_following = true
 	_add_time_filter_buttons()
+	_add_level_filter_buttons()
 
 
 # ------------- [Private Method] -------------
@@ -51,6 +60,20 @@ func _add_time_filter_buttons() -> void:
 		time_filter_container.add_child(btn)
 		if preset_name == "All":
 			_current_time_filter_button = btn
+
+
+func _add_level_filter_buttons() -> void:
+	for preset_name: String in _level_presets.keys():
+		var btn := Button.new()
+		btn.text = preset_name
+		btn.toggle_mode = true
+		if preset_name == "DEBUG":
+			btn.button_pressed = true
+		btn.pressed.connect(_on_level_filter_pressed.bind(_level_presets[preset_name], btn))
+		_update_level_filter_button_style(btn, preset_name == "DEBUG")
+		level_filter_container.add_child(btn)
+		if preset_name == "DEBUG":
+			_current_level_filter_button = btn
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
@@ -114,6 +137,15 @@ func _update_time_filter_button_style(btn: Button, is_active: bool) -> void:
 		btn.modulate = Color(1, 1, 1, 0.5)
 
 
+func _update_level_filter_button_style(btn: Button, is_active: bool) -> void:
+	if is_active:
+		# Use an orange color for active level filter
+		btn.modulate = Color(1.0, 0.7, 0.3, 1.0)
+	else:
+		# Reset to default
+		btn.modulate = Color(1, 1, 1, 0.5)
+
+
 func _on_time_filter_pressed(duration: float, button: Button) -> void:
 	# Update previous button style
 	if _current_time_filter_button:
@@ -123,6 +155,18 @@ func _on_time_filter_pressed(duration: float, button: Button) -> void:
 	_active_time_filter = duration
 	_current_time_filter_button = button
 	_update_time_filter_button_style(button, true)
+	_rebuild_log_display()
+
+
+func _on_level_filter_pressed(min_level: int, button: Button) -> void:
+	# Update previous button style
+	if _current_level_filter_button:
+		_update_level_filter_button_style(_current_level_filter_button, false)
+
+	# Set new active filter
+	_active_level_filter = min_level
+	_current_level_filter_button = button
+	_update_level_filter_button_style(button, true)
 	_rebuild_log_display()
 
 
@@ -168,6 +212,10 @@ func _get_max_log_time() -> float:
 	return _all_logs[-1].get("time", 0.0)
 
 
+func _get_log_level_value(level_str: String) -> int:
+	return _log_level_values.get(level_str, 0)
+
+
 func _should_display_log(log_data: Dictionary) -> bool:
 	# Check category filter
 	var category: String = log_data.get("category", "")
@@ -183,6 +231,12 @@ func _should_display_log(log_data: Dictionary) -> bool:
 		var max_time: float = _get_max_log_time()
 		if max_time - log_time > _active_time_filter:
 			return false
+
+	# Check level filter
+	var log_level_str: String = log_data.get("level", "DEBUG")
+	var log_level_val: int = _get_log_level_value(log_level_str)
+	if log_level_val < _active_level_filter:
+		return false
 
 	return true
 
@@ -207,12 +261,25 @@ func _on_clear_pressed() -> void:
 	if _current_time_filter_button:
 		_update_time_filter_button_style(_current_time_filter_button, false)
 
-	# Find and activate the "All" button
+	# Find and activate the "All" button for time filter
 	for child: Node in time_filter_container.get_children():
 		var btn := child as Button
 		if btn and btn.text == "All":
 			_current_time_filter_button = btn
 			_update_time_filter_button_style(btn, true)
+			break
+
+	# Reset level filter to "DEBUG"
+	_active_level_filter = 0
+	if _current_level_filter_button:
+		_update_level_filter_button_style(_current_level_filter_button, false)
+
+	# Find and activate the "DEBUG" button for level filter
+	for child: Node in level_filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == "DEBUG":
+			_current_level_filter_button = btn
+			_update_level_filter_button_style(btn, true)
 			break
 
 
