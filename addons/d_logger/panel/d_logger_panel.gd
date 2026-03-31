@@ -5,6 +5,7 @@ extends Control
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
+var _is_rebuilding: bool = false
 
 @onready var clear_button: Button = %ClearButton
 @onready var log_display: RichTextLabel = %RichTextLabel
@@ -27,14 +28,52 @@ func _add_filter_button(category: String) -> void:
 	btn.toggle_mode = true
 	btn.button_pressed = true
 	btn.toggled.connect(_on_filter_toggled.bind(category, btn))
+	btn.gui_input.connect(_on_filter_gui_input.bind(category))
 	_update_button_style(btn, true)
 	filter_container.add_child(btn)
+
+
+func _on_filter_gui_input(event: InputEvent, category: String) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.alt_pressed:
+			_solo_category(category)
+			get_viewport().set_input_as_handled()
+
+
+func _solo_category(solo_cat: String) -> void:
+	# If already soloing this category, toggle show all
+	var is_already_soloed := true
+	for cat in _active_filters:
+		if (
+			(cat == solo_cat and not _active_filters[cat])
+			or (cat != solo_cat and _active_filters[cat])
+		):
+			is_already_soloed = false
+			break
+
+	_is_rebuilding = true
+	for child in filter_container.get_children():
+		var btn := child as Button
+		if not btn:
+			continue
+
+		var should_be_pressed := true if is_already_soloed else (btn.text == solo_cat)
+		if btn.button_pressed != should_be_pressed:
+			btn.button_pressed = should_be_pressed
+		else:
+			# Manually update state if button was already in desired state
+			_active_filters[btn.text] = should_be_pressed
+			_update_button_style(btn, should_be_pressed)
+
+	_is_rebuilding = false
+	_rebuild_log_display()
 
 
 func _on_filter_toggled(is_pressed: bool, category: String, btn: Button) -> void:
 	_active_filters[category] = is_pressed
 	_update_button_style(btn, is_pressed)
-	_rebuild_log_display()
+	if not _is_rebuilding:
+		_rebuild_log_display()
 
 
 func _update_button_style(btn: Button, is_pressed: bool) -> void:
