@@ -47,7 +47,7 @@ func _initialize_settings() -> void:
 	)
 
 	# --- Enable Console Logging ---
-	_set_default_setting(DLoggerConstants.SETTING_ENABLE, true)
+	_set_default_setting(DLoggerConstants.SETTING_ENABLE, false)
 	ProjectSettings.add_property_info(
 		{
 			"name": DLoggerConstants.SETTING_ENABLE,

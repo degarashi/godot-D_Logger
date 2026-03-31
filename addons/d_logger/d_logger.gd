@@ -13,7 +13,7 @@ var _initialized := false
 
 # Override variables
 var _override_file_path: String = ""
-var _override_console_enabled: bool = true
+var _override_console_enabled: bool = false
 var _override_prefix: String = ""
 var _override_min_level: int = DLoggerConstants.LogLevel.NOT_SPECIFIED
 
@@ -56,7 +56,7 @@ func setup_logger() -> void:
 	var console_enabled: bool = (
 		_override_console_enabled
 		if _has_console_override
-		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE, true)
+		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE, false)
 	)
 
 	var file_enabled: bool = ProjectSettings.get_setting(
