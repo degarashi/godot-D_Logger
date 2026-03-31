@@ -99,6 +99,7 @@ static func format_log(
 ) -> String:
 	# Convert to seconds (e.g., 1234ms -> 1.234s)
 	var seconds := Time.get_ticks_msec() / 1000.0
+	var frames := Engine.get_frames_drawn()
 	var cat_str := category
 
 	# Build context information
@@ -113,12 +114,13 @@ static func format_log(
 	if not caller_str.is_empty():
 		caller_str += " "
 
-	# [001.234s][D-Logger][main.gd:10] [MyNode] MyCategory - [WARN] Message
-	# [001.234s][D-Logger] [MyNode] MyCategory - [DEBUG] Message
+	# [001.234s][F:123][D-Logger][main.gd:10] [MyNode] MyCategory - [WARN] Message
+	# [001.234s][F:123][D-Logger] [MyNode] MyCategory - [DEBUG] Message
 	return (
-		"[%7.3fs][%s]%s%s %s - [%s] %s"
+		"[%7.3fs][F:%d][%s]%s%s %s - [%s] %s"
 		% [
 			seconds,
+			frames,
 			prefix,
 			caller_str,
 			ctx_str,

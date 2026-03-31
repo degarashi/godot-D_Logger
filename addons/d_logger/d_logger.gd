@@ -133,7 +133,9 @@ func _dispatch(
 			"category": category,
 			"level": level_str,
 			"context_str": DLoggerFunc.get_object_string(context) if context else "",
-			"prefix": pref
+			"prefix": pref,
+			"time": Time.get_ticks_msec() / 1000.0,
+			"frame": Engine.get_frames_drawn()
 		}
 
 		# Send data through a unique communication channel named 'd_logger:log'
