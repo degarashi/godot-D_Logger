@@ -7,6 +7,79 @@ var _panel_instance: Control
 var _debugger_instance: EditorDebuggerPlugin
 
 
+# --- Settings Management ---
+class SettingsEntry:
+	var sys_name: String
+	var runtime_name: String  # If not empty, will sync this value to ProjectSettings
+	var type: int
+	var default_val: Variant
+	var prop_hint: int
+	var prop_hint_str: String
+	var is_editor_setting: bool
+
+	func _init(
+		p_sysname: String,
+		p_runtime_name: String,
+		p_type: int,
+		p_default: Variant,
+		p_hint: int = PROPERTY_HINT_NONE,
+		p_hint_str: String = "",
+		p_is_editor_setting: bool = true
+	) -> void:
+		sys_name = p_sysname
+		runtime_name = p_runtime_name
+		type = p_type
+		default_val = p_default
+		prop_hint = p_hint
+		prop_hint_str = p_hint_str
+		is_editor_setting = p_is_editor_setting
+
+
+var _settings_entries: Array[SettingsEntry] = [
+	SettingsEntry.new(
+		DLoggerConstants.SETTING_PREFIX,
+		"",
+		TYPE_STRING,
+		DLoggerConstants.DEFAULT_PREFIX,
+		PROPERTY_HINT_NONE,
+		"The prefix label displayed at the beginning of each log.",
+		false  # Project Setting
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_ENABLE,
+		DLoggerConstants.SETTING_ENABLE,
+		TYPE_BOOL,
+		false,
+		PROPERTY_HINT_NONE,
+		"Toggle to enable or disable detailed console logging."
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_MIN_LEVEL,
+		DLoggerConstants.SETTING_MIN_LEVEL,
+		TYPE_INT,
+		DLoggerConstants.LogLevel.DEBUG,
+		PROPERTY_HINT_ENUM,
+		DLoggerConstants.MIN_LEVEL_HINT_STRING
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_ENABLE_FILE,
+		DLoggerConstants.SETTING_ENABLE_FILE,
+		TYPE_BOOL,
+		false,
+		PROPERTY_HINT_NONE,
+		"Toggle to enable or disable logging to a file."
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_FILE_PATH,
+		DLoggerConstants.SETTING_FILE_PATH,
+		TYPE_STRING,
+		DLoggerConstants.DEFAULT_FILE_PATH,
+		PROPERTY_HINT_FILE,
+		"*.log, *.txt;Log Files"
+	)
+]
+
+
 func _enter_tree() -> void:
 	_initialize_settings()
 	add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
@@ -21,6 +94,10 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	var es := get_editor_interface().get_editor_settings()
+	if es.settings_changed.is_connected(_sync_settings_to_runtime):
+		es.settings_changed.disconnect(_sync_settings_to_runtime)
+
 	if ProjectSettings.has_setting(DLoggerConstants.AUTOLOAD_NAME):
 		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
 
@@ -35,67 +112,55 @@ func _exit_tree() -> void:
 
 
 func _initialize_settings() -> void:
-	# --- Prefix Settings ---
-	_set_default_setting(DLoggerConstants.SETTING_PREFIX, DLoggerConstants.DEFAULT_PREFIX)
-	ProjectSettings.add_property_info(
-		{
-			"name": DLoggerConstants.SETTING_PREFIX,
-			"type": TYPE_STRING,
-			"hint": PROPERTY_HINT_NONE,
-			"hint_string": "The prefix label displayed at the beginning of each log."
-		}
-	)
+	var es := get_editor_interface().get_editor_settings()
 
-	# --- Enable Console Logging ---
-	_set_default_setting(DLoggerConstants.SETTING_ENABLE, false)
-	ProjectSettings.add_property_info(
-		{
-			"name": DLoggerConstants.SETTING_ENABLE,
-			"type": TYPE_BOOL,
-			"hint": PROPERTY_HINT_NONE,
-			"hint_string": "Toggle to enable or disable detailed console logging."
-		}
-	)
+	# Register Settings
+	for entry in _settings_entries:
+		if entry.is_editor_setting:
+			if not es.has_setting(entry.sys_name):
+				es.set_setting(entry.sys_name, entry.default_val)
+			es.add_property_info(
+				{
+					"name": entry.sys_name,
+					"type": entry.type,
+					"hint": entry.prop_hint,
+					"hint_string": entry.prop_hint_str
+				}
+			)
+			es.set_initial_value(entry.sys_name, entry.default_val, false)
+		else:
+			# Project Setting
+			if not ProjectSettings.has_setting(entry.sys_name):
+				ProjectSettings.set_setting(entry.sys_name, entry.default_val)
+			ProjectSettings.add_property_info(
+				{
+					"name": entry.sys_name,
+					"type": entry.type,
+					"hint": entry.prop_hint,
+					"hint_string": entry.prop_hint_str
+				}
+			)
+			ProjectSettings.set_initial_value(entry.sys_name, entry.default_val)
 
-	# --- MinLevel ---
-	_set_default_setting(DLoggerConstants.SETTING_MIN_LEVEL, 0)  # Default: DEBUG
-	ProjectSettings.add_property_info(
-		{
-			"name": DLoggerConstants.SETTING_MIN_LEVEL,
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Debug:0,Info:1,Warn:2,Error:3"
-		}
-	)
+	# Connect to settings changed to keep runtime in sync
+	if not es.settings_changed.is_connected(_sync_settings_to_runtime):
+		es.settings_changed.connect(_sync_settings_to_runtime)
 
-	# --- Enable File Logging ---
-	_set_default_setting(DLoggerConstants.SETTING_ENABLE_FILE, false)
-	ProjectSettings.add_property_info(
-		{
-			"name": DLoggerConstants.SETTING_ENABLE_FILE,
-			"type": TYPE_BOOL,
-			"hint": PROPERTY_HINT_NONE,
-			"hint_string": "Toggle to enable or disable logging to a file."
-		}
-	)
-
-	# --- File Path ---
-	_set_default_setting(DLoggerConstants.SETTING_FILE_PATH, DLoggerConstants.DEFAULT_FILE_PATH)
-	ProjectSettings.add_property_info(
-		{
-			"name": DLoggerConstants.SETTING_FILE_PATH,
-			"type": TYPE_STRING,
-			"hint": PROPERTY_HINT_FILE,
-			"hint_string": "*.log, *.txt;Log Files"
-		}
-	)
+	# Initial sync
+	_sync_settings_to_runtime()
 
 
-## Helper function to safely set default values
-func _set_default_setting(setting_path: String, default_value: Variant) -> void:
-	# Set the initial value only if the setting does not exist yet
-	if not ProjectSettings.has_setting(setting_path):
-		ProjectSettings.set_setting(setting_path, default_value)
+func _sync_settings_to_runtime() -> void:
+	var es := get_editor_interface().get_editor_settings()
 
-	# Define the default value used when clicking the reset button
-	ProjectSettings.set_initial_value(setting_path, default_value)
+	for entry in _settings_entries:
+		if entry.is_editor_setting and not entry.runtime_name.is_empty():
+			var val: Variant = es.get_setting(entry.sys_name)
+			# Only update ProjectSettings if it changed (to avoid unnecessary settings_changed signals)
+			if (
+				not ProjectSettings.has_setting(entry.runtime_name)
+				or ProjectSettings.get_setting(entry.runtime_name) != val
+			):
+				ProjectSettings.set_setting(entry.runtime_name, val)
+
+	# We don't call ProjectSettings.save() here to avoid polluting project.godot

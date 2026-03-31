@@ -25,6 +25,13 @@ config/icon="res://icon.svg"
 
 DLogger="*uid://co142rftxrv40"
 
+[debug]
+
+d_logger/enable_log=false
+d_logger/min_log_level=0
+d_logger/enable_file_log=false
+d_logger/log_file_path="user://debug.log"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/d_logger/plugin.cfg")
