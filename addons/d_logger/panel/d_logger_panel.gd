@@ -26,13 +26,24 @@ func _add_filter_button(category: String) -> void:
 	btn.text = category
 	btn.toggle_mode = true
 	btn.button_pressed = true
-	btn.toggled.connect(_on_filter_toggled.bind(category))
+	btn.toggled.connect(_on_filter_toggled.bind(category, btn))
+	_update_button_style(btn, true)
 	filter_container.add_child(btn)
 
 
-func _on_filter_toggled(is_pressed: bool, category: String) -> void:
+func _on_filter_toggled(is_pressed: bool, category: String, btn: Button) -> void:
 	_active_filters[category] = is_pressed
+	_update_button_style(btn, is_pressed)
 	_rebuild_log_display()
+
+
+func _update_button_style(btn: Button, is_pressed: bool) -> void:
+	if is_pressed:
+		# Use a visible color (e.g. cyan with some alpha) for active filters
+		btn.modulate = Color(0.3, 0.8, 1.0, 1.0)
+	else:
+		# Reset to default
+		btn.modulate = Color(1, 1, 1, 0.5)
 
 
 func _append_formatted_log(log_data: Dictionary) -> void:
