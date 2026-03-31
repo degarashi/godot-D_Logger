@@ -94,6 +94,7 @@ func _add_filter_button(category: String) -> void:
 	btn.button_pressed = true
 	btn.toggled.connect(_on_filter_toggled.bind(category, btn))
 	btn.gui_input.connect(_on_filter_gui_input.bind(category))
+	btn.tooltip_text = "Toggle filter | Alt+Click to solo"
 	_update_button_style(btn, true)
 	filter_container.add_child(btn)
 
