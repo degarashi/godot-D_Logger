@@ -60,7 +60,7 @@ Add metadata to your logs for better filtering:
 # cat: Category (String)
 # ctx: Context (Object, usually 'self')
 DLogger.debug("Player jumped", [], "gameplay", self)
-# Example Output: [...][D-Logger][player.gd:12][Player:<Node#123>] gameplay - [DEBUG] Player jumped
+# Example Output: [  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] Player jumped
 ```
 
 ---
@@ -119,10 +119,27 @@ Useful for skipping heavy computations before logging:
 ## 📝 Output Format
 
 Logs follow this structure:
-`[   time ][prefix][file:line][context] category - [LEVEL] message`
+`[   time ][F:frame][prefix][file:line] [context] category - [LEVEL] message`
 
-**Example:**
-`[  1.234s][D-Logger][test.gd:42][Player:<Node#123>] gameplay - [DEBUG] Character spawned`
+**Example (DEBUG):**
+```
+[  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] Character spawned
+```
+
+**Example (WARN):**
+```
+[  1.345s][F:130][D-Logger][test.gd:42] [Player] gameplay - [WARN] Low health
+```
+
+**Format breakdown:**
+- `[time]` - Elapsed time in seconds
+- `[F:frame]` - Total frames drawn since the game started
+- `[prefix]` - Logger prefix (default or custom)
+- `[file:line]` - Source file and line number (**WARN and ERROR only**)
+- `[context]` - Object context (if provided)
+- `category` - Log category string (if provided)
+- `[LEVEL]` - Log level (DEBUG, INFO, WARN, ERROR)
+- `message` - Formatted log message
 
 ---
 
@@ -141,3 +158,81 @@ Log files are stored in the `user://` directory:
 - **Windows**: `%APPDATA%\Godot\app_userdata\[ProjectName]\debug.log`
 - **macOS**: `~/Library/Application Support/Godot/app_userdata/[ProjectName]/debug.log`
 - **Linux**: `~/.local/share/godot/app_userdata/[ProjectName]/debug.log`
+
+---
+
+## 📚 Common Patterns & Examples
+
+### Performance-Conscious Logging
+Skip expensive computations if the log level is disabled:
+
+```gdscript
+# Bad: expensive_calculation() runs even if debug is disabled
+DLogger.debug("Result: {0}", [expensive_calculation()])
+
+# Good: expensive_calculation() only runs if debug is enabled
+if DLogger.is_debug_enabled():
+    DLogger.debug("Result: {0}", [expensive_calculation()])
+```
+
+### Categorized Logging
+Organize logs by subsystem for easy filtering:
+
+```gdscript
+# In player.gd
+DLogger.warn("Health critically low", [], "gameplay", self)
+
+# In network_manager.gd
+DLogger.info("Connecting to {0}:{1}", [ip, port], "network", self)
+
+# In audio_manager.gd
+DLogger.error("Failed to load audio: {0}", [path], "audio", self)
+```
+
+### Per-System Loggers
+Create dedicated loggers for specific subsystems:
+
+```gdscript
+# In network_manager.gd
+extends Node
+
+var net_log: DLoggerClass
+
+func _init():
+    net_log = DLoggerClass.new("NET", DLoggerConstants.LogLevel.DEBUG)
+
+func connect_to_server(host: String, port: int) -> bool:
+    net_log.info("Attempting connection to {0}:{1}", [host, port])
+    # ... connection logic
+    return true
+```
+
+### Integration with `assert()`
+Use D-Logger with `assert()` for debug-only assertions:
+
+```gdscript
+func set_health(value: int) -> void:
+    assert(value >= 0 and DLogger.warn("Health cannot be negative: {0}", [value]))
+    _health = max(0, value)
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### No logs appear in the console
+- **Check 1**: Is D-Logger enabled in **Project Settings > Plugins**?
+- **Check 2**: Is `enable_log` set to `true` in **Project Settings > Debug > D-Logger**?
+- **Check 3**: Is your log level at or above `min_log_level`? (e.g., if `min_log_level` is INFO, DEBUG logs won't show)
+- **Check 4**: Is this a release build? (Logs are disabled in release builds by default)
+
+### File log is not being created
+- **Check 1**: Is `enable_file_log` enabled in **Project Settings > Debug > D-Logger**?
+- **Check 2**: Do you have write permissions to the `log_file_path` directory?
+- **Check 3**: Try setting `log_file_path` to `user://debug.log` first to ensure the `user://` directory exists
+- **Check 4**: Is this a debug build? (File logging is disabled in release builds by default)
+
+### Custom logger instance not working
+- **Check 1**: Make sure you're creating it with `DLoggerClass.new()`, not `DLogger.new()`
+- **Check 2**: Verify the min_level parameter is correct (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
+- **Check 3**: Ensure the instance is not being garbage collected before use (store it as a member variable)
