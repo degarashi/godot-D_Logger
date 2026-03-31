@@ -44,15 +44,18 @@ func _append_formatted_log(log_data: Dictionary) -> void:
 func _format_log(log_data: Dictionary) -> String:
 	var time: float = log_data.get("time", 0.0)
 	var frame: int = log_data.get("frame", 0)
-	var formatted_msg: String = "[%7.3fs][F:%d][%s] %s %s - [%s] %s" % [
-		time,
-		frame,
-		log_data.get("prefix", ""),
-		log_data.get("context_str", ""),
-		log_data.get("category", ""),
-		log_data.get("level", ""),
-		log_data.get("message", "")
-	]
+	var formatted_msg: String = (
+		"[%7.3fs][F:%d][%s] %s %s - [%s] %s"
+		% [
+			time,
+			frame,
+			log_data.get("prefix", ""),
+			log_data.get("context_str", ""),
+			log_data.get("category", ""),
+			log_data.get("level", ""),
+			log_data.get("message", "")
+		]
+	)
 
 	var level: String = log_data.get("level", "DEBUG")
 
