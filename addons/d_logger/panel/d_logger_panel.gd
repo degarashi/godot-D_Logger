@@ -40,6 +40,37 @@ func _ready() -> void:
 	_add_time_filter_buttons()
 	_add_level_filter_buttons()
 
+	# Set focus_mode so this panel can receive input
+	focus_mode = Control.FOCUS_ALL
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Only process shortcuts when panel is visible
+	if not visible:
+		return
+
+	# Check if focus is within this panel or its children
+	var focused_control: Control = get_window().gui_get_focus_owner()
+	if not focused_control:
+		return
+	if focused_control != self and not is_ancestor_of(focused_control):
+		return
+
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_1:
+				_apply_level_filter(0, "DEBUG")  # DEBUG
+				get_viewport().set_input_as_handled()
+			KEY_2:
+				_apply_level_filter(1, "INFO+")  # INFO+
+				get_viewport().set_input_as_handled()
+			KEY_3:
+				_apply_level_filter(2, "WARN+")  # WARN+
+				get_viewport().set_input_as_handled()
+			KEY_4:
+				_apply_level_filter(3, "ERROR")  # ERROR
+				get_viewport().set_input_as_handled()
+
 
 # ------------- [Public Method called by Debugger Plugin] -------------
 func add_log(log_data: Dictionary) -> void:
@@ -122,9 +153,31 @@ func _add_level_filter_buttons() -> void:
 			btn.button_pressed = true
 		btn.pressed.connect(_on_level_filter_pressed.bind(_level_presets[preset_name], btn))
 		_update_level_filter_button_style(btn, preset_name == "DEBUG")
+
+		# Add keyboard shortcut hint to tooltip
+		var shortcut_hint: String = ""
+		match preset_name:
+			"DEBUG":
+				shortcut_hint = " (Press 1)"
+			"INFO+":
+				shortcut_hint = " (Press 2)"
+			"WARN+":
+				shortcut_hint = " (Press 3)"
+			"ERROR":
+				shortcut_hint = " (Press 4)"
+		btn.tooltip_text = preset_name + shortcut_hint
+
 		level_filter_container.add_child(btn)
 		if preset_name == "DEBUG":
 			_current_level_filter_button = btn
+
+
+func _apply_level_filter(min_level: int, preset_name: String) -> void:
+	for child: Node in level_filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == preset_name:
+			btn.pressed.emit()
+			break
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
