@@ -1,32 +1,32 @@
 # D-Logger for Godot 4.3+
 
-[English](README.md) | **日本語**
+**日本語** | [English](README.md)
 
-Godot向けの軽量かつ強力で拡張性の高いロギングシステム(になる予定)。
-コンソールとファイルへの同時出力をサポート。
-また、Project Settingsとの統合やインスタンス単位の柔軟な設定が可能。
+![D-Logger Preview](doc_images/d_logger_image.jpg)
+
+Godot向けの軽量かつ強力で拡張性の高いロギングシステム。D-Loggerは、マルチ出力、インタラクティブなフィルタリング、Godotエディタとのシームレスな統合をサポートし、ログ管理を効率化する。
 
 ---
 
 ## ✨ 特徴
 
-- 📢 **マルチキャストロギング**: コンソールとファイルへ同時にログを出力。
-- 🔍 **インタラクティブなフィルタリング**: エディタの底部パネル（D-Logger）上の動的なボタンでカテゴリごとにログをフィルタリング。
-  - カテゴリボタンをクリックして表示/非表示を切り替え
-  - `Alt + Click` でそのカテゴリのみを表示（Solo モード）
-- ⚙️ **Project Settings 統合**: プレフィックス、ログレベル、ファイルパスなどの全体設定を Godot の Editor Settings から直接管理できる。
-- 🧩 **インスタンス単位の設定**: 特定のサブシステム向けに、独自のプレフィックスやログレベルを持つロガーを作成可能。
-- 🎨 **リッチテキスト出力**: カラーコード化されたコンソールログにより、視認性が向上。
-- 🔍 **コンテキストとカテゴリ**: オブジェクト参照やカテゴリ文字列を付与して、ログの追跡を容易に。
-- ⚡ **パフォーマンス重視**: ログレベルが無効な場合、複雑なフォーマット処理を自動的にスキップ。
+- 📢 **マルチキャストロギング**: コンソール、ファイル、および専用のエディタパネルへ同時にログを出力。
+- 🔍 **インタラクティブな底部パネル**: リアルタイムでログを調査できるカスタムパネル。
+  - **カテゴリフィルタリング**: 特定のカテゴリの表示/非表示を切り替え。`Alt + Click` でそのカテゴリのみを表示（Solo モード）。
+  - **時間フィルタリング**: 直近 30秒、1分、5分のログを絞り込み。
+  - **レベルフィルタリング**: DEBUG, INFO+, WARN+, ERROR の表示を素早く切り替え。
+- ⚙️ **Project & Editor Settings**: プレフィックス、ログレベル、ファイルパスなどを Godot の設定メニューから直接管理。
+- 🧩 **インスタンス単位の設定**: ネットワークやAIなど、特定のサブシステム向けに独自のプレフィックスやレベルを持つロガーを作成可能。
+- 🎨 **リッチテキスト出力**: エディタパネル上で BBCode をサポートし、視認性の高いログ表示を実現。
+- ⚡ **パフォーマンス重視**: ログレベルが無効な場合、複雑な文字列フォーマット処理を自動的にスキップ。
 - 🛠️ **デバッグ専用設計**: コンソールおよびファイル出力はリリースビルドで自動的に無効化され、本番環境でのオーバーヘッドを防止。
 
 ---
 
 ## 📦 インストール
 
-1. `addons/d_logger/` フォルダをプロジェクトの `addons/` ディレクトリにコピー。
-2. **Project Settings > Plugins** から **D-Logger** を有効化。
+1. `addons/d_logger/` フォルダをプロジェクトの `addons/` ディレクトリにコピーする。
+2. **Project > Project Settings > Plugins** から **D-Logger** を有効化する。
 3. `DLogger` という名前のシングルトン（Autoload）が自動的に登録される。
 
 ---
@@ -68,9 +68,9 @@ DLogger.debug("プレイヤーがジャンプした", [], "gameplay", self)
 
 ---
 
-## ⚙️ Project Settings
+## ⚙️ 設定
 
-**Editor > Editor Layout > Editor Settings > D-Logger** セクションからグローバル設定を変更できる：
+設定は **Editor > Editor Settings > D-Logger** から管理する（一部の値は実行時に Project Settings と同期される）：
 
 | 設定項目 | 型 | デフォルト値 | 説明 |
 |---------|------|---------|-------------|
@@ -79,22 +79,23 @@ DLogger.debug("プレイヤーがジャンプした", [], "gameplay", self)
 | `min_log_level` | Enum | `DEBUG` | 表示する最小レベル（DEBUG, INFO, WARN, ERROR）。 |
 | `enable_file_log` | Boolean | `false` | ファイルへのログ出力を有効化（デバッグビルドのみ）。 |
 | `log_file_path` | String | `user://debug.log` | ログファイルの保存先パス。 |
+| `auto_activate_panel`| Boolean | `true` | デバッグ開始時に D-Logger パネルを自動表示。 |
 
 ---
 
 ## 🔧 インスタンスごとのロガー
 
-ネットワークやAIなど、特定のシステム専用のロガーが必要な場合は、個別のインスタンスを作成できる：
+特定のシステム専用のロガーが必要な場合は、個別のインスタンスを作成できる：
 
 ```gdscript
 var network_log: DLoggerClass
 
 func _init():
-	# 引数: prefix, min_level, console_enabled, file_path
-	network_log = DLoggerClass.new("NETWORK", 1) # 1 は INFO
+    # 引数: prefix, min_level, console_enabled, file_path
+    network_log = DLoggerClass.new("NETWORK", DLoggerConstants.LogLevel.INFO)
 
 func _ready():
-	network_log.info("サーバーに接続中...")
+    network_log.info("サーバーに接続中...")
 ```
 
 ---
@@ -102,7 +103,7 @@ func _ready():
 ## 📖 API リファレンス
 
 ### ロギングメソッド
-すべてのメソッドは `true` を返す。これにより、`assert()` 内で使用してデバッグ時のみ実行させることが可能。
+すべてのメソッドは `true` を返す。これにより、`assert()` 内で使用してデバッグ時のみ実行させることが可能だ。
 
 - `debug(msg, values=[], category="", context=null, prefix="")`
 - `info(msg, values=[], category="", context=null, prefix="")`
@@ -110,12 +111,18 @@ func _ready():
 - `error(msg, values=[], category="", context=null, prefix="")`
 
 ### レベルチェック
-重い計算を伴うログ出力の前に使用すると効果的。
+重い計算を伴うログ出力の前に使用すると効果的だ。
 
 - `is_debug_enabled()`
 - `is_info_enabled()`
 - `is_warn_enabled()`
 - `is_error_enabled()`
+
+### エディタパネルのショートカット
+- **Ctrl + L**: ログをクリア
+- **Ctrl + C**: ログをクリップボードにコピー
+- **Ctrl + S**: ログを `user://` 内のファイルに保存
+- **1, 2, 3, 4**: ログレベルフィルタの切り替え
 
 ---
 
@@ -129,95 +136,25 @@ func _ready():
 [  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] キャラクタースポーン
 ```
 
-**例 (WARN):**
-```
-[  1.345s][F:130][D-Logger][test.gd:42] [Player] gameplay - [WARN] 体力不足
-```
-
-**フォーマットの説明:**
-- `[time]` - 経過時間（秒）
-- `[F:frame]` - ゲーム開始からの総フレーム数
-- `[prefix]` - ロガープレフィックス（デフォルトまたはカスタム）
-- `[file:line]` - ソースファイルと行番号 (**WARN と ERROR のみ**)
-- `[context]` - オブジェクトコンテキスト（指定されている場合）
-- `category` - ログカテゴリ文字列（指定されている場合）
-- `[LEVEL]` - ログレベル（DEBUG, INFO, WARN, ERROR）
-- `message` - フォーマット済みログメッセージ
+**注意:** `[file:line]`（ソースファイルと行番号）は、コンソールをスッキリさせるため **WARN** と **ERROR** レベルでのみ表示される。
 
 ---
 
 ## 💡 ヒント
 
-### リリースビルドでの挙動
-デフォルトでは、D-Loggerは**リリースビルドで何も出力しない**。
-これはパフォーマンスの低下やデバッグ情報の漏洩を防ぐための仕様。
-
-特定のロジックをデバッグ時のみ実行したい場合は `assert` を活用するといいかもしれない：
-```gdscript
-assert(DLogger.debug("このロジックとログはデバッグビルドにのみ存在する"))
-```
-
-### ログファイルの場所
-ログファイルは `user://` ディレクトリに保存される。
-- **Windows**: `%APPDATA%\Godot\app_userdata\[プロジェクト名]\debug.log`
-- **macOS**: `~/Library/Application Support/Godot/app_userdata/[プロジェクト名]/debug.log`
-- **Linux**: `~/.local/share/godot/app_userdata/[プロジェクト名]/debug.log`
-
----
-
-## 📚 よくあるパターンと使用例
-
 ### パフォーマンスを意識したロギング
-ログレベルが無効な場合、重い計算をスキップする：
+ログ出力に重い計算が必要な場合は、レベルチェックで囲むこと：
 
 ```gdscript
-# 悪い例: expensive_calculation() はデバッグが無効でも実行される
-DLogger.debug("結果: {0}", [expensive_calculation()])
-
-# 良い例: expensive_calculation() はデバッグが有効な時だけ実行される
 if DLogger.is_debug_enabled():
-    DLogger.debug("結果: {0}", [expensive_calculation()])
-```
-
-### カテゴリ分けされたロギング
-サブシステムごとにログを分類して、フィルタリングを容易にする：
-
-```gdscript
-# player.gd の中
-DLogger.warn("体力が危機的に低下", [], "gameplay", self)
-
-# network_manager.gd の中
-DLogger.info("接続中: {0}:{1}", [ip, port], "network", self)
-
-# audio_manager.gd の中
-DLogger.error("オーディオ読み込み失敗: {0}", [path], "audio", self)
-```
-
-### システム専用ロガー
-特定のサブシステム用に専用ロガーを作成する：
-
-```gdscript
-# network_manager.gd の中
-extends Node
-
-var net_log: DLoggerClass
-
-func _init():
-    net_log = DLoggerClass.new("NET", DLoggerConstants.LogLevel.DEBUG)
-
-func connect_to_server(host: String, port: int) -> bool:
-    net_log.info("接続試行: {0}:{1}", [host, port])
-    # ... 接続ロジック
-    return true
+    DLogger.debug("複雑な計算結果: {0}", [do_heavy_calc()])
 ```
 
 ### `assert()` との組み合わせ
-D-Loggerを `assert()` と組み合わせてデバッグ専用アサーションを実装する：
+ロギングメソッドは `true` を返すため、`assert` と組み合わせてデバッグ時のみログを出力し、失敗時にコンテキストを提供できる：
 
 ```gdscript
-func set_health(value: int) -> void:
-    assert(value >= 0 and DLogger.warn("体力は負の値にできません: {0}", [value]))
-    _health = max(0, value)
+assert(DLogger.debug("このログはデバッグビルドでのみ出力される"))
 ```
 
 ---
@@ -225,19 +162,11 @@ func set_health(value: int) -> void:
 ## 🐛 トラブルシューティング
 
 ### コンソールにログが表示されない
-- **確認1**: **Project Settings > Plugins** で D-Logger は有効になっていますか？
-- **確認2**: **Editor Settings > D-Logger** の `enable_console_log` は `true` になっていますか？
-- **確認3**: ログレベルが `min_log_level` 以上ですか？（例：`min_log_level` が INFO の場合、DEBUG ログは表示されません）
-- **確認4**: リリースビルドではないですか？（デフォルトではリリースビルドではログが無効です）
+- プラグインが **Project Settings** で有効になっているか確認する。
+- **Editor Settings** の `enable_console_log` が `true` になっているか確認する。
+- `min_log_level`（最小ログレベル）の設定を確認する。
+- 注意：D-Logger はデフォルトで **リリースビルドでは何も出力しない**。
 
-### ファイルログが作成されない
-- **確認1**: **Editor Settings > D-Logger** で `enable_file_log` は有効になっていますか？
-- **確認2**: `log_file_path` ディレクトリへの書き込み権限はありますか？
-- **確認3**: 最初に `log_file_path` を `user://debug.log` に設定して、`user://` ディレクトリが存在することを確認してください
-- **確認4**: デバッグビルドですか？（デフォルトではリリースビルドではファイルロギングが無効です）
-
-### カスタムロガーインスタンスが動作しない
-- **確認1**: `DLogger.new()` ではなく `DLoggerClass.new()` で作成していますか？
-- **確認2**: min_level パラメータが正しいですか？（0=DEBUG, 1=INFO, 2=WARN, 3=ERROR）
-- **確認3**: インスタンスが使用される前にガベージコレクションされていないですか？（メンバー変数として保存してください）
-
+### ログファイルが作成されない
+- 設定の `log_file_path` を確認する。
+- デフォルトのパスは `user://debug.log` である。`user://` フォルダは、Godot エディタの **Project > Open User Data Folder** から開くことができる。
