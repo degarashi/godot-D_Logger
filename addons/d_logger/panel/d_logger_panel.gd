@@ -358,10 +358,10 @@ func _rebuild_log_display() -> void:
 			_append_formatted_log(log_data)
 
 
-func _on_clear_pressed() -> void:
+func clear_logs() -> void:
 	_all_logs.clear()
 	log_display.clear()
-	# Optionally clear filters too?
+
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
@@ -391,6 +391,10 @@ func _on_clear_pressed() -> void:
 			_current_level_filter_button = btn
 			_update_level_filter_button_style(btn, true)
 			break
+
+
+func _on_clear_pressed() -> void:
+	clear_logs()
 
 
 func _on_copy_pressed() -> void:
