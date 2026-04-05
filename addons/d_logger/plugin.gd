@@ -87,6 +87,14 @@ var _settings_entries: Array[SettingsEntry] = [
 		true,
 		PROPERTY_HINT_NONE,
 		"Automatically activate the D-Logger panel when a debug session starts."
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_AUTO_CLEAR_ON_START,
+		"",
+		TYPE_BOOL,
+		true,
+		PROPERTY_HINT_NONE,
+		"Automatically clear the log panel when a new debug session starts."
 	)
 ]
 
@@ -165,8 +173,13 @@ func _initialize_settings() -> void:
 
 
 func _on_debugger_session_started() -> void:
-	# Show the panel when debug session starts
 	var es := get_editor_interface().get_editor_settings()
+
+	var auto_clear: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_CLEAR_ON_START)
+	if _panel_instance and auto_clear:
+		_panel_instance.clear_logs()
+
+	# Show the panel when debug session starts
 	var auto_activate: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL)
 	if _panel_instance and auto_activate:
 		call_deferred("make_bottom_panel_item_visible", _panel_instance)
