@@ -28,7 +28,7 @@ const DEFAULT_FILE_PATH := "user://debug.log"
 
 # --- Autoload Info ---
 const AUTOLOAD_NAME := "DLogger"
-const AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.gd"
+const AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.tscn"
 
 # --- Log Level Labels ---
 # For Enum display in settings

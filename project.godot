@@ -23,7 +23,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-DLogger="*uid://co142rftxrv40"
+DLogger="*uid://dk8w65jl35vbd"
 
 [debug]
 
