@@ -100,13 +100,13 @@ func _setup_shortcuts() -> void:
 	copy_button.shortcut = _create_shortcut(KEY_C, true)
 	copy_button.tooltip_text = "Copy Logs (Ctrl+C)"
 
-	# Ctrl + S (or Cmd + S) to save logs
-	save_button.shortcut = _create_shortcut(KEY_S, true)
-	save_button.tooltip_text = "Save Logs (Ctrl+S)"
+	# Ctrl + Alt + S (or Cmd + Alt + S) to save logs
+	save_button.shortcut = _create_shortcut(KEY_S, true, false, true)
+	save_button.tooltip_text = "Save Logs (Ctrl+Alt+S)"
 
 
 ## Helper function to dynamically generate shortcut resources
-func _create_shortcut(p_keycode: Key, p_require_ctrl: bool = false) -> Shortcut:
+func _create_shortcut(p_keycode: Key, p_require_ctrl: bool = false, p_require_shift: bool = false, p_require_alt: bool = false) -> Shortcut:
 	var shortcut := Shortcut.new()
 	var event := InputEventKey.new()
 
@@ -118,6 +118,12 @@ func _create_shortcut(p_keycode: Key, p_require_ctrl: bool = false) -> Shortcut:
 			event.command = true
 		else:
 			event.ctrl_pressed = true
+
+	if p_require_shift:
+		event.shift_pressed = true
+
+	if p_require_alt:
+		event.alt_pressed = true
 
 	shortcut.events.append(event)
 	return shortcut
