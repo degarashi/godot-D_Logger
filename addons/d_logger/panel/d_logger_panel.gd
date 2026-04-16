@@ -76,13 +76,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ------------- [Public Method called by Debugger Plugin] -------------
 func add_log(log_data: Dictionary) -> void:
-	var category: String = log_data.get("category", "")
-	if category.is_empty():
-		category = "Default"
+	var source := _get_log_source(log_data)
 
 	# Add new category button if it doesn't exist yet
-	if not _active_filters.has(category):
-		_add_filter_button(category)
+	if not _active_filters.has(source):
+		_add_filter_button(source)
 
 	_all_logs.append(log_data)
 
@@ -91,6 +89,16 @@ func add_log(log_data: Dictionary) -> void:
 
 
 # ------------- [Private Method] -------------
+func _get_log_source(log_data: Dictionary) -> String:
+	var category: String = log_data.get("category", "")
+	if not category.is_empty():
+		return category
+
+	var prefix: String = log_data.get("prefix", "")
+	if not prefix.is_empty() and prefix != DLoggerConstants.DEFAULT_PREFIX:
+		return prefix
+
+	return "Default"
 func _setup_shortcuts() -> void:
 	# Ctrl + L (or Cmd + L) to clear logs
 	clear_button.shortcut = _create_shortcut(KEY_L, true)
@@ -295,20 +303,24 @@ func _append_formatted_log(log_data: Dictionary) -> void:
 func _format_log(log_data: Dictionary) -> String:
 	var time: float = log_data.get("time", 0.0)
 	var frame: int = log_data.get("frame", 0)
+	var level: String = log_data.get("level", "DEBUG")
+	var prefix: String = log_data.get("prefix", "")
+	var category: String = log_data.get("category", "")
+	var context_str: String = log_data.get("context_str", "")
+
+	var source_str := DLoggerFunc.get_source_string(prefix, category)
+
 	var formatted_msg: String = (
-		"[%7.3fs][F:%d][%s] %s %s - [%s] %s"
+		"[%7.3fs][F:%d]%s %s - [%s] %s"
 		% [
 			time,
 			frame,
-			log_data.get("prefix", ""),
-			log_data.get("context_str", ""),
-			log_data.get("category", ""),
-			log_data.get("level", ""),
+			source_str,
+			context_str,
+			level,
 			log_data.get("message", "")
 		]
 	)
-
-	var level: String = log_data.get("level", "DEBUG")
 
 	match level:
 		"DEBUG":
@@ -333,12 +345,9 @@ func _get_log_level_value(level_str: String) -> int:
 
 
 func _should_display_log(log_data: Dictionary) -> bool:
-	# Check category filter
-	var category: String = log_data.get("category", "")
-	if category.is_empty():
-		category = "Default"
-
-	if not _active_filters.get(category, true):
+	# Check category/prefix filter
+	var source := _get_log_source(log_data)
+	if not _active_filters.get(source, true):
 		return false
 
 	# Check time filter
@@ -416,15 +425,21 @@ func _get_formatted_logs() -> String:
 		if _should_display_log(log_data):
 			var time: float = log_data.get("time", 0.0)
 			var frame: int = log_data.get("frame", 0)
+			var level: String = log_data.get("level", "DEBUG")
+			var prefix: String = log_data.get("prefix", "")
+			var category: String = log_data.get("category", "")
+			var context_str: String = log_data.get("context_str", "")
+
+			var source_str := DLoggerFunc.get_source_string(prefix, category)
+
 			var raw_msg: String = (
-				"[%7.3fs][F:%d][%s] %s %s - [%s] %s"
+				"[%7.3fs][F:%d]%s %s - [%s] %s"
 				% [
 					time,
 					frame,
-					log_data.get("prefix", ""),
-					log_data.get("context_str", ""),
-					log_data.get("category", ""),
-					log_data.get("level", ""),
+					source_str,
+					context_str,
+					level,
 					log_data.get("message", "")
 				]
 			)

@@ -94,37 +94,43 @@ static func _get_caller_info(level: String) -> String:
 	return caller_info
 
 
+static func get_source_string(prefix: String, category: String) -> String:
+	if category.is_empty() or category == prefix:
+		return "[%s]" % prefix
+	if prefix == DLoggerConstants.DEFAULT_PREFIX:
+		return "[%s]" % category
+	return "[%s:%s]" % [prefix, category]
+
+
 static func format_log(
 	msg: String, category: String, level: String, context: Object, prefix: String
 ) -> String:
 	# Convert to seconds (e.g., 1234ms -> 1.234s)
 	var seconds := Time.get_ticks_msec() / 1000.0
 	var frames := Engine.get_frames_drawn()
-	var cat_str := category
 
 	# Build context information
 	var ctx_str := ""
 	if context:
-		ctx_str = get_object_string(context)
+		ctx_str = " " + get_object_string(context)
 
 	# Pass the log level to determine if we should fetch stack trace
 	var caller_str := _get_caller_info(level)
-
-	# To maintain a clean visual output, add a trailing space only if we have caller info
 	if not caller_str.is_empty():
-		caller_str += " "
+		caller_str = " " + caller_str
 
-	# [001.234s][F:123][D-Logger][main.gd:10] [MyNode] MyCategory - [WARN] Message
-	# [001.234s][F:123][D-Logger] [MyNode] MyCategory - [DEBUG] Message
+	var source_str := get_source_string(prefix, category)
+
+	# [001.234s][F:123][D-Logger] [main.gd:10] [MyNode] - [WARN] Message
+	# [001.234s][F:123][AI:Behavior] [MyNode] - [DEBUG] Message
 	return (
-		"[%7.3fs][F:%d][%s]%s%s %s - [%s] %s"
+		"[%7.3fs][F:%d]%s%s%s - [%s] %s"
 		% [
 			seconds,
 			frames,
-			prefix,
+			source_str,
 			caller_str,
 			ctx_str,
-			cat_str,
 			level,
 			msg,
 		]
