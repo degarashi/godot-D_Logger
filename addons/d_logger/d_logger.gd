@@ -1,3 +1,4 @@
+@tool
 class_name DLoggerClass
 extends RefCounted
 
@@ -8,6 +9,7 @@ const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
 const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 
 # ------------- [Private Variables] -------------
+static var _editor_panel: Object = null
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
 
@@ -117,7 +119,7 @@ func _dispatch(
 			_dispatcher.error(final_msg, [], category, context, pref)
 
 	# --- Process of sending to the editor debugger ---
-	if OS.is_debug_build() and EngineDebugger.is_active():
+	if OS.is_debug_build():
 		var level_str := "DEBUG"
 		match level:
 			DLoggerConstants.LogLevel.INFO:
@@ -138,8 +140,12 @@ func _dispatch(
 			"frame": Engine.get_frames_drawn()
 		}
 
-		# Send data through a unique communication channel named 'd_logger:log'
-		EngineDebugger.send_message("d_logger:log", [debug_data])
+		if EngineDebugger.is_active():
+			# Send data through a unique communication channel named 'd_logger:log'
+			EngineDebugger.send_message("d_logger:log", [debug_data])
+		elif _editor_panel and _editor_panel.has_method("add_log"):
+			# Direct call to the panel when running inside the editor
+			_editor_panel.add_log(debug_data)
 
 
 # ------------- [Public Methods] -------------
