@@ -102,7 +102,9 @@ var _settings_entries: Array[SettingsEntry] = [
 # ------------- [Callbacks] -------------
 func _enter_tree() -> void:
 	_initialize_settings()
-	add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
+
+	if not ProjectSettings.has_setting("autoload/" + DLoggerConstants.AUTOLOAD_NAME):
+		add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
 
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
@@ -118,9 +120,6 @@ func _exit_tree() -> void:
 	var es := get_editor_interface().get_editor_settings()
 	if es.settings_changed.is_connected(_sync_settings_to_runtime):
 		es.settings_changed.disconnect(_sync_settings_to_runtime)
-
-	if ProjectSettings.has_setting(DLoggerConstants.AUTOLOAD_NAME):
-		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
 
 	# --- Delete debugger plugin ---
 	if _debugger_instance:
@@ -141,6 +140,8 @@ func _initialize_settings() -> void:
 		if entry.is_editor_setting:
 			if not es.has_setting(entry.sys_name):
 				es.set_setting(entry.sys_name, entry.default_val)
+
+			# metadata for editor UI
 			es.add_property_info(
 				{
 					"name": entry.sys_name,
@@ -154,6 +155,8 @@ func _initialize_settings() -> void:
 			# Project Setting
 			if not ProjectSettings.has_setting(entry.sys_name):
 				ProjectSettings.set_setting(entry.sys_name, entry.default_val)
+
+			# metadata for editor UI
 			ProjectSettings.add_property_info(
 				{
 					"name": entry.sys_name,
@@ -162,13 +165,15 @@ func _initialize_settings() -> void:
 					"hint_string": entry.prop_hint_str
 				}
 			)
+			# set_initial_value can mark project as dirty in some cases,
+			# so we only set it if not already present or if we really need it.
 			ProjectSettings.set_initial_value(entry.sys_name, entry.default_val)
 
 	# Connect to settings changed to keep runtime in sync
 	if not es.settings_changed.is_connected(_sync_settings_to_runtime):
 		es.settings_changed.connect(_sync_settings_to_runtime)
 
-	# Initial sync
+	# Initial sync (only if needed)
 	_sync_settings_to_runtime()
 
 
