@@ -1,6 +1,9 @@
 @tool
 extends Control
 
+const MAX_LOG_COUNT = 10000
+const LOG_TRIM_BATCH_SIZE = 100
+
 # ------------- [Private Variable] -------------
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
@@ -83,6 +86,15 @@ func add_log(log_data: Dictionary) -> void:
 		_add_filter_button(source)
 
 	_all_logs.append(log_data)
+
+	# Limit the number of logs stored
+	if _all_logs.size() > MAX_LOG_COUNT:
+		# Trim a batch of logs to avoid rebuilding too frequently
+		for i in range(LOG_TRIM_BATCH_SIZE):
+			if not _all_logs.is_empty():
+				_all_logs.remove_at(0)
+		_rebuild_log_display()
+		return # Display already rebuilt, no need to append
 
 	if _should_display_log(log_data):
 		_append_formatted_log(log_data)
