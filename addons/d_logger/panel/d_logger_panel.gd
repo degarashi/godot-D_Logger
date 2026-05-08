@@ -94,7 +94,7 @@ func add_log(log_data: Dictionary) -> void:
 			if not _all_logs.is_empty():
 				_all_logs.remove_at(0)
 		_rebuild_log_display()
-		return # Display already rebuilt, no need to append
+		return  # Display already rebuilt, no need to append
 
 	if _should_display_log(log_data):
 		_append_formatted_log(log_data)
@@ -111,6 +111,8 @@ func _get_log_source(log_data: Dictionary) -> String:
 		return prefix
 
 	return "Default"
+
+
 func _setup_shortcuts() -> void:
 	# Ctrl + L (or Cmd + L) to clear logs
 	clear_button.shortcut = _create_shortcut(KEY_L, true)
@@ -126,7 +128,12 @@ func _setup_shortcuts() -> void:
 
 
 ## Helper function to dynamically generate shortcut resources
-func _create_shortcut(p_keycode: Key, p_require_ctrl: bool = false, p_require_shift: bool = false, p_require_alt: bool = false) -> Shortcut:
+func _create_shortcut(
+	p_keycode: Key,
+	p_require_ctrl: bool = false,
+	p_require_shift: bool = false,
+	p_require_alt: bool = false
+) -> Shortcut:
 	var shortcut := Shortcut.new()
 	var event := InputEventKey.new()
 
@@ -204,7 +211,7 @@ func _add_level_filter_buttons() -> void:
 			_current_level_filter_button = btn
 
 
-func _apply_level_filter(min_level: int, preset_name: String) -> void:
+func _apply_level_filter(_min_level: int, preset_name: String) -> void:
 	for child: Node in level_filter_container.get_children():
 		var btn := child as Button
 		if btn and btn.text == preset_name:
@@ -324,14 +331,7 @@ func _format_log(log_data: Dictionary) -> String:
 
 	var formatted_msg: String = (
 		"[%7.3fs][F:%d]%s %s - [%s] %s"
-		% [
-			time,
-			frame,
-			source_str,
-			context_str,
-			level,
-			log_data.get("message", "")
-		]
+		% [time, frame, source_str, context_str, level, log_data.get("message", "")]
 	)
 
 	match level:
