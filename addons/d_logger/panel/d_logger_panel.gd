@@ -38,6 +38,7 @@ func _ready() -> void:
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
+	log_display.meta_clicked.connect(_on_log_meta_clicked)
 
 	# Assign shortcuts
 	_setup_shortcuts()
@@ -313,6 +314,22 @@ func _on_level_filter_pressed(min_level: int, button: Button) -> void:
 	_rebuild_log_display()
 
 
+func _on_log_meta_clicked(meta: Variant) -> void:
+	if meta is String:
+		var meta_str: String = meta
+		var parts := meta_str.split(":")
+		if parts.size() >= 3:
+			# コロンで分割された要素のうち、最後（行番号）を除いた全てを結合してパスを復元
+			var path_parts := parts.slice(0, -1)
+			var file_path := ":".join(path_parts)
+			var line_num := parts[-1].to_int()
+
+			if FileAccess.file_exists(file_path):
+				var res := load(file_path)
+				if res is Script:
+					EditorInterface.edit_script(res, line_num)
+
+
 func _append_formatted_log(log_data: Dictionary) -> void:
 	if log_display:
 		var bbcode_msg := _format_log(log_data)
@@ -326,12 +343,12 @@ func _format_log(log_data: Dictionary) -> String:
 	var prefix: String = log_data.get("prefix", "")
 	var category: String = log_data.get("category", "")
 	var context_str: String = log_data.get("context_str", "")
+	var caller_info = log_data.get("caller_info", {})
 
 	var source_str := DLoggerFunc.get_source_string(prefix, category)
 
-	var formatted_msg: String = (
-		"[%7.3fs][F:%d]%s %s - [%s] %s"
-		% [time, frame, source_str, context_str, level, log_data.get("message", "")]
+	var formatted_msg := DLoggerFunc.get_formatted_line(
+		time, frame, source_str, caller_info, context_str, level, log_data.get("message", ""), true
 	)
 
 	match level:
@@ -441,7 +458,7 @@ func _get_formatted_logs() -> String:
 			var prefix: String = log_data.get("prefix", "")
 			var category: String = log_data.get("category", "")
 			var context_str: String = log_data.get("context_str", "")
-			var caller_info: String = log_data.get("caller_info", "")
+			var caller_info = log_data.get("caller_info", {})
 
 			var source_str := DLoggerFunc.get_source_string(prefix, category)
 
@@ -452,7 +469,8 @@ func _get_formatted_logs() -> String:
 				caller_info,
 				context_str,
 				level,
-				log_data.get("message", "")
+				log_data.get("message", ""),
+				false  # use_bbcode
 			)
 			output_text += raw_msg + "\n"
 	return output_text

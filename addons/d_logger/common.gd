@@ -71,14 +71,13 @@ static func get_object_string(obj: Object) -> String:
 	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
 
 
-static func get_caller_info(level: String) -> String:
+static func get_caller_info(level: String) -> Dictionary:
 	# Release builds cannot use get_stack(), so we skip it entirely
 	# Also skip for high-frequency logs (DEBUG, INFO) to maintain performance
 	if not OS.is_debug_build() or level == "DEBUG" or level == "INFO":
-		return ""
+		return {}
 
 	var stack := get_stack()
-	var caller_info := ""
 
 	# Loop through the stack to find the first file outside the logger addon
 	for i in range(stack.size()):
@@ -86,12 +85,15 @@ static func get_caller_info(level: String) -> String:
 		var source: String = entry.get("source", "")
 
 		if not source.begins_with("res://addons/d_logger/"):
-			caller_info = "[{file}:{line}]".format(
-				{"file": source.get_file(), "line": entry.get("line", 0)}
-			)
-			break  # Found the caller, no need to inspect the rest of the stack
+			return {
+				"file": source,
+				"line": entry.get("line", 0),
+				"display": "[{file}:{line}]".format(
+					{"file": source.get_file(), "line": entry.get("line", 0)}
+				)
+			}
 
-	return caller_info
+	return {}
 
 
 static func get_source_string(prefix: String, category: String) -> String:
@@ -106,13 +108,28 @@ static func get_formatted_line(
 	time: float,
 	frame: int,
 	source_str: String,
-	caller_str: String,
+	caller_info: Variant, # Can be String (old format) or Dictionary
 	ctx_str: String,
 	level: String,
-	msg: String
+	msg: String,
+	use_bbcode: bool = false
 ) -> String:
-	# Build formatted parts with optional leading spaces
-	var caller_part := " " + caller_str if not caller_str.is_empty() else ""
+	var caller_display := ""
+	var caller_url := ""
+
+	if caller_info is Dictionary and not caller_info.is_empty():
+		caller_display = caller_info.get("display", "")
+		caller_url = "%s:%d" % [caller_info.get("file", ""), caller_info.get("line", 0)]
+	elif caller_info is String and not caller_info.is_empty():
+		caller_display = caller_info
+
+	var caller_part := ""
+	if not caller_display.is_empty():
+		if use_bbcode and not caller_url.is_empty():
+			caller_part = " [url=%s]%s[/url]" % [caller_url, caller_display]
+		else:
+			caller_part = " " + caller_display
+
 	var ctx_part := " " + ctx_str if not ctx_str.is_empty() else ""
 
 	# [001.234s][F:123][D-Logger] [main.gd:10] [MyNode] - [WARN] Message
@@ -138,7 +155,8 @@ static func format_log(
 	var frames := Engine.get_frames_drawn()
 
 	var ctx_str := get_object_string(context) if context else ""
-	var caller_str := get_caller_info(level)
+	var caller_info := get_caller_info(level)
 	var source_str := get_source_string(prefix, category)
 
-	return get_formatted_line(seconds, frames, source_str, caller_str, ctx_str, level, msg)
+	# By default, use plain text for internal formatting (e.g. for console/file)
+	return get_formatted_line(seconds, frames, source_str, caller_info, ctx_str, level, msg, false)
