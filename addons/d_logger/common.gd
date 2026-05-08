@@ -71,7 +71,7 @@ static func get_object_string(obj: Object) -> String:
 	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
 
 
-static func _get_caller_info(level: String) -> String:
+static func get_caller_info(level: String) -> String:
 	# Release builds cannot use get_stack(), so we skip it entirely
 	# Also skip for high-frequency logs (DEBUG, INFO) to maintain performance
 	if not OS.is_debug_build() or level == "DEBUG" or level == "INFO":
@@ -102,6 +102,34 @@ static func get_source_string(prefix: String, category: String) -> String:
 	return "[%s:%s]" % [prefix, category]
 
 
+static func get_formatted_line(
+	time: float,
+	frame: int,
+	source_str: String,
+	caller_str: String,
+	ctx_str: String,
+	level: String,
+	msg: String
+) -> String:
+	# Build formatted parts with optional leading spaces
+	var caller_part := " " + caller_str if not caller_str.is_empty() else ""
+	var ctx_part := " " + ctx_str if not ctx_str.is_empty() else ""
+
+	# [001.234s][F:123][D-Logger] [main.gd:10] [MyNode] - [WARN] Message
+	return (
+		"[%7.3fs][F:%d]%s%s%s - [%s] %s"
+		% [
+			time,
+			frame,
+			source_str,
+			caller_part,
+			ctx_part,
+			level,
+			msg,
+		]
+	)
+
+
 static func format_log(
 	msg: String, category: String, level: String, context: Object, prefix: String
 ) -> String:
@@ -109,29 +137,8 @@ static func format_log(
 	var seconds := Time.get_ticks_msec() / 1000.0
 	var frames := Engine.get_frames_drawn()
 
-	# Build context information
-	var ctx_str := ""
-	if context:
-		ctx_str = " " + get_object_string(context)
-
-	# Pass the log level to determine if we should fetch stack trace
-	var caller_str := _get_caller_info(level)
-	if not caller_str.is_empty():
-		caller_str = " " + caller_str
-
+	var ctx_str := get_object_string(context) if context else ""
+	var caller_str := get_caller_info(level)
 	var source_str := get_source_string(prefix, category)
 
-	# [001.234s][F:123][D-Logger] [main.gd:10] [MyNode] - [WARN] Message
-	# [001.234s][F:123][AI:Behavior] [MyNode] - [DEBUG] Message
-	return (
-		"[%7.3fs][F:%d]%s%s%s - [%s] %s"
-		% [
-			seconds,
-			frames,
-			source_str,
-			caller_str,
-			ctx_str,
-			level,
-			msg,
-		]
-	)
+	return get_formatted_line(seconds, frames, source_str, caller_str, ctx_str, level, msg)

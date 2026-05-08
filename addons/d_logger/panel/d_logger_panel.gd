@@ -429,19 +429,18 @@ func _get_formatted_logs() -> String:
 			var prefix: String = log_data.get("prefix", "")
 			var category: String = log_data.get("category", "")
 			var context_str: String = log_data.get("context_str", "")
+			var caller_info: String = log_data.get("caller_info", "")
 
 			var source_str := DLoggerFunc.get_source_string(prefix, category)
 
-			var raw_msg: String = (
-				"[%7.3fs][F:%d]%s %s - [%s] %s"
-				% [
-					time,
-					frame,
-					source_str,
-					context_str,
-					level,
-					log_data.get("message", "")
-				]
+			var raw_msg := DLoggerFunc.get_formatted_line(
+				time,
+				frame,
+				source_str,
+				caller_info,
+				context_str,
+				level,
+				log_data.get("message", "")
 			)
 			output_text += raw_msg + "\n"
 	return output_text

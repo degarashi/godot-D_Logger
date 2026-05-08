@@ -135,6 +135,7 @@ func _dispatch(
 			"category": category,
 			"level": level_str,
 			"context_str": DLoggerFunc.get_object_string(context) if context else "",
+			"caller_info": DLoggerFunc.get_caller_info(level_str),
 			"prefix": pref,
 			"time": Time.get_ticks_msec() / 1000.0,
 			"frame": Engine.get_frames_drawn()
