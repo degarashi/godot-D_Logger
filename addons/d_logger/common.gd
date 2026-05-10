@@ -148,14 +148,19 @@ static func get_formatted_line(
 
 
 static func format_log(
-	msg: String, category: String, level: String, context: Object, prefix: String
+	msg: String,
+	category: String,
+	level: String,
+	context: Object,
+	prefix: String,
+	p_caller_info: Variant = null
 ) -> String:
 	# Convert to seconds (e.g., 1234ms -> 1.234s)
 	var seconds := Time.get_ticks_msec() / 1000.0
 	var frames := Engine.get_frames_drawn()
 
 	var ctx_str := get_object_string(context) if context else ""
-	var caller_info := get_caller_info(level)
+	var caller_info: Variant = p_caller_info if p_caller_info != null else get_caller_info(level)
 	var source_str := get_source_string(prefix, category)
 
 	# By default, use plain text for internal formatting (e.g. for console/file)

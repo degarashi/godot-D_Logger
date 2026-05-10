@@ -43,10 +43,11 @@ func debug(
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	for l in _list:
-		l.debug(msg, values, category, context, prefix)
+		l.debug(msg, values, category, context, prefix, p_caller_info)
 	return true
 
 
@@ -55,10 +56,11 @@ func info(
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	for l in _list:
-		l.info(msg, values, category, context, prefix)
+		l.info(msg, values, category, context, prefix, p_caller_info)
 	return true
 
 
@@ -67,10 +69,11 @@ func warn(
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	for l in _list:
-		l.warn(msg, values, category, context, prefix)
+		l.warn(msg, values, category, context, prefix, p_caller_info)
 	return true
 
 
@@ -79,8 +82,9 @@ func error(
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	for l in _list:
-		l.error(msg, values, category, context, prefix)
+		l.error(msg, values, category, context, prefix, p_caller_info)
 	return true

@@ -28,7 +28,8 @@ func debug(
 	_values: Variant = [],
 	_category: String = "",
 	_context: Object = null,
-	_prefix: String = ""
+	_prefix: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
@@ -38,7 +39,8 @@ func info(
 	_values: Variant = [],
 	_category: String = "",
 	_context: Object = null,
-	_prefix: String = ""
+	_prefix: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
@@ -48,7 +50,8 @@ func warn(
 	_values: Variant = [],
 	_category: String = "",
 	_context: Object = null,
-	_prefix: String = ""
+	_prefix: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
@@ -58,6 +61,7 @@ func error(
 	_values: Variant = [],
 	_category: String = "",
 	_context: Object = null,
-	_prefix: String = ""
+	_prefix: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true

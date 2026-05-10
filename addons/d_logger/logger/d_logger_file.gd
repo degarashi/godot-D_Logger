@@ -69,9 +69,10 @@ func debug(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info))
 	return true
 
 
@@ -80,9 +81,10 @@ func info(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "INFO", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "INFO", context, prefix, p_caller_info))
 	return true
 
 
@@ -91,9 +93,10 @@ func warn(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "WARN", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "WARN", context, prefix, p_caller_info))
 	# Immediate reflection on warning
 	if _file:
 		_file.flush()
@@ -105,9 +108,10 @@ func error(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "ERROR", context, prefix))
+	_write_line(DLoggerFunc.format_log(msg, category, "ERROR", context, prefix, p_caller_info))
 
 	# Flush the file buffer to ensure the error log is physically written to disk
 	if _file:

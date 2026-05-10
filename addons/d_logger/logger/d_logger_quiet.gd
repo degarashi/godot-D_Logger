@@ -24,26 +24,46 @@ func is_error_enabled() -> bool:
 
 
 func debug(
-	_m: String, _v: Variant = [], _cat: String = "", _ctx: Object = null, _p: String = ""
+	_m: String,
+	_v: Variant = [],
+	_cat: String = "",
+	_ctx: Object = null,
+	_p: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
 
 func info(
-	_m: String, _v: Variant = [], _cat: String = "", _ctx: Object = null, _p: String = ""
+	_m: String,
+	_v: Variant = [],
+	_cat: String = "",
+	_ctx: Object = null,
+	_p: String = "",
+	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
 
 func warn(
-	msg: String, _v: Variant = [], cat: String = "", ctx: Object = null, pref: String = ""
+	msg: String,
+	_v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	pref: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	push_warning(DLoggerFunc.format_log(msg, cat, "WARN", ctx, pref))
+	push_warning(DLoggerFunc.format_log(msg, cat, "WARN", ctx, pref, p_caller_info))
 	return true
 
 
 func error(
-	msg: String, _v: Variant = [], cat: String = "", ctx: Object = null, pref: String = ""
+	msg: String,
+	_v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	pref: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	push_error(DLoggerFunc.format_log(msg, cat, "ERROR", ctx, pref))
+	push_error(DLoggerFunc.format_log(msg, cat, "ERROR", ctx, pref, p_caller_info))
 	return true

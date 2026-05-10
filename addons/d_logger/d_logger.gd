@@ -91,7 +91,13 @@ func setup_logger() -> void:
 
 
 func _dispatch(
-	level: int, msg: String, values: Variant, category: String, context: Object, p_prefix: String
+	level: int,
+	msg: String,
+	values: Variant,
+	category: String,
+	context: Object,
+	p_prefix: String,
+	p_caller_info: Variant = null
 ) -> void:
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
 	var final_msg := msg
@@ -108,34 +114,37 @@ func _dispatch(
 			if values != null:
 				final_msg = msg.format([values])
 
+	var level_str := "DEBUG"
+	match level:
+		DLoggerConstants.LogLevel.INFO:
+			level_str = "INFO"
+		DLoggerConstants.LogLevel.WARN:
+			level_str = "WARN"
+		DLoggerConstants.LogLevel.ERROR:
+			level_str = "ERROR"
+
+	# Pre-calculate caller info for performance (one time per log)
+	var caller_info: Variant = p_caller_info if p_caller_info != null else DLoggerFunc.get_caller_info(level_str)
+
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
-			_dispatcher.debug(final_msg, [], category, context, pref)
+			_dispatcher.debug(final_msg, [], category, context, pref, caller_info)
 		DLoggerConstants.LogLevel.INFO:
-			_dispatcher.info(final_msg, [], category, context, pref)
+			_dispatcher.info(final_msg, [], category, context, pref, caller_info)
 		DLoggerConstants.LogLevel.WARN:
-			_dispatcher.warn(final_msg, [], category, context, pref)
+			_dispatcher.warn(final_msg, [], category, context, pref, caller_info)
 		DLoggerConstants.LogLevel.ERROR:
-			_dispatcher.error(final_msg, [], category, context, pref)
+			_dispatcher.error(final_msg, [], category, context, pref, caller_info)
 
 	# --- Process of sending to the editor debugger ---
 	if OS.is_debug_build():
-		var level_str := "DEBUG"
-		match level:
-			DLoggerConstants.LogLevel.INFO:
-				level_str = "INFO"
-			DLoggerConstants.LogLevel.WARN:
-				level_str = "WARN"
-			DLoggerConstants.LogLevel.ERROR:
-				level_str = "ERROR"
-
 		# Pack the message to be sent to the editor side into a dictionary
 		var debug_data: Dictionary = {
 			"message": final_msg,
 			"category": category,
 			"level": level_str,
 			"context_str": DLoggerFunc.get_object_string(context) if context else "",
-			"caller_info": DLoggerFunc.get_caller_info(level_str),
+			"caller_info": caller_info,
 			"prefix": pref,
 			"time": Time.get_ticks_msec() / 1000.0,
 			"frame": Engine.get_frames_drawn()
@@ -184,32 +193,32 @@ func is_error_enabled() -> bool:
 
 
 func debug(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
 ) -> bool:
 	if is_debug_enabled():
-		_dispatch(DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info)
 	return true
 
 
 func info(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
 ) -> bool:
 	if is_info_enabled():
-		_dispatch(DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info)
 	return true
 
 
 func warn(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
 ) -> bool:
 	if is_warn_enabled():
-		_dispatch(DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info)
 	return true
 
 
 func error(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = ""
+	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
 ) -> bool:
 	if is_error_enabled():
-		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p)
+		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info)
 	return true

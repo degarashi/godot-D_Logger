@@ -28,10 +28,12 @@ func debug(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	print_rich(
-		"[color=gray]%s[/color]" % [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix)]
+		"[color=gray]%s[/color]"
+		% [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info)]
 	)
 	return true
 
@@ -41,12 +43,13 @@ func info(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	print_rich(
 		(
 			"[b][color=cyan]%s[/color][/b]"
-			% [DLoggerFunc.format_log(msg, category, "INFO", context, prefix)]
+			% [DLoggerFunc.format_log(msg, category, "INFO", context, prefix, p_caller_info)]
 		)
 	)
 	return true
@@ -57,9 +60,10 @@ func warn(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	var header: String = DLoggerFunc.format_log(msg, category, "WARN", context, prefix)
+	var header: String = DLoggerFunc.format_log(msg, category, "WARN", context, prefix, p_caller_info)
 	print_rich("[b][color=yellow]%s[/color][/b]" % [header])
 	push_warning(header)
 	return true
@@ -70,9 +74,12 @@ func error(
 	_values: Variant = [],
 	category: String = "",
 	context: Object = null,
-	prefix: String = ""
+	prefix: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
-	var header: String = DLoggerFunc.format_log(msg, category, "ERROR", context, prefix)
+	var header: String = DLoggerFunc.format_log(
+		msg, category, "ERROR", context, prefix, p_caller_info
+	)
 	print_rich("[b][color=red]%s[/color][/b]" % [header])
 	push_error(header)
 	return true
