@@ -80,11 +80,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ------------- [Public Method called by Debugger Plugin] -------------
 func add_log(log_data: Dictionary) -> void:
-	var source := _get_log_source(log_data)
+	var tags := _get_log_tags(log_data)
 
-	# Add new category button if it doesn't exist yet
-	if not _active_filters.has(source):
-		_add_filter_button(source)
+	# Add new category buttons if they don't exist yet
+	for tag in tags:
+		if not _active_filters.has(tag):
+			_add_filter_button(tag)
 
 	_all_logs.append(log_data)
 
@@ -102,16 +103,22 @@ func add_log(log_data: Dictionary) -> void:
 
 
 # ------------- [Private Method] -------------
-func _get_log_source(log_data: Dictionary) -> String:
+func _get_log_tags(log_data: Dictionary) -> Array[String]:
 	var category: String = log_data.get("category", "")
 	if not category.is_empty():
-		return category
+		var tags: Array[String] = []
+		for tag in category.split("|"):
+			var t := tag.strip_edges()
+			if not t.is_empty():
+				tags.append(t)
+		if not tags.is_empty():
+			return tags
 
 	var prefix: String = log_data.get("prefix", "")
 	if not prefix.is_empty() and prefix != DLoggerConstants.DEFAULT_PREFIX:
-		return prefix
+		return [prefix]
 
-	return "Default"
+	return ["Default"]
 
 
 func _setup_shortcuts() -> void:
@@ -374,9 +381,14 @@ func _get_log_level_value(level_str: String) -> int:
 
 
 func _should_display_log(log_data: Dictionary) -> bool:
-	# Check category/prefix filter
-	var source := _get_log_source(log_data)
-	if not _active_filters.get(source, true):
+	# Check category/prefix filter (OR logic: show if at least one tag is active)
+	var tags := _get_log_tags(log_data)
+	var is_tag_active := false
+	for tag in tags:
+		if _active_filters.get(tag, true):
+			is_tag_active = true
+			break
+	if not is_tag_active:
 		return false
 
 	# Check time filter

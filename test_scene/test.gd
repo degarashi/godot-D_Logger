@@ -37,10 +37,16 @@ func _ready() -> void:
 
 	# Test warning with category
 	var logger_cat: DLOGGER = DLOGGER.new("CATEGORY_TEST")
-	logger_cat.warn("Low memory detected!", "System")
+	logger_cat.warn("Low memory detected!", [], "System")
 	logger_cat.info("Player spawned at {0}", [Vector2(100, 200)], "Gameplay")
 	logger_cat.error("Connection lost", [], "Network")
 	logger_cat.debug("Internal AI state: IDLE", [], "Gameplay")
+
+	# Test with multiple tags
+	var logger_tags: DLOGGER = DLOGGER.new("TAG_TEST")
+	logger_tags.info("Multiple tags: AI and Combat", [], "AI|Combat")
+	logger_tags.info("Multiple tags: Network and Player", [], "Network|Player")
+	logger_tags.info("Single tag: Player", [], "Player")
 
 	# Verify stack trace and caller info
 	await get_tree().create_timer(0.5).timeout
