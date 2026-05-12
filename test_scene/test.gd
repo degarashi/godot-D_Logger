@@ -48,6 +48,15 @@ func _ready() -> void:
 	logger_tags.info("Multiple tags: Network and Player", [], "Network|Player")
 	logger_tags.info("Single tag: Player", [], "Player")
 
+	# Test Log Stacking
+	print("Testing Log Stacking (Check Editor Panel for (x10) indicator)...")
+	var logger_stack := DLOGGER.new("STACK_TEST")
+	for i in range(10):
+		logger_stack.info("This is a repeated message")
+	logger_stack.info("A different message")
+	for i in range(5):
+		logger_stack.info("This is a repeated message")  # Should start a new stack because last was different
+
 	# Verify stack trace and caller info
 	await get_tree().create_timer(0.5).timeout
 	_check_caller_info(logger_custom_prefix)

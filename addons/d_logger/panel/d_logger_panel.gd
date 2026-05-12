@@ -87,7 +87,27 @@ func add_log(log_data: Dictionary) -> void:
 		if not _active_filters.has(tag):
 			_add_filter_button(tag)
 
-	_all_logs.append(log_data)
+	# --- Log Stacking Logic ---
+	var is_stacked := false
+	if not _all_logs.is_empty():
+		var last_log: Dictionary = _all_logs[-1]
+		# Check if current log is identical to the last one (excluding time/frame/count)
+		if (
+			last_log.get("message") == log_data.get("message")
+			and last_log.get("level") == log_data.get("level")
+			and last_log.get("prefix") == log_data.get("prefix")
+			and last_log.get("category") == log_data.get("category")
+			and last_log.get("caller_info") == log_data.get("caller_info")
+		):
+			last_log["count"] = last_log.get("count", 1) + 1
+			# Update time/frame to the latest one
+			last_log["time"] = log_data.get("time", 0.0)
+			last_log["frame"] = log_data.get("frame", 0)
+			is_stacked = true
+
+	if not is_stacked:
+		log_data["count"] = 1
+		_all_logs.append(log_data)
 
 	# Limit the number of logs stored
 	if _all_logs.size() > MAX_LOG_COUNT:
@@ -99,7 +119,14 @@ func add_log(log_data: Dictionary) -> void:
 		return  # Display already rebuilt, no need to append
 
 	if _should_display_log(log_data):
-		_append_formatted_log(log_data)
+		if is_stacked:
+			# If it's a stack update, we need to refresh the display
+			# For simplicity, we rebuild if it's the last visible line
+			# or if we want to be more efficient, we could use a custom approach.
+			# Here, we'll rebuild to keep it simple but correct.
+			_rebuild_log_display()
+		else:
+			_append_formatted_log(log_data)
 
 
 # ------------- [Private Method] -------------
@@ -357,6 +384,10 @@ func _format_log(log_data: Dictionary) -> String:
 	var formatted_msg := DLoggerFunc.get_formatted_line(
 		time, frame, source_str, caller_info, context_str, level, log_data.get("message", ""), true
 	)
+
+	var count: int = log_data.get("count", 1)
+	if count > 1:
+		formatted_msg += " [b](x%d)[/b]" % count
 
 	match level:
 		"DEBUG":
