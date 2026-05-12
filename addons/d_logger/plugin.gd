@@ -95,6 +95,14 @@ var _settings_entries: Array[SettingsEntry] = [
 		true,
 		PROPERTY_HINT_NONE,
 		"Automatically clear the log panel when a new debug session starts."
+	),
+	SettingsEntry.new(
+		DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR,
+		DLoggerConstants.SETTING_PAUSE_ON_ERROR,
+		TYPE_BOOL,
+		false,
+		PROPERTY_HINT_NONE,
+		"Automatically pause the game tree when an error is logged."
 	)
 ]
 

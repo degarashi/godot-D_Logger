@@ -15,12 +15,14 @@ const EDITOR_SETTING_ENABLE_FILE := "d_logger/enable_file_log"
 const EDITOR_SETTING_FILE_PATH := "d_logger/log_file_path"
 const EDITOR_SETTING_AUTO_ACTIVATE_PANEL := "d_logger/auto_activate_panel"
 const EDITOR_SETTING_AUTO_CLEAR_ON_START := "d_logger/auto_clear_on_start"
+const EDITOR_SETTING_PAUSE_ON_ERROR := "d_logger/pause_on_error"
 
 # --- Runtime Settings Paths (Accessed via ProjectSettings, but may be synced from EditorSettings) ---
 const SETTING_ENABLE_CONSOLE := "debug/d_logger/enable_console_log"
 const SETTING_MIN_LEVEL := "debug/d_logger/min_log_level"
 const SETTING_ENABLE_FILE := "debug/d_logger/enable_file_log"
 const SETTING_FILE_PATH := "debug/d_logger/log_file_path"
+const SETTING_PAUSE_ON_ERROR := "debug/d_logger/pause_on_error"
 
 # --- Default Values ---
 const DEFAULT_PREFIX := "D-Logger"

@@ -136,6 +136,15 @@ func _dispatch(
 		DLoggerConstants.LogLevel.ERROR:
 			_dispatcher.error(final_msg, [], category, context, pref, caller_info)
 
+			# Pause the tree if enabled
+			if (
+				OS.is_debug_build()
+				and ProjectSettings.get_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, false)
+			):
+				var tree := Engine.get_main_loop() as SceneTree
+				if tree:
+					tree.paused = true
+
 	# --- Process of sending to the editor debugger ---
 	if OS.is_debug_build():
 		# Pack the message to be sent to the editor side into a dictionary
