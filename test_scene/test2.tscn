@@ -4,6 +4,8 @@
 [ext_resource type="Script" uid="uid://0xioyfyuuyol" path="res://addons/d_logger/d_logger_finder_node.gd" id="2_vy8pg"]
 [ext_resource type="Script" uid="uid://co142rftxrv40" path="res://addons/d_logger/d_logger_node.gd" id="3_7xv3q"]
 [ext_resource type="Script" uid="uid://hs72y3tn0npc" path="res://addons/d_logger/d_logger_init_param.gd" id="3_xeyx1"]
+[ext_resource type="Texture2D" uid="uid://4q335xxs2p" path="res://icon.svg" id="5_icon"]
+[ext_resource type="Script" uid="uid://bis23lw5u0yd3" path="res://test_scene/rotating_sprite.gd" id="6_rot"]
 
 [sub_resource type="Resource" id="Resource_74unx"]
 script = ExtResource("3_xeyx1")
@@ -20,3 +22,9 @@ metadata/_custom_type_script = "uid://co142rftxrv40"
 unique_name_in_owner = true
 script = ExtResource("2_vy8pg")
 metadata/_custom_type_script = "uid://0xioyfyuuyol"
+
+[node name="RotatingSprite" type="Sprite2D" parent="." unique_id=1858873228]
+process_mode = 1
+position = Vector2(576, 324)
+texture = ExtResource("5_icon")
+script = ExtResource("6_rot")

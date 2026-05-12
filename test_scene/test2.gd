@@ -14,9 +14,9 @@ func _ready() -> void:
 		if d_logger_finder.get_logger():
 			DLogger.info("Valid logger instance obtained from DLoggerFinder")
 
-	print("--- Pause on Error Test Scene ---")
-	print("Press [SPACE] to trigger an error and test pause functionality.")
-	print(
+	DLogger.info("--- Pause on Error Test Scene ---")
+	DLogger.info("Press [SPACE] to trigger an error and test pause functionality.")
+	DLogger.info(
 		"Current pause_on_error setting: ",
 		ProjectSettings.get_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, false)
 	)
@@ -30,7 +30,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		if get_tree().paused:
-			print("Unpausing...")
+			DLogger.info("Unpausing...")
 			get_tree().paused = false
 		else:
 			_run_pause_test()
@@ -38,7 +38,7 @@ func _input(event: InputEvent) -> void:
 
 # ------------- [Private Method] -------------
 func _run_pause_test() -> void:
-	print("\nStarting Pause on Error test...")
+	DLogger.info("Starting Pause on Error test...")
 
 	# Force enable the setting for this test
 	ProjectSettings.set_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, true)
@@ -46,6 +46,6 @@ func _run_pause_test() -> void:
 	DLogger.error("Testing Pause on Error! The game tree should pause NOW.")
 
 	if get_tree().paused:
-		print("SUCCESS: Game tree is PAUSED.")
+		DLogger.info("SUCCESS: Game tree is PAUSED.")
 	else:
-		print("FAILURE: Game tree is NOT paused. (Check if OS.is_debug_build() is true)")
+		DLogger.info("FAILURE: Game tree is NOT paused. (Check if OS.is_debug_build() is true)")

@@ -24,6 +24,7 @@ var _current_level_filter_button: Button = null
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
 @onready var save_button: Button = %SaveButton
+@onready var pause_on_error_button: Button = %PauseOnErrorButton
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var time_filter_container: HBoxContainer = %TimeFilterContainer
@@ -35,6 +36,8 @@ func _ready() -> void:
 	clear_button.pressed.connect(_on_clear_pressed)
 	copy_button.pressed.connect(_on_copy_pressed)
 	save_button.pressed.connect(_on_save_pressed)
+	pause_on_error_button.toggled.connect(_on_pause_on_error_toggled)
+
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
 	log_display.scroll_following = true
@@ -48,6 +51,11 @@ func _ready() -> void:
 
 	# Set focus_mode so this panel can receive input
 	focus_mode = Control.FOCUS_ALL
+
+	if Engine.is_editor_hint():
+		_update_pause_on_error_button()
+		var es := EditorInterface.get_editor_settings()
+		es.settings_changed.connect(_update_pause_on_error_button)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -322,6 +330,36 @@ func _update_level_filter_button_style(btn: Button, is_active: bool) -> void:
 	else:
 		# Reset to default
 		btn.modulate = Color(1, 1, 1, 0.5)
+
+
+func _update_pause_on_error_button_style(is_active: bool) -> void:
+	if is_active:
+		# Use a red/orange color for pause on error active
+		pause_on_error_button.modulate = Color(1.0, 0.4, 0.3, 1.0)
+	else:
+		# Reset to default
+		pause_on_error_button.modulate = Color(1, 1, 1, 0.5)
+
+
+func _update_pause_on_error_button() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var es := EditorInterface.get_editor_settings()
+	if es.has_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR):
+		var val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+		if pause_on_error_button.button_pressed != val:
+			pause_on_error_button.set_pressed_no_signal(val)
+		_update_pause_on_error_button_style(val)
+
+
+func _on_pause_on_error_toggled(is_pressed: bool) -> void:
+	if not Engine.is_editor_hint():
+		return
+	var es := EditorInterface.get_editor_settings()
+	var current_val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+	if current_val != is_pressed:
+		es.set_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed)
+	_update_pause_on_error_button_style(is_pressed)
 
 
 func _on_time_filter_pressed(duration: float, button: Button) -> void:
