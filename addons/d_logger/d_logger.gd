@@ -124,7 +124,9 @@ func _dispatch(
 			level_str = "ERROR"
 
 	# Pre-calculate caller info for performance (one time per log)
-	var caller_info: Variant = p_caller_info if p_caller_info != null else DLoggerFunc.get_caller_info(level_str)
+	var caller_info: Variant = (
+		p_caller_info if p_caller_info != null else DLoggerFunc.get_caller_info(level_str)
+	)
 
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
@@ -202,7 +204,12 @@ func is_error_enabled() -> bool:
 
 
 func debug(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	if is_debug_enabled():
 		_dispatch(DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info)
@@ -210,7 +217,12 @@ func debug(
 
 
 func info(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	if is_info_enabled():
 		_dispatch(DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info)
@@ -218,7 +230,12 @@ func info(
 
 
 func warn(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	if is_warn_enabled():
 		_dispatch(DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info)
@@ -226,7 +243,12 @@ func warn(
 
 
 func error(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	if is_error_enabled():
 		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info)
