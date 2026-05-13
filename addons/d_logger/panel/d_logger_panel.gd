@@ -20,6 +20,7 @@ var _log_level_values: Dictionary[String, int] = {"DEBUG": 0, "INFO": 1, "WARN":
 var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3}
 var _active_level_filter: int = 0
 var _current_level_filter_button: Button = null
+var _is_right_dragging: bool = false
 
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
@@ -42,12 +43,15 @@ func _ready() -> void:
 	# enable automatic scrolling
 	log_display.scroll_following = true
 	log_display.meta_clicked.connect(_on_log_meta_clicked)
+	log_display.gui_input.connect(_on_log_display_gui_input)
 
 	# Assign shortcuts
 	_setup_shortcuts()
 
 	_add_time_filter_buttons()
 	_add_level_filter_buttons()
+
+	visibility_changed.connect(_on_visibility_changed)
 
 	# Set focus_mode so this panel can receive input
 	focus_mode = Control.FOCUS_ALL
@@ -84,6 +88,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_4:
 				_apply_level_filter(3, "ERROR")  # ERROR
 				get_viewport().set_input_as_handled()
+
+
+func _on_visibility_changed() -> void:
+	if not visible:
+		_is_right_dragging = false
+		if log_display:
+			log_display.mouse_default_cursor_shape = Control.CURSOR_ARROW
 
 
 # ------------- [Public Method called by Debugger Plugin] -------------
@@ -384,6 +395,24 @@ func _on_level_filter_pressed(min_level: int, button: Button) -> void:
 	_current_level_filter_button = button
 	_update_level_filter_button_style(button, true)
 	_rebuild_log_display()
+
+
+func _on_log_display_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			if event.pressed:
+				_is_right_dragging = true
+				log_display.mouse_default_cursor_shape = Control.CURSOR_DRAG
+			else:
+				_is_right_dragging = false
+				log_display.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			accept_event()
+
+	if event is InputEventMouseMotion and _is_right_dragging:
+		var v_scroll := log_display.get_v_scroll_bar()
+		if v_scroll:
+			v_scroll.value -= event.relative.y
+		accept_event()
 
 
 func _on_log_meta_clicked(meta: Variant) -> void:
