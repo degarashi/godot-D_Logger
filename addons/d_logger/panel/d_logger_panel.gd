@@ -8,6 +8,7 @@ const LOG_TRIM_BATCH_SIZE = 100
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
+var _search_query: String = ""
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
 var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0}
@@ -26,6 +27,7 @@ var _is_right_dragging: bool = false
 @onready var copy_button: Button = %CopyButton
 @onready var save_button: Button = %SaveButton
 @onready var pause_on_error_button: Button = %PauseOnErrorButton
+@onready var search_line_edit: LineEdit = %SearchLineEdit
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var time_filter_container: HBoxContainer = %TimeFilterContainer
@@ -38,6 +40,7 @@ func _ready() -> void:
 	copy_button.pressed.connect(_on_copy_pressed)
 	save_button.pressed.connect(_on_save_pressed)
 	pause_on_error_button.toggled.connect(_on_pause_on_error_toggled)
+	search_line_edit.text_changed.connect(_on_search_text_changed)
 
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
@@ -75,6 +78,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed:
+		if (event.ctrl_pressed or event.command_or_control_autoremap) and event.keycode == KEY_F:
+			search_line_edit.grab_focus()
+			search_line_edit.select_all()
+			get_viewport().set_input_as_handled()
+			return
+
 		match event.keycode:
 			KEY_1:
 				_apply_level_filter(0, "DEBUG")  # DEBUG
@@ -531,6 +540,16 @@ func _should_display_log(log_data: Dictionary) -> bool:
 	if log_level_val < _active_level_filter:
 		return false
 
+	# Check search query
+	if not _search_query.is_empty():
+		var query := _search_query.to_lower()
+		var message: String = log_data.get("message", "").to_lower()
+		var category: String = log_data.get("category", "").to_lower()
+		var prefix: String = log_data.get("prefix", "").to_lower()
+
+		if not (query in message or query in category or query in prefix):
+			return false
+
 	return true
 
 
@@ -541,6 +560,11 @@ func _rebuild_log_display() -> void:
 			_append_formatted_log(log_data)
 
 
+func _on_search_text_changed(new_text: String) -> void:
+	_search_query = new_text
+	_rebuild_log_display()
+
+
 func clear_logs() -> void:
 	_all_logs.clear()
 	log_display.clear()
@@ -548,6 +572,10 @@ func clear_logs() -> void:
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
+
+	# Reset search
+	_search_query = ""
+	search_line_edit.text = ""
 
 	# Reset time filter to "All"
 	_active_time_filter = -1.0
