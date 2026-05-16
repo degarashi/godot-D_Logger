@@ -68,7 +68,7 @@ static func find_logger_from_ancestor(start_node: Node) -> Object:
 static func get_object_string(obj: Object) -> String:
 	if obj is Node:
 		return "[{0}]".format([obj.name])
-	return "[{0}:{1}]".format([obj.get_class(), obj.get_instance_id()])
+	return "[{0}:{1}]".format([obj.get_class(), String.num_uint64(obj.get_instance_id())])
 
 
 static func get_caller_info(level: String) -> Dictionary:
