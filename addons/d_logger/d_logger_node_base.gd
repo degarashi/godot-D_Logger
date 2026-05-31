@@ -36,24 +36,44 @@ func is_error_enabled() -> bool:
 
 
 func debug(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	return _logger.debug(msg, v, cat, ctx, p, p_caller_info)
 
 
 func info(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	return _logger.info(msg, v, cat, ctx, p, p_caller_info)
 
 
 func warn(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	return _logger.warn(msg, v, cat, ctx, p, p_caller_info)
 
 
 func error(
-	msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "", p_caller_info: Variant = null
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
 ) -> bool:
 	return _logger.error(msg, v, cat, ctx, p, p_caller_info)

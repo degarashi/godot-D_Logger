@@ -32,8 +32,10 @@ func debug(
 	p_caller_info: Variant = null
 ) -> bool:
 	print_rich(
-		"[color=gray]%s[/color]"
-		% [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info)]
+		(
+			"[color=gray]%s[/color]"
+			% [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info)]
+		)
 	)
 	return true
 
@@ -63,7 +65,9 @@ func warn(
 	prefix: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	var header: String = DLoggerFunc.format_log(msg, category, "WARN", context, prefix, p_caller_info)
+	var header: String = DLoggerFunc.format_log(
+		msg, category, "WARN", context, prefix, p_caller_info
+	)
 	print_rich("[b][color=yellow]%s[/color][/b]" % [header])
 	push_warning(header)
 	return true

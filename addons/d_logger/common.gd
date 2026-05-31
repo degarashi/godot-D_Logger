@@ -88,9 +88,8 @@ static func get_caller_info(level: String) -> Dictionary:
 			return {
 				"file": source,
 				"line": entry.get("line", 0),
-				"display": "[{file}:{line}]".format(
-					{"file": source.get_file(), "line": entry.get("line", 0)}
-				)
+				"display":
+				"[{file}:{line}]".format({"file": source.get_file(), "line": entry.get("line", 0)})
 			}
 
 	return {}
@@ -108,7 +107,7 @@ static func get_formatted_line(
 	time: float,
 	frame: int,
 	source_str: String,
-	caller_info: Variant, # Can be String (old format) or Dictionary
+	caller_info: Variant,  # Can be String (old format) or Dictionary
 	ctx_str: String,
 	level: String,
 	msg: String,
