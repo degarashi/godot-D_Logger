@@ -109,6 +109,7 @@ func _on_visibility_changed() -> void:
 # ------------- [Public Method called by Debugger Plugin] -------------
 func add_log(log_data: Dictionary) -> void:
 	var tags := _get_log_tags(log_data)
+	log_data["_log_tags"] = tags
 
 	# Add new category buttons if they don't exist yet
 	for tag in tags:
@@ -492,7 +493,9 @@ func _get_log_level_value(level_str: String) -> int:
 
 func _should_display_log(log_data: Dictionary) -> bool:
 	# Check category/prefix filter (OR logic: show if at least one tag is active)
-	var tags := _get_log_tags(log_data)
+	var tags: Array[String] = log_data.get("_log_tags", [])
+	if tags.is_empty():
+		tags = _get_log_tags(log_data)
 	var is_tag_active := false
 	for tag in tags:
 		if _active_filters.get(tag, true):
