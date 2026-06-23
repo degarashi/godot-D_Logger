@@ -15,6 +15,7 @@ func clear() -> void:
 
 
 func add(logger: RefCounted) -> void:
+	assert(logger != null, "logger must not be null")
 	_list.append(logger)
 
 
