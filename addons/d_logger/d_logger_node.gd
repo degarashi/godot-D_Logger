@@ -12,6 +12,11 @@ func _enter_tree() -> void:
 		ProjectSettings.settings_changed.connect(_on_settings_changed)
 
 
+func _exit_tree() -> void:
+	if ProjectSettings.settings_changed.is_connected(_on_settings_changed):
+		ProjectSettings.settings_changed.disconnect(_on_settings_changed)
+
+
 func _ready() -> void:
 	_logger = _create_logger_from_settings(_init_param if _init_param else DLoggerInitParam.new())
 	if not _init_param:
