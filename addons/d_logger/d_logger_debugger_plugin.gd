@@ -6,7 +6,6 @@ signal on_session_started
 
 # ------------- [Private Variable] -------------
 var _panel: Control
-var _plugin: EditorPlugin
 
 
 # ------------- [Callbacks] -------------
