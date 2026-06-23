@@ -140,9 +140,7 @@ func add_log(log_data: Dictionary) -> void:
 	# Limit the number of logs stored
 	if _all_logs.size() > MAX_LOG_COUNT:
 		# Trim a batch of logs to avoid rebuilding too frequently
-		for i in range(LOG_TRIM_BATCH_SIZE):
-			if not _all_logs.is_empty():
-				_all_logs.remove_at(0)
+		_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
 		_rebuild_log_display()
 		return  # Display already rebuilt, no need to append
 
