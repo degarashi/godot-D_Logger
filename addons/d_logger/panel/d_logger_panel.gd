@@ -147,11 +147,11 @@ func add_log(log_data: Dictionary) -> void:
 
 	if _should_display_log(log_data):
 		if is_stacked:
-			# If it's a stack update, we need to refresh the display
-			# For simplicity, we rebuild if it's the last visible line
-			# or if we want to be more efficient, we could use a custom approach.
-			# Here, we'll rebuild to keep it simple but correct.
-			_rebuild_log_display()
+			# Update only the last visible line instead of full rebuild
+			var pc := log_display.get_paragraph_count()
+			if pc > 0:
+				log_display.remove_paragraph(pc - 1)
+			_append_formatted_log(log_data)
 		else:
 			_append_formatted_log(log_data)
 
