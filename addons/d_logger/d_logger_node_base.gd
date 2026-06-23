@@ -4,7 +4,7 @@ extends Node
 
 # ------------- [Public Variable] -------------
 ## The underlying RefCounted _logger instance
-var _logger: Object
+var _logger: DLoggerClass
 
 
 # ------------- [Callbacks] -------------
@@ -13,7 +13,7 @@ func _init() -> void:
 
 
 # ------------- [Public Methods] -------------
-func get_logger() -> Object:
+func get_logger() -> DLoggerClass:
 	return _logger
 
 
