@@ -37,6 +37,7 @@ class SettingsEntry:
 # ------------- [Private Variable] -------------
 var _panel_instance: Control
 var _debugger_instance: EditorDebuggerPlugin
+var _autoload_added: bool = false
 
 var _settings_entries: Array[SettingsEntry] = [
 	SettingsEntry.new(
@@ -113,6 +114,7 @@ func _enter_tree() -> void:
 
 	if not ProjectSettings.has_setting("autoload/" + DLoggerConstants.AUTOLOAD_NAME):
 		add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
+		_autoload_added = true
 
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
@@ -129,6 +131,11 @@ func _exit_tree() -> void:
 	var es := get_editor_interface().get_editor_settings()
 	if es.settings_changed.is_connected(_sync_settings_to_runtime):
 		es.settings_changed.disconnect(_sync_settings_to_runtime)
+
+	# --- Remove autoload singleton if we added it ---
+	if _autoload_added:
+		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
+		_autoload_added = false
 
 	# --- Delete debugger plugin ---
 	if _debugger_instance:
