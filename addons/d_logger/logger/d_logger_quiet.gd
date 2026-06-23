@@ -24,22 +24,22 @@ func is_error_enabled() -> bool:
 
 
 func debug(
-	_m: String,
-	_v: Variant = [],
-	_cat: String = "",
-	_ctx: Object = null,
-	_p: String = "",
+	_msg: String,
+	_values: Variant = [],
+	_category: String = "",
+	_context: Object = null,
+	_prefix: String = "",
 	_p_caller_info: Variant = null
 ) -> bool:
 	return true
 
 
 func info(
-	_m: String,
-	_v: Variant = [],
-	_cat: String = "",
-	_ctx: Object = null,
-	_p: String = "",
+	_msg: String,
+	_values: Variant = [],
+	_category: String = "",
+	_context: Object = null,
+	_prefix: String = "",
 	_p_caller_info: Variant = null
 ) -> bool:
 	return true
@@ -47,23 +47,23 @@ func info(
 
 func warn(
 	msg: String,
-	_v: Variant = [],
-	cat: String = "",
-	ctx: Object = null,
-	pref: String = "",
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	push_warning(DLoggerFunc.format_log(msg, cat, "WARN", ctx, pref, p_caller_info))
+	push_warning(DLoggerFunc.format_log(msg, category, "WARN", context, prefix, p_caller_info))
 	return true
 
 
 func error(
 	msg: String,
-	_v: Variant = [],
-	cat: String = "",
-	ctx: Object = null,
-	pref: String = "",
+	_values: Variant = [],
+	category: String = "",
+	context: Object = null,
+	prefix: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	push_error(DLoggerFunc.format_log(msg, cat, "ERROR", ctx, pref, p_caller_info))
+	push_error(DLoggerFunc.format_log(msg, category, "ERROR", context, prefix, p_caller_info))
 	return true
