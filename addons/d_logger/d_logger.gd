@@ -128,6 +128,11 @@ func _dispatch(
 		p_caller_info if p_caller_info != null else DLoggerFunc.get_caller_info(level_str)
 	)
 
+	# Pre-compute time/frame once for all downstream loggers and debug_data
+	var seconds: float = Time.get_ticks_msec() / 1000.0
+	var frames: int = Engine.get_frames_drawn()
+	DLoggerFunc.set_time_cache(seconds, frames)
+
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
 			_dispatcher.debug(final_msg, [], category, context, pref, caller_info)
@@ -147,6 +152,8 @@ func _dispatch(
 				if tree:
 					tree.paused = true
 
+	DLoggerFunc.clear_time_cache()
+
 	# --- Process of sending to the editor debugger ---
 	if OS.is_debug_build():
 		# Pack the message to be sent to the editor side into a dictionary
@@ -157,8 +164,8 @@ func _dispatch(
 			"context_str": DLoggerFunc.get_object_string(context) if context else "",
 			"caller_info": caller_info,
 			"prefix": pref,
-			"time": Time.get_ticks_msec() / 1000.0,
-			"frame": Engine.get_frames_drawn()
+			"time": seconds,
+			"frame": frames
 		}
 
 		if EngineDebugger.is_active():

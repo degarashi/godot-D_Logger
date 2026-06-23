@@ -1,6 +1,20 @@
 class_name DLoggerFunc
 extends Object
 
+# Cache for time/frame to avoid redundant computation across logger chain
+static var _cached_seconds: float = -1.0
+static var _cached_frames: int = -1
+
+
+static func set_time_cache(seconds: float, frames: int) -> void:
+	_cached_seconds = seconds
+	_cached_frames = frames
+
+
+static func clear_time_cache() -> void:
+	_cached_seconds = -1.0
+	_cached_frames = -1
+
 
 ## @brief Checks if the given object meets the requirements of a logger interface
 ## @param logger The object to be checked
@@ -169,9 +183,9 @@ static func format_log(
 	prefix: String,
 	p_caller_info: Variant = null
 ) -> String:
-	# Convert to seconds (e.g., 1234ms -> 1.234s)
-	var seconds := Time.get_ticks_msec() / 1000.0
-	var frames := Engine.get_frames_drawn()
+	# Use cached time/frame if available, otherwise compute
+	var seconds := _cached_seconds if _cached_seconds >= 0.0 else Time.get_ticks_msec() / 1000.0
+	var frames := _cached_frames if _cached_frames >= 0 else Engine.get_frames_drawn()
 
 	var ctx_str := get_object_string(context) if context else ""
 	var caller_info: Variant = p_caller_info if p_caller_info != null else get_caller_info(level)
