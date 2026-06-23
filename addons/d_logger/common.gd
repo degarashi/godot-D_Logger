@@ -95,9 +95,24 @@ static func get_caller_info(level: String) -> Dictionary:
 	return {}
 
 
-static func get_source_string(prefix: String, category: String) -> String:
+static func get_source_string(prefix: String, category: String, use_bbcode: bool = false) -> String:
 	if category.is_empty() or category == prefix:
+		if use_bbcode:
+			return "[[url=filter:%s]%s[/url]]" % [prefix, prefix]
 		return "[%s]" % prefix
+
+	var tags := category.split("|")
+	if use_bbcode:
+		var linked: Array[String] = []
+		for t in tags:
+			var tag := t.strip_edges()
+			if not tag.is_empty():
+				linked.append("[url=filter:%s]%s[/url]" % [tag, tag])
+		var body := "|".join(linked)
+		if prefix == DLoggerConstants.DEFAULT_PREFIX:
+			return "[" + body + "]"
+		return "[%s:%s]" % [prefix, body]
+
 	if prefix == DLoggerConstants.DEFAULT_PREFIX:
 		return "[%s]" % category
 	return "[%s:%s]" % [prefix, category]

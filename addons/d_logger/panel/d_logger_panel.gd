@@ -459,32 +459,8 @@ func _format_log(log_data: Dictionary) -> String:
 	var context_str: String = log_data.get("context_str", "")
 	var caller_info = log_data.get("caller_info", {})
 
-	# Create clickable source string based on the same logic as DLoggerFunc.get_source_string
-	# but using tags from _get_log_tags for the clickable parts.
-	var tags := _get_log_tags(log_data)
-	var source_str := ""
-
-	if category.is_empty() or category == prefix:
-		# e.g. [D-Logger] or [MyPrefix]
-		# In this case _get_log_tags returns [prefix] or ["Default"]
-		var tag := tags[0]
-		source_str = "[[url=filter:%s]%s[/url]]" % [tag, prefix]
-	elif prefix == DLoggerConstants.DEFAULT_PREFIX:
-		# e.g. [AI|Combat]
-		var linked_tags := []
-		for t in category.split("|"):
-			var tag := t.strip_edges()
-			if not tag.is_empty():
-				linked_tags.append("[url=filter:%s]%s[/url]" % [tag, tag])
-		source_str = "[" + "|".join(linked_tags) + "]"
-	else:
-		# e.g. [MyPrefix:AI|Combat]
-		var linked_tags := []
-		for t in category.split("|"):
-			var tag := t.strip_edges()
-			if not tag.is_empty():
-				linked_tags.append("[url=filter:%s]%s[/url]" % [tag, tag])
-		source_str = "[%s:%s]" % [prefix, "|".join(linked_tags)]
+	# Use the same source string formatting as DLoggerFunc, with clickable BBCode.
+	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
 
 	var formatted_msg := DLoggerFunc.get_formatted_line(
 		time, frame, source_str, caller_info, context_str, level, log_data.get("message", ""), true
