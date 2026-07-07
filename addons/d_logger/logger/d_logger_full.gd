@@ -1,89 +1,32 @@
 @tool
-extends RefCounted
+extends DLoggerBase
 
 
-# ------------- [Public Method] -------------
-func _init() -> void:
-	assert(DLoggerFunc.is_logger(self))
-
-
-func is_debug_enabled() -> bool:
-	return true
-
-
-func is_info_enabled() -> bool:
-	return true
-
-
-func is_warn_enabled() -> bool:
-	return true
-
-
-func is_error_enabled() -> bool:
-	return true
-
-
-func debug(
+# ------------- [Output] -------------
+func _output(
 	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	print_rich(
-		(
-			"[color=gray]%s[/color]"
-			% [DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info)]
-		)
-	)
-	return true
+	values: Variant,
+	category: String,
+	context: Object,
+	prefix: String,
+	p_caller_info: Variant,
+	level: String
+) -> void:
+	var formatted := DLoggerFunc.format_log(msg, category, level, context, prefix, p_caller_info)
+	var bbcode: String
 
+	match level:
+		"DEBUG":
+			bbcode = "[color=gray]%s[/color]" % formatted
+		"INFO":
+			bbcode = "[b][color=cyan]%s[/color][/b]" % formatted
+		"WARN":
+			bbcode = "[b][color=yellow]%s[/color][/b]" % formatted
+			push_warning(formatted)
+		"ERROR":
+			bbcode = "[b][color=red]%s[/color][/b]" % formatted
+			push_error(formatted)
+		_:
+			bbcode = formatted
 
-func info(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	print_rich(
-		(
-			"[b][color=cyan]%s[/color][/b]"
-			% [DLoggerFunc.format_log(msg, category, "INFO", context, prefix, p_caller_info)]
-		)
-	)
-	return true
-
-
-func warn(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	var header: String = DLoggerFunc.format_log(
-		msg, category, "WARN", context, prefix, p_caller_info
-	)
-	print_rich("[b][color=yellow]%s[/color][/b]" % [header])
-	push_warning(header)
-	return true
-
-
-func error(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	var header: String = DLoggerFunc.format_log(
-		msg, category, "ERROR", context, prefix, p_caller_info
-	)
-	print_rich("[b][color=red]%s[/color][/b]" % [header])
-	push_error(header)
-	return true
+	print_rich(bbcode)

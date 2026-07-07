@@ -1,12 +1,8 @@
 @tool
-extends RefCounted
+extends DLoggerBase
 
 
-# ------------- [Public Method] -------------
-func _init() -> void:
-	assert(DLoggerFunc.is_logger(self))
-
-
+# ------------- [Level Checks] -------------
 func is_debug_enabled() -> bool:
 	return false
 
@@ -21,47 +17,3 @@ func is_warn_enabled() -> bool:
 
 func is_error_enabled() -> bool:
 	return false
-
-
-func debug(
-	_msg: String,
-	_values: Variant = [],
-	_category: String = "",
-	_context: Object = null,
-	_prefix: String = "",
-	_p_caller_info: Variant = null
-) -> bool:
-	return true
-
-
-func info(
-	_msg: String,
-	_values: Variant = [],
-	_category: String = "",
-	_context: Object = null,
-	_prefix: String = "",
-	_p_caller_info: Variant = null
-) -> bool:
-	return true
-
-
-func warn(
-	_msg: String,
-	_values: Variant = [],
-	_category: String = "",
-	_context: Object = null,
-	_prefix: String = "",
-	_p_caller_info: Variant = null
-) -> bool:
-	return true
-
-
-func error(
-	_msg: String,
-	_values: Variant = [],
-	_category: String = "",
-	_context: Object = null,
-	_prefix: String = "",
-	_p_caller_info: Variant = null
-) -> bool:
-	return true

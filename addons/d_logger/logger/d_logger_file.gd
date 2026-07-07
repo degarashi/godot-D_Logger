@@ -1,5 +1,5 @@
 @tool
-extends RefCounted
+extends DLoggerBase
 
 # ------------- [Private Variable] -------------
 var _file_path: String
@@ -47,74 +47,19 @@ func _write_line(line: String) -> void:
 		_file.store_line(line)
 
 
-# ------------- [Public Method] -------------
-func is_debug_enabled() -> bool:
-	return true
-
-
-func is_info_enabled() -> bool:
-	return true
-
-
-func is_warn_enabled() -> bool:
-	return true
-
-
-func is_error_enabled() -> bool:
-	return true
-
-
-func debug(
+# ------------- [Output] -------------
+func _output(
 	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "DEBUG", context, prefix, p_caller_info))
-	return true
+	values: Variant,
+	category: String,
+	context: Object,
+	prefix: String,
+	p_caller_info: Variant,
+	level: String
+) -> void:
+	_write_line(DLoggerFunc.format_log(msg, category, level, context, prefix, p_caller_info))
 
-
-func info(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "INFO", context, prefix, p_caller_info))
-	return true
-
-
-func warn(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "WARN", context, prefix, p_caller_info))
-	# Immediate reflection on warning
-	if _file:
-		_file.flush()
-	return true
-
-
-func error(
-	msg: String,
-	_values: Variant = [],
-	category: String = "",
-	context: Object = null,
-	prefix: String = "",
-	p_caller_info: Variant = null
-) -> bool:
-	_write_line(DLoggerFunc.format_log(msg, category, "ERROR", context, prefix, p_caller_info))
-
-	# Flush the file buffer to ensure the error log is physically written to disk
-	if _file:
-		_file.flush()
-
-	return true
+	# Flush immediately for warnings and errors
+	if level == "WARN" or level == "ERROR":
+		if _file:
+			_file.flush()
