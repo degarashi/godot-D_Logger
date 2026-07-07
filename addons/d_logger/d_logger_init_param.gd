@@ -4,7 +4,7 @@ extends Resource
 # ------------- [Exports] -------------
 @export var prefix_override: String = ""
 @export var min_level_override := DLoggerConstants.LogLevel.NOT_SPECIFIED
-@export var console_enabled_override: bool = true
+@export var console_enabled_override: Variant = null  # null = use ProjectSettings
 @export var file_path_override: String = ""
 
 
@@ -12,7 +12,7 @@ extends Resource
 func _init(
 	p_prefix: String = "",
 	p_min_level: DLoggerConstants.LogLevel = DLoggerConstants.LogLevel.NOT_SPECIFIED,
-	p_console_enabled: bool = true,
+	p_console_enabled: Variant = null,
 	p_file_path: String = ""
 ) -> void:
 	prefix_override = p_prefix
