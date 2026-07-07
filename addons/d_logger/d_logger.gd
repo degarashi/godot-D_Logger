@@ -99,6 +99,9 @@ func _dispatch(
 	p_prefix: String,
 	p_caller_info: Variant = null
 ) -> void:
+	# Clear any stale cache from a previous failed _dispatch call
+	DLoggerFunc.clear_time_cache()
+
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
 	var final_msg := msg
 
