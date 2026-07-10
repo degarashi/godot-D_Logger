@@ -12,7 +12,7 @@ func _init() -> void:
 	assert(DLoggerFunc.is_logger(self))
 
 
-# ------------- [Public Methods] -------------
+# ------------- [Public Method] -------------
 func get_logger() -> DLoggerClass:
 	return _logger
 

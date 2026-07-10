@@ -4,7 +4,7 @@ extends Node
 const TEST_DELAY = 2.0
 const SPACE_KEY = KEY_SPACE
 
-# ------------- [Private Variables] -------------
+# ------------- [Private Variable] -------------
 var is_test_running := false
 
 # ------------- [Exports] -------------

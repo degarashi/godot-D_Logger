@@ -8,7 +8,7 @@ const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
 const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 
-# ------------- [Private Variables] -------------
+# ------------- [Private Variable] -------------
 static var _editor_panel: Object = null
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
@@ -179,7 +179,7 @@ func _dispatch(
 			_editor_panel.add_log(debug_data)
 
 
-# ------------- [Public Methods] -------------
+# ------------- [Public Method] -------------
 func get_prefix() -> String:
 	if _has_prefix_override:
 		return _override_prefix
