@@ -20,7 +20,7 @@ func _init(path: String) -> void:
 	if not FileAccess.file_exists(_file_path):
 		_file = FileAccess.open(_file_path, FileAccess.WRITE)
 		if _file:
-			var init_msg := "--- Log Created: {0} ---"
+			var init_msg := "=== New Session Started: {0} ==="
 			_file.store_line(init_msg.format([Time.get_datetime_string_from_system()]))
 			# Do not close it here, let it flow directly to the session process
 	else:
