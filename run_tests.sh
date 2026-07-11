@@ -1,30 +1,36 @@
 #!/bin/bash
+set -euo pipefail
 
-# Configuration
-GODOT_BIN=${GODOT_BIN:-godot}
+GODOT_BIN=${GODOT_BIN:-${GODOT_PATH:-$(which godot)}}
 
-# Check if Godot binary exists
-if ! command -v "$GODOT_BIN" &> /dev/null; then
-    echo "Error: Godot binary not found at $GODOT_BIN"
-    echo "Please set the GODOT_BIN environment variable or edit this script."
-    exit 1
+if [ ! -f "$GODOT_BIN" ]; then
+	echo "Error: Godot binary not found at $GODOT_BIN" >&2
+	echo "Godot binary not found. Checked: GODOT_BIN='$GODOT_BIN'" >&2
+	exit 1
 fi
 
-echo "--------------------------------------------------"
-echo "Running D-Logger Test Suite"
-echo "Godot: $GODOT_BIN"
-echo "--------------------------------------------------"
-
-$GODOT_BIN --headless --path . -s tests/test.gd
-
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -eq 0 ]; then
-    echo "--------------------------------------------------"
-    echo "✅ All tests passed!"
-else
-    echo "--------------------------------------------------"
-    echo "❌ Some tests failed with exit code $EXIT_CODE"
+if [ ! -x "$GODOT_BIN" ]; then
+	echo "Error: Godot binary is not executable: $GODOT_BIN" >&2
+	exit 1
 fi
 
-exit $EXIT_CODE
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GDUNIT_RUNNER="$SCRIPT_DIR/addons/gdUnit4/runtest.sh"
+if [ ! -f "$GDUNIT_RUNNER" ]; then
+	echo "Error: gdUnit4 runner not found at $GDUNIT_RUNNER" >&2
+	exit 1
+fi
+
+export GODOT_BIN
+
+TEST_DIR="tests"
+
+while getopts "a:" opt; do
+	case $opt in
+		a) TEST_DIR="$OPTARG" ;;
+		*) echo "Usage: $0 [-a test_dir]" >&2; exit 1 ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+exec "$GDUNIT_RUNNER" -a "$TEST_DIR" "$@"
