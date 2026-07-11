@@ -117,14 +117,7 @@ func _dispatch(
 			if values != null:
 				final_msg = msg.format([values])
 
-	var level_str := "DEBUG"
-	match level:
-		DLoggerConstants.LogLevel.INFO:
-			level_str = "INFO"
-		DLoggerConstants.LogLevel.WARN:
-			level_str = "WARN"
-		DLoggerConstants.LogLevel.ERROR:
-			level_str = "ERROR"
+	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(level, "DEBUG")
 
 	# Pre-calculate caller info for performance (one time per log)
 	var caller_info: Variant = (
