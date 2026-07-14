@@ -162,3 +162,10 @@ func test_info_not_dispatched_when_level_is_warn() -> void:
 	node._logger = _CLASS.new("TEST", _CONST.LogLevel.WARN)
 	assert_bool(node.info("should not dispatch")).is_true()
 	node.free()
+
+
+# ------------- [Null Logger Safety] -------------
+func test_get_logger_no_crash_when_null() -> void:
+	var node := _NODE_BASE.new()
+	assert_object(node.get_logger()).is_null()
+	node.free()

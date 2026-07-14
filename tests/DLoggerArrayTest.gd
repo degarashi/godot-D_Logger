@@ -122,3 +122,18 @@ func test_all_methods_return_true() -> void:
 	assert_bool(arr.info("msg")).is_true()
 	assert_bool(arr.warn("msg")).is_true()
 	assert_bool(arr.error("msg")).is_true()
+
+
+# ------------- [Error Handling] -------------
+func test_add_null_throws_error() -> void:
+	var arr := _ARRAY.new()
+	assert_error(func(): arr.add(null))
+
+
+func test_dispatch_empty_list() -> void:
+	var arr := _ARRAY.new()
+	# Empty array should still return true for all methods
+	assert_bool(arr.debug("test")).is_true()
+	assert_bool(arr.info("test")).is_true()
+	assert_bool(arr.warn("test")).is_true()
+	assert_bool(arr.error("test")).is_true()

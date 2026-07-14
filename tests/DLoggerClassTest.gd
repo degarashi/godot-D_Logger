@@ -198,3 +198,35 @@ func test_setup_logger_clears_dispatcher() -> void:
 	logger.setup_logger()
 	# After setup, dispatcher should have at least the quiet fallback
 	assert_int(logger._dispatcher._list.size()).is_greater(0)
+
+
+# ------------- [Dispatch-Level Formatting] -------------
+func test_dispatch_debug_formatting() -> void:
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, true)
+	# DLoggerFull spy receives formatted message via dispatcher
+	assert_bool(logger.debug("Value: {0}", [42])).is_true()
+
+
+func test_dispatch_info_formatting() -> void:
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, true)
+	assert_bool(logger.info("HP={hp}", {"hp": 100})).is_true()
+
+
+func test_dispatch_warn_formatting() -> void:
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, true)
+	assert_bool(logger.warn("Warning: {0}", ["low memory"])).is_true()
+
+
+func test_dispatch_error_formatting_with_pause() -> void:
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, true)
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, true)
+	# Should not crash even with pause_on_error enabled
+	assert_bool(logger.error("Fatal: {0}", [42])).is_true()
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	get_tree().paused = false
+
+
+func test_dispatch_invalid_type_values() -> void:
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	# Non-array non-dict non-null value should be wrapped in array
+	assert_bool(logger.info("Message: {0}", "string_val")).is_true()

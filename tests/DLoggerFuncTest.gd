@@ -4,6 +4,8 @@ extends GdUnitTestSuite
 const _FUNC = preload("res://addons/d_logger/common.gd")
 const _CONST = preload("res://addons/d_logger/constants.gd")
 const _BASE = preload("res://addons/d_logger/logger/d_logger_base.gd")
+const _CLASS = preload("res://addons/d_logger/d_logger.gd")
+const _NODE_BASE = preload("res://addons/d_logger/d_logger_node_base.gd")
 
 
 # ------------- [has_logger_interface] -------------
@@ -192,3 +194,84 @@ func test_get_formatted_line_with_caller() -> void:
 	)
 	assert_str(result).contains("main.gd:10")
 	assert_str(result).contains("Warning msg")
+
+
+# ------------- [find_logger_from_ancestor] -------------
+func test_find_logger_from_ancestor_finds_logger() -> void:
+	var root := Node.new()
+	root.name = "Root"
+	var logger_node := _NODE_BASE.new()
+	logger_node.name = "LoggerNode"
+	logger_node._logger = _CLASS.new("TEST")
+	root.add_child(logger_node)
+	var child := Node.new()
+	child.name = "Child"
+	logger_node.add_child(child)
+	var result := _FUNC.find_logger_from_ancestor(child)
+	assert_object(result).is_not_null()
+	child.free()
+	logger_node.free()
+	root.free()
+
+
+func test_find_logger_from_ancestor_no_logger() -> void:
+	var root := Node.new()
+	root.name = "Root"
+	var child := Node.new()
+	child.name = "Child"
+	root.add_child(child)
+	var result := _FUNC.find_logger_from_ancestor(child)
+	assert_object(result).is_null()
+	child.free()
+	root.free()
+
+
+func test_find_logger_from_ancestor_null_input() -> void:
+	var result := _FUNC.find_logger_from_ancestor(null)
+	assert_object(result).is_null()
+
+
+func test_find_logger_from_ancestor_deep_hierarchy() -> void:
+	var root := Node.new()
+	root.name = "Root"
+	var logger_node := _NODE_BASE.new()
+	logger_node.name = "LoggerNode"
+	logger_node._logger = _CLASS.new("TEST")
+	root.add_child(logger_node)
+	var mid := Node.new()
+	mid.name = "Mid"
+	logger_node.add_child(mid)
+	var deep := Node.new()
+	deep.name = "Deep"
+	mid.add_child(deep)
+	var result := _FUNC.find_logger_from_ancestor(deep)
+	assert_object(result).is_not_null()
+	deep.free()
+	mid.free()
+	logger_node.free()
+	root.free()
+
+
+# ------------- [get_source_string with BBCode] -------------
+func test_get_source_string_with_bbcode() -> void:
+	var result := _FUNC.get_source_string("D-Logger", "", true)
+	assert_str(result).contains("[url=")
+	assert_str(result).contains("[/url]")
+
+
+func test_get_source_string_empty_prefix() -> void:
+	var result := _FUNC.get_source_string("", "")
+	assert_str(result).is_equal("[]")
+	var result_cat := _FUNC.get_source_string("", "Test")
+	assert_str(result_cat).is_equal("[:Test]")
+
+
+# ------------- [get_object_string edge cases] -------------
+func test_get_object_string_with_long_name() -> void:
+	var long_name := \
+	"ThisIsAVeryLongNodeNameThatExceedsTypicalLengthLimits_1234567890"
+	var node := Node.new()
+	node.name = long_name
+	var result := _FUNC.get_object_string(node)
+	assert_str(result).contains(long_name)
+	node.free()

@@ -550,3 +550,282 @@ func test_display_line_map_after_add_log() -> void:
 
 	assert_int(panel._displayed_line_map.size()).is_equal(2)
 	panel.free()
+
+
+# ------------- [_format_log - BBCode Formatting] -------------
+func test_format_log_debug_has_gray_color() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "DEBUG")
+	var result: String = panel._format_log(log_data)
+	assert_str(result).contains("[color=gray]")
+	panel.free()
+
+
+func test_format_log_info_has_bold_cyan() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "INFO")
+	var result: String = panel._format_log(log_data)
+	assert_str(result).contains("[b][color=cyan]")
+	assert_str(result).contains("[/color][/b]")
+	panel.free()
+
+
+func test_format_log_warn_has_bold_yellow() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "WARN")
+	var result: String = panel._format_log(log_data)
+	assert_str(result).contains("[b][color=yellow]")
+	panel.free()
+
+
+func test_format_log_error_has_bold_red() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "ERROR")
+	var result: String = panel._format_log(log_data)
+	assert_str(result).contains("[b][color=red]")
+	panel.free()
+
+
+func test_format_log_with_count() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "INFO")
+	log_data["count"] = 5
+	var result: String = panel._format_log(log_data)
+	assert_str(result).contains("(x5)")
+	panel.free()
+
+
+func test_format_log_selected_has_white_color() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("test", "DEBUG")
+	var result: String = panel._format_log(log_data, true)
+	assert_str(result).contains("[color=#ffffff]")
+	panel.free()
+
+
+# ------------- [_on_log_meta_clicked] -------------
+func test_meta_click_select_toggles_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._ctrl_held = true
+	panel._on_log_meta_clicked("select:2")
+	assert_bool(panel._selected_log_indices.has(2)).is_true()
+	panel._on_log_meta_clicked("select:2")
+	assert_bool(panel._selected_log_indices.has(2)).is_false()
+	panel.free()
+
+
+func test_meta_click_filter_solos_category() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("msg1", "INFO", "D-Logger", "System"))
+	panel.add_log(_make_log("msg2", "INFO", "D-Logger", "Network"))
+	panel.add_log(_make_log("msg3", "INFO", "D-Logger", "AI"))
+	panel._on_log_meta_clicked("filter:System")
+	assert_bool(panel._active_filters["System"]).is_true()
+	assert_bool(panel._active_filters["Network"]).is_false()
+	assert_bool(panel._active_filters["AI"]).is_false()
+	panel.free()
+
+
+# ------------- [_solo_category] -------------
+func test_solo_category_disables_others() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("msg1", "INFO", "D-Logger", "System"))
+	panel.add_log(_make_log("msg2", "INFO", "D-Logger", "Network"))
+	panel.add_log(_make_log("msg3", "INFO", "D-Logger", "AI"))
+	panel._solo_category("Network")
+	assert_bool(panel._active_filters["Network"]).is_true()
+	assert_bool(panel._active_filters["System"]).is_false()
+	assert_bool(panel._active_filters["AI"]).is_false()
+	panel.free()
+
+
+func test_solo_category_already_soloed_toggles_all() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("msg1", "INFO", "D-Logger", "Network"))
+	panel.add_log(_make_log("msg2", "INFO", "D-Logger", "System"))
+	panel.add_log(_make_log("msg3", "INFO", "D-Logger", "AI"))
+	# Deactivate System and AI via their filter buttons
+	for child in panel.filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text != "Network":
+			btn.button_pressed = false
+	# Now only Network is active
+	panel._solo_category("Network")
+	assert_bool(panel._active_filters["Network"]).is_true()
+	assert_bool(panel._active_filters["System"]).is_true()
+	assert_bool(panel._active_filters["AI"]).is_true()
+	panel.free()
+
+
+# ------------- [_unhandled_input - Keyboard Shortcuts] -------------
+func test_unhandled_input_escape_clears_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	panel._selected_log_indices[0] = true
+	var event := InputEventKey.new()
+	event.keycode = KEY_ESCAPE
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_bool(panel._selected_log_indices.is_empty()).is_true()
+	panel.free()
+
+
+func test_unhandled_input_ctrl_f_focuses_search() -> void:
+	var panel := await _instantiate_panel()
+	panel.grab_focus()
+	var event := InputEventKey.new()
+	event.keycode = KEY_F
+	event.ctrl_pressed = true
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_bool(panel.search_line_edit.has_focus()).is_true()
+	panel.free()
+
+
+func test_unhandled_input_key_1_changes_level_filter() -> void:
+	var panel := await _instantiate_panel()
+	panel.grab_focus()
+	panel._active_level_filter = 3
+	var event := InputEventKey.new()
+	event.keycode = KEY_1
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_int(panel._active_level_filter).is_equal(0)
+	panel.free()
+
+
+func test_unhandled_input_key_2_changes_level_filter() -> void:
+	var panel := await _instantiate_panel()
+	panel.grab_focus()
+	panel._active_level_filter = 0
+	var event := InputEventKey.new()
+	event.keycode = KEY_2
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_int(panel._active_level_filter).is_equal(1)
+	panel.free()
+
+
+func test_unhandled_input_key_3_changes_level_filter() -> void:
+	var panel := await _instantiate_panel()
+	panel.grab_focus()
+	panel._active_level_filter = 0
+	var event := InputEventKey.new()
+	event.keycode = KEY_3
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_int(panel._active_level_filter).is_equal(2)
+	panel.free()
+
+
+func test_unhandled_input_key_4_changes_level_filter() -> void:
+	var panel := await _instantiate_panel()
+	panel.grab_focus()
+	panel._active_level_filter = 0
+	var event := InputEventKey.new()
+	event.keycode = KEY_4
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_int(panel._active_level_filter).is_equal(3)
+	panel.free()
+
+
+# ------------- [_input - Ctrl+C] -------------
+func test_input_ctrl_c_triggers_copy() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	var event := InputEventKey.new()
+	event.keycode = KEY_C
+	event.ctrl_pressed = true
+	event.pressed = true
+	panel._input(event)
+	# _on_copy_pressed runs synchronously up to clipboard_set + button text
+	assert_str(panel.copy_button.text).is_equal("Copied!")
+	panel.free()
+
+
+func test_input_ctrl_c_ignored_when_search_focused() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	panel.search_line_edit.grab_focus()
+	var original: String = panel.copy_button.text
+	var event := InputEventKey.new()
+	event.keycode = KEY_C
+	event.ctrl_pressed = true
+	event.pressed = true
+	panel._input(event)
+	assert_str(panel.copy_button.text).is_equal(original)
+	panel.free()
+
+
+# ------------- [_on_copy_pressed] -------------
+func test_on_copy_pressed_with_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._selected_log_indices[0] = true
+	panel._selected_log_indices[2] = true
+	panel._on_copy_pressed()
+	assert_str(panel.copy_button.text).is_equal("Copied!")
+	panel.free()
+
+
+func test_on_copy_pressed_without_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	panel._on_copy_pressed()
+	assert_str(panel.copy_button.text).is_equal("Copied!")
+	panel.free()
+
+
+func test_on_copy_pressed_empty_returns_early() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_copy_pressed()
+	# No logs — nothing to copy, button text should stay unchanged
+	assert_str(panel.copy_button.text).is_not_equal("Copied!")
+	panel.free()
+
+
+# ------------- [_on_log_display_gui_input] -------------
+func test_gui_input_click_outside_clears_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._selected_log_indices[2] = true
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.position = Vector2(0, 9999)
+	panel._on_log_display_gui_input(event)
+	assert_bool(panel._selected_log_indices.is_empty()).is_true()
+	panel.free()
+
+
+func test_gui_input_ctrl_click_outside_preserves_selection() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._selected_log_indices[2] = true
+	panel._selected_log_indices[3] = true
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.ctrl_pressed = true
+	event.position = Vector2(0, 9999)
+	panel._on_log_display_gui_input(event)
+	# Ctrl+Click outside does NOT clear selection
+	assert_bool(panel._selected_log_indices.has(2)).is_true()
+	assert_bool(panel._selected_log_indices.has(3)).is_true()
+	panel.free()
+
+
+# ------------- [_rebuild_log_display_preserve_scroll] -------------
+func test_rebuild_preserve_scroll() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 20)
+	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
+	if v_scroll and v_scroll.max_value > 0.0:
+		var expected := v_scroll.max_value * 0.3
+		v_scroll.value = expected
+		panel._rebuild_log_display_preserve_scroll()
+		await get_tree().process_frame
+		assert_float(v_scroll.value).is_equal(expected)
+	panel.free()

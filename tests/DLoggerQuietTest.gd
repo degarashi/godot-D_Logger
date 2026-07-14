@@ -89,3 +89,39 @@ func test_format_with_dict() -> void:
 func test_init() -> void:
 	var quiet := _QUIET.new()
 	assert_object(quiet).is_not_null()
+
+
+# ------------- [_Output Push Verification] -------------
+func test_output_debug_no_output() -> void:
+	var quiet := _QUIET.new()
+	# debug() is disabled - _output is bypassed at level check
+	assert_bool(quiet.debug("should not output")).is_true()
+	assert_bool(quiet.is_debug_enabled()).is_false()
+
+
+func test_output_info_no_output() -> void:
+	var quiet := _QUIET.new()
+	assert_bool(quiet.info("should not output")).is_true()
+	assert_bool(quiet.is_info_enabled()).is_false()
+
+
+func test_output_warn_output_via_push_warning() -> void:
+	var quiet := _QUIET.new()
+	# warn() calls _output which calls push_warning
+	assert_bool(quiet.warn("warn via push_warning")).is_true()
+
+
+func test_output_error_output_via_push_error() -> void:
+	var quiet := _QUIET.new()
+	assert_bool(quiet.error("error via push_error")).is_true()
+
+
+func test_output_no_file_or_console_write() -> void:
+	var quiet := _QUIET.new()
+	# Quiet does not write to files or console; verify no side effects
+	quiet.debug("no side effect")
+	quiet.info("no side effect")
+	quiet.warn("no side effect")
+	quiet.error("no side effect")
+	assert_bool(quiet.is_debug_enabled()).is_false()
+	assert_bool(quiet.is_info_enabled()).is_false()

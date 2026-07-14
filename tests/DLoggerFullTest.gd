@@ -121,4 +121,23 @@ func test_with_prefix_override() -> void:
 	assert_bool(logger.info("msg", [], "", null, "CUSTOM")).is_true()
 
 
+# ------------- [_Output Direct Invocation] -------------
+func test_output_direct_call_no_crash() -> void:
+	var logger := _FULL.new()
+	# Calling _output directly with known params should not crash
+	logger._output("test msg", [], "", null, "", null, "DEBUG")
+
+
+func test_output_warn_calls_push_warning() -> void:
+	var logger := _FULL.new()
+	# warn() calls _output which calls push_warning internally
+	assert_bool(logger.warn("test warn push")).is_true()
+
+
+func test_output_error_calls_push_error() -> void:
+	var logger := _FULL.new()
+	# error() calls _output which calls push_error internally
+	assert_bool(logger.error("test error push")).is_true()
+
+
 

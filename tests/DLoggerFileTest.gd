@@ -113,3 +113,33 @@ func test_file_logger_level_checks() -> void:
 	assert_bool(logger.is_info_enabled()).is_true()
 	assert_bool(logger.is_warn_enabled()).is_true()
 	assert_bool(logger.is_error_enabled()).is_true()
+
+
+# ------------- [Error Path] -------------
+func test_init_invalid_path_does_not_crash() -> void:
+	var logger := _FILE_LOGGER.new("")
+	assert_object(logger).is_not_null()
+
+
+func test_debug_writes_no_flush() -> void:
+	var path := _temp_dir.path_join("debug_noflush.log")
+	var logger := _FILE_LOGGER.new(path)
+	logger.debug("debug without flush")
+	# Force a flush via warn so buffered content is written to disk
+	logger.warn("flush_trigger")
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("debug without flush")
+
+
+func test_info_writes_no_flush() -> void:
+	var path := _temp_dir.path_join("info_noflush.log")
+	var logger := _FILE_LOGGER.new(path)
+	logger.info("info without flush")
+	# Force a flush via warn so buffered content is written to disk
+	logger.warn("flush_trigger")
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("info without flush")
