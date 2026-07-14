@@ -632,12 +632,17 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	var category: String = log_data.get("category", "")
 	var context_str: String = log_data.get("context_str", "")
 	var caller_info = log_data.get("caller_info", {})
+	var message: String = log_data.get("message", "")
+
+	# Highlight search keyword in the message text
+	if not _search_query.is_empty():
+		message = _highlight_search_text(message)
 
 	# Use source string formatting with clickable BBCode.
 	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
 
 	var formatted_msg := DLoggerFunc.get_formatted_line(
-		time, frame, source_str, caller_info, context_str, level, log_data.get("message", ""), true
+		time, frame, source_str, caller_info, context_str, level, message, true
 	)
 
 	var count: int = log_data.get("count", 1)
@@ -670,6 +675,26 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	else:
 		result = formatted_msg
 
+	return result
+
+
+## Highlights occurrences of the search query in the given text using BBCode.
+## Wraps each match with a yellow background and black text for visibility.
+func _highlight_search_text(text: String) -> String:
+	var query := _search_query
+	if query.is_empty():
+		return text
+	var lower_text := text.to_lower()
+	var lower_query := query.to_lower()
+	var result: String = ""
+	var last_end: int = 0
+	var pos: int = lower_text.find(lower_query, last_end)
+	while pos >= 0:
+		result += text.substr(last_end, pos - last_end)
+		result += "[bgcolor=yellow][color=black]" + text.substr(pos, query.length()) + "[/color][/bgcolor]"
+		last_end = pos + query.length()
+		pos = lower_text.find(lower_query, last_end)
+	result += text.substr(last_end)
 	return result
 
 
