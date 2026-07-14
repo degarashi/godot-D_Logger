@@ -22,6 +22,17 @@ var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 
 var _active_level_filter: int = 0
 var _current_level_filter_button: Button = null
 var _is_right_dragging: bool = false
+var _selected_log_indices: Dictionary = {}
+var _ctrl_held: bool = false
+# Maps display line number to log array index
+var _displayed_line_map: Array[int] = []
+
+# Drag-to-select state
+var _is_dragging_selection: bool = false
+var _drag_anchor_display_line: int = -1
+var _drag_is_additive: bool = false
+var _drag_last_range: Vector2i = Vector2i(-1, -1)
+var _drag_moved: bool = false
 
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
@@ -69,6 +80,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Only process shortcuts when panel is visible
 	if not visible:
 		return
+
+	# Escape clears selection (works even without focus on panel)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if not _selected_log_indices.is_empty():
+			_selected_log_indices.clear()
+			_update_selection_info()
+			_rebuild_log_display()
+			get_viewport().set_input_as_handled()
+			return
 
 	# Check if focus is within this panel or its children
 	var focused_control: Control = get_window().gui_get_focus_owner()
@@ -142,18 +162,26 @@ func add_log(log_data: Dictionary) -> void:
 	if _all_logs.size() > MAX_LOG_COUNT:
 		# Trim a batch of logs to avoid rebuilding too frequently
 		_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
+		# Selection indices are invalidated by trimming
+		_selected_log_indices.clear()
+		_update_selection_info()
 		_rebuild_log_display()
 		return  # Display already rebuilt, no need to append
 
 	if _should_display_log(log_data):
+		var log_idx := _all_logs.size() - 1
 		if is_stacked:
-			# Update only the last visible line instead of full rebuild
+			# Update only the last visible line
 			var pc := log_display.get_paragraph_count()
 			if pc > 0:
 				log_display.remove_paragraph(pc - 1)
-			_append_formatted_log(log_data)
+			# Update the last entry in the line map
+			if not _displayed_line_map.is_empty():
+				_displayed_line_map[-1] = log_idx
+			_append_formatted_log(log_data, log_idx)
 		else:
-			_append_formatted_log(log_data)
+			_displayed_line_map.append(log_idx)
+			_append_formatted_log(log_data, log_idx)
 
 
 # ------------- [Private Method] -------------
@@ -407,6 +435,51 @@ func _on_level_filter_pressed(min_level: int, button: Button) -> void:
 
 func _on_log_display_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
+		_ctrl_held = (event.ctrl_pressed or event.command_or_control_autoremap)
+
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				var line_idx := _get_line_at_mouse_pos(event.position)
+				if line_idx >= 0 and line_idx < _displayed_line_map.size():
+					if _ctrl_held:
+						# Ctrl+Click: toggle single line (existing behavior)
+						# then any subsequent drag will be additive.
+						_toggle_log_selection(_displayed_line_map[line_idx])
+						_drag_is_additive = true
+					else:
+						# Plain click: just start drag tracking.
+						# Selection only happens on drag, not click.
+						_drag_is_additive = false
+
+					_drag_anchor_display_line = line_idx
+					_is_dragging_selection = true
+					_drag_moved = false
+					_drag_last_range = Vector2i(line_idx, line_idx)
+				else:
+					# Click outside any log line: clear selection.
+					if not _ctrl_held:
+						if not _selected_log_indices.is_empty():
+							_selected_log_indices.clear()
+							_update_selection_info()
+							_rebuild_log_display_preserve_scroll()
+					_is_dragging_selection = false
+
+				get_viewport().set_input_as_handled()
+				return
+
+			else:
+				# Left button released
+				if _is_dragging_selection:
+					if not _drag_moved and not _ctrl_held:
+						# Pure click (no drag, no Ctrl): clear selection.
+						if not _selected_log_indices.is_empty():
+							_selected_log_indices.clear()
+							_update_selection_info()
+							_rebuild_log_display_preserve_scroll()
+					_is_dragging_selection = false
+					_drag_last_range = Vector2i(-1, -1)
+					return
+
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			if event.pressed:
 				_is_right_dragging = true
@@ -422,10 +495,68 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			v_scroll.value -= event.relative.y
 		accept_event()
 
+	# Drag-to-select: update range while left mouse is held.
+	if (
+		event is InputEventMouseMotion
+		and _is_dragging_selection
+		and (event.button_mask & MOUSE_BUTTON_MASK_LEFT)
+	):
+		_drag_moved = true
+		var current_line := _get_line_at_mouse_pos(event.position)
+		if current_line >= 0 and current_line < _displayed_line_map.size():
+			var range_start := mini(_drag_anchor_display_line, current_line)
+			var range_end := maxi(_drag_anchor_display_line, current_line)
+
+			# Skip if the range hasn't changed.
+			if range_start == _drag_last_range.x and range_end == _drag_last_range.y:
+				return
+
+			_drag_last_range = Vector2i(range_start, range_end)
+
+			if not _drag_is_additive:
+				_selected_log_indices.clear()
+
+			for dl in range(range_start, range_end + 1):
+				_selected_log_indices[_displayed_line_map[dl]] = true
+
+			_update_selection_info()
+			_rebuild_log_display_preserve_scroll()
+			accept_event()
+
+
+func _get_line_at_mouse_pos(mouse_pos: Vector2) -> int:
+	# event.position from gui_input is already in the control's local
+	# coordinates. The RichTextLabel's stylebox has content margins
+	# (padding) inside its bounds. get_paragraph_offset() is relative to
+	# the content area AFTER those margins, so we must subtract the top
+	# margin to convert from local coordinates to content coordinates.
+	var v_scroll := log_display.get_v_scroll_bar()
+	var scroll_y := v_scroll.value if v_scroll else 0.0
+
+	# Calculate Y position relative to the top of the content
+	var style := log_display.get_theme_stylebox(&"normal")
+	var top_padding := style.content_margin_top if style else 0.0
+	var content_y := mouse_pos.y + scroll_y - top_padding
+
+	# Iterate paragraphs to find which one contains content_y
+	var count := log_display.get_paragraph_count()
+	for i in range(count - 1, -1, -1):
+		if content_y >= log_display.get_paragraph_offset(i):
+			return i
+	return -1
+
 
 func _on_log_meta_clicked(meta: Variant) -> void:
 	if meta is String:
 		var meta_str: String = meta
+
+		# Handle selection toggle
+		if meta_str.begins_with("select:"):
+			if _ctrl_held:
+				var log_index := meta_str.trim_prefix("select:").to_int()
+				_toggle_log_selection(log_index)
+			return
+
 		if meta_str.begins_with("filter:"):
 			_solo_category(meta_str.trim_prefix("filter:"))
 			return
@@ -443,9 +574,29 @@ func _on_log_meta_clicked(meta: Variant) -> void:
 					EditorInterface.edit_script(res, line_num)
 
 
-func _append_formatted_log(log_data: Dictionary) -> void:
+func _toggle_log_selection(log_index: int) -> void:
+	if _selected_log_indices.has(log_index):
+		_selected_log_indices.erase(log_index)
+	else:
+		_selected_log_indices[log_index] = true
+	_update_selection_info()
+	_rebuild_log_display_preserve_scroll()
+
+
+func _update_selection_info() -> void:
+	var count := _selected_log_indices.size()
+	if count > 0:
+		copy_button.tooltip_text = ("Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count)
+	else:
+		copy_button.tooltip_text = ("Copy Logs (Ctrl+C)")
+
+
+func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
 		var bbcode_msg := _format_log(log_data)
+		# Add highlight for selected lines
+		if log_index >= 0 and _selected_log_indices.has(log_index):
+			bbcode_msg = "[bgcolor=#22aaaaaa]%s[/bgcolor]" % bbcode_msg
 		log_display.append_text(bbcode_msg + "\n")
 
 
@@ -458,7 +609,7 @@ func _format_log(log_data: Dictionary) -> String:
 	var context_str: String = log_data.get("context_str", "")
 	var caller_info = log_data.get("caller_info", {})
 
-	# Use the same source string formatting as DLoggerFunc, with clickable BBCode.
+	# Use source string formatting with clickable BBCode.
 	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
 
 	var formatted_msg := DLoggerFunc.get_formatted_line(
@@ -469,16 +620,20 @@ func _format_log(log_data: Dictionary) -> String:
 	if count > 1:
 		formatted_msg += " [b](x%d)[/b]" % count
 
+	var result: String
 	match level:
 		"DEBUG":
-			return "[color=gray]{0}[/color]".format([formatted_msg])
+			result = ("[color=gray]{0}[/color]".format([formatted_msg]))
 		"INFO":
-			return "[b][color=cyan]{0}[/color][/b]".format([formatted_msg])
+			result = ("[b][color=cyan]{0}[/color][/b]".format([formatted_msg]))
 		"WARN":
-			return "[b][color=yellow]{0}[/color][/b]".format([formatted_msg])
+			result = ("[b][color=yellow]{0}[/color][/b]".format([formatted_msg]))
 		"ERROR":
-			return "[b][color=red]{0}[/color][/b]".format([formatted_msg])
-	return formatted_msg
+			result = ("[b][color=red]{0}[/color][/b]".format([formatted_msg]))
+		_:
+			result = formatted_msg
+
+	return result
 
 
 func _get_max_log_time() -> float:
@@ -532,9 +687,27 @@ func _should_display_log(log_data: Dictionary) -> bool:
 
 func _rebuild_log_display() -> void:
 	log_display.clear()
-	for log_data: Dictionary in _all_logs:
+	_displayed_line_map.clear()
+	for i in range(_all_logs.size()):
+		var log_data: Dictionary = _all_logs[i]
 		if _should_display_log(log_data):
-			_append_formatted_log(log_data)
+			_displayed_line_map.append(i)
+			_append_formatted_log(log_data, i)
+
+
+## Rebuilds the log display while preserving the current scroll position.
+## Call this instead of _rebuild_log_display() when the user has actively
+## positioned the viewport (e.g. after a selection change).
+func _rebuild_log_display_preserve_scroll() -> void:
+	var v_scroll := log_display.get_v_scroll_bar()
+	var saved_scroll: float = v_scroll.value if v_scroll else 0.0
+	log_display.scroll_following = false
+	_rebuild_log_display()
+	if v_scroll:
+		# Defer scroll restoration so the layout has settled and the
+		# scroll bar's max_value reflects the new content height.
+		# Without this, the first selection can jump the viewport.
+		v_scroll.call_deferred("set_value", saved_scroll)
 
 
 func _on_search_text_changed(new_text: String) -> void:
@@ -544,6 +717,7 @@ func _on_search_text_changed(new_text: String) -> void:
 
 func clear_logs() -> void:
 	_all_logs.clear()
+	_selected_log_indices.clear()
 	log_display.clear()
 
 	for child: Node in filter_container.get_children():
@@ -580,6 +754,8 @@ func clear_logs() -> void:
 			_update_level_filter_button_style(btn, true)
 			break
 
+	_update_selection_info()
+
 
 func _on_clear_pressed() -> void:
 	clear_logs()
@@ -594,7 +770,12 @@ func _on_copy_pressed() -> void:
 
 func _get_formatted_logs() -> String:
 	var output_text := ""
-	for log_data: Dictionary in _all_logs:
+	var has_selection := not _selected_log_indices.is_empty()
+	for i in range(_all_logs.size()):
+		var log_data: Dictionary = _all_logs[i]
+		# Skip if selection exists and this log is not selected
+		if has_selection and not _selected_log_indices.has(i):
+			continue
 		if _should_display_log(log_data):
 			var time: float = log_data.get("time", 0.0)
 			var frame: int = log_data.get("frame", 0)
