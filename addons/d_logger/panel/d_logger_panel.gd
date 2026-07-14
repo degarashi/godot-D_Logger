@@ -76,6 +76,27 @@ func _ready() -> void:
 		es.settings_changed.connect(_update_pause_on_error_button)
 
 
+func _input(event: InputEvent) -> void:
+	# Handle Ctrl+C (copy) here, in _input (before _shortcut_input / _unhandled_input),
+	# because the editor's own input chain tends to consume Ctrl+C before it reaches
+	# the button's Shortcut or _unhandled_input. Marking the event as handled here
+	# stops it from being swallowed by anything else.
+	if not is_visible_in_tree():
+		return
+	if not (event is InputEventKey and event.pressed and not event.is_echo()):
+		return
+	if not (event.ctrl_pressed or event.command_or_control_autoremap):
+		return
+	if event.keycode != KEY_C:
+		return
+	# Don't steal Ctrl+C from text editing controls (e.g. search box, script editor).
+	var focused := get_window().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit:
+		return
+	_on_copy_pressed()
+	get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# Only process shortcuts when panel is visible
 	if not visible:
@@ -438,6 +459,9 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 		_ctrl_held = (event.ctrl_pressed or event.command_or_control_autoremap)
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			# Grab focus so subsequent keyboard shortcuts (e.g. Ctrl+C) work
+			grab_focus()
+
 			if event.pressed:
 				var line_idx := _get_line_at_mouse_pos(event.position)
 				if line_idx >= 0 and line_idx < _displayed_line_map.size():
@@ -593,14 +617,14 @@ func _update_selection_info() -> void:
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
-		var bbcode_msg := _format_log(log_data)
-		# Add highlight for selected lines
-		if log_index >= 0 and _selected_log_indices.has(log_index):
-			bbcode_msg = "[bgcolor=#22aaaaaa]%s[/bgcolor]" % bbcode_msg
+		var is_selected := log_index >= 0 and _selected_log_indices.has(log_index)
+		var bbcode_msg := _format_log(log_data, is_selected)
+		if is_selected:
+			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
 		log_display.append_text(bbcode_msg + "\n")
 
 
-func _format_log(log_data: Dictionary) -> String:
+func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	var time: float = log_data.get("time", 0.0)
 	var frame: int = log_data.get("frame", 0)
 	var level: String = log_data.get("level", "DEBUG")
@@ -620,18 +644,31 @@ func _format_log(log_data: Dictionary) -> String:
 	if count > 1:
 		formatted_msg += " [b](x%d)[/b]" % count
 
+	var text_color := ""
+	if is_selected:
+		text_color = "#ffffff"
+	else:
+		match level:
+			"DEBUG":
+				text_color = "gray"
+			"INFO":
+				text_color = "cyan"
+			"WARN":
+				text_color = "yellow"
+			"ERROR":
+				text_color = "red"
+
 	var result: String
-	match level:
-		"DEBUG":
-			result = ("[color=gray]{0}[/color]".format([formatted_msg]))
-		"INFO":
-			result = ("[b][color=cyan]{0}[/color][/b]".format([formatted_msg]))
-		"WARN":
-			result = ("[b][color=yellow]{0}[/color][/b]".format([formatted_msg]))
-		"ERROR":
-			result = ("[b][color=red]{0}[/color][/b]".format([formatted_msg]))
-		_:
-			result = formatted_msg
+	if is_selected:
+		result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+	elif not text_color.is_empty():
+		var is_bold := level in ["INFO", "WARN", "ERROR"]
+		if is_bold:
+			result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+		else:
+			result = ("[color={0}]{1}[/color]".format([text_color, formatted_msg]))
+	else:
+		result = formatted_msg
 
 	return result
 
@@ -765,7 +802,8 @@ func _on_copy_pressed() -> void:
 	var formatted_logs: String = _get_formatted_logs()
 	if formatted_logs.is_empty():
 		return
-	_copy_to_clipboard(formatted_logs)
+	var copy_count := _selected_log_indices.size() if not _selected_log_indices.is_empty() else _displayed_line_map.size()
+	_copy_to_clipboard(formatted_logs, copy_count)
 
 
 func _get_formatted_logs() -> String:
@@ -801,13 +839,78 @@ func _get_formatted_logs() -> String:
 	return output_text
 
 
-func _copy_to_clipboard(text: String) -> void:
+func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	DisplayServer.clipboard_set(text)
+
+	var toast_msg := "Copied %d log(s)" % log_count if log_count > 0 else "Copied"
+	_show_toast(toast_msg)
 
 	var original_text := copy_button.text
 	copy_button.text = "Copied!"
 	await get_tree().create_timer(1.0).timeout
 	copy_button.text = original_text
+
+
+func _show_toast(message: String) -> void:
+	var margin := 12
+	var toast_w := 220
+	var toast_h := 36
+
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _make_toast_stylebox())
+	panel.size = Vector2(toast_w, toast_h)
+
+	var label := Label.new()
+	label.text = message
+	label.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	label.add_theme_font_size_override("font_size", 14)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(label)
+
+	add_child(panel)
+	panel.move_to_front()
+
+	# Position and animate after layout is computed
+	call_deferred("_animate_toast", panel, margin, toast_w, toast_h)
+
+
+func _animate_toast(panel: Panel, margin: float, w: float, h: float) -> void:
+	if not is_inside_tree():
+		panel.queue_free()
+		return
+
+	# Set position at bottom-center
+	panel.position = Vector2(
+		(size.x - w) * 0.5,
+		size.y - h - margin
+	)
+
+	# Slide up and fade out
+	var tween := panel.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(panel, "position:y", panel.position.y - 20, 1.5)
+	tween.tween_property(panel, "modulate:a", 0.0, 1.0).set_delay(0.5)
+	tween.finished.connect(panel.queue_free)
+
+
+func _make_toast_stylebox() -> StyleBoxFlat:
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.12, 0.12, 0.17, 0.92)
+	bg.shadow_color = Color(0, 0, 0, 0.4)
+	bg.shadow_size = 4
+	bg.corner_radius_top_left = 6
+	bg.corner_radius_top_right = 6
+	bg.corner_radius_bottom_left = 6
+	bg.corner_radius_bottom_right = 6
+	bg.content_margin_left = 16
+	bg.content_margin_right = 16
+	bg.content_margin_top = 6
+	bg.content_margin_bottom = 6
+	return bg
 
 
 func _on_save_pressed() -> void:
