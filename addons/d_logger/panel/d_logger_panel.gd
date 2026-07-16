@@ -488,7 +488,9 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 							_rebuild_log_display_preserve_scroll()
 					_is_dragging_selection = false
 
-				get_viewport().set_input_as_handled()
+				# NOTE: Do NOT call set_input_as_handled() here.
+				# It prevents RichTextLabel from emitting meta_clicked,
+				# which breaks [url=filter:category] links in log output.
 				return
 
 			else:
