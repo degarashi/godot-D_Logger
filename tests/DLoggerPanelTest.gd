@@ -628,7 +628,7 @@ func test_on_level_filter_pressed() -> void:
 	var panel := await _instantiate_panel()
 	_populate_logs(panel, 5)
 
-	panel._on_level_filter_pressed(2, panel._current_level_filter_button)
+	panel._on_level_option_selected(2)
 
 	assert_int(panel._active_level_filter).is_equal(2)
 	panel.free()
@@ -639,7 +639,7 @@ func test_on_time_filter_pressed() -> void:
 	var panel := await _instantiate_panel()
 	_populate_logs(panel, 5)
 
-	panel._on_time_filter_pressed(30.0, panel._current_time_filter_button)
+	panel._on_time_option_selected(1)
 
 	assert_float(panel._active_time_filter).is_equal(30.0)
 	panel.free()
