@@ -72,26 +72,23 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="TimeFilterBar" type="HBoxContainer" parent="VBoxContainer" unique_id=532502334]
+[node name="FilterOptionsBar" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/TimeFilterBar" unique_id=273293437]
+[node name="TimeLabel" type="Label" parent="VBoxContainer/FilterOptionsBar"]
 layout_mode = 2
-text = "Time Range:"
+text = "Time:"
 
-[node name="TimeFilterContainer" type="HBoxContainer" parent="VBoxContainer/TimeFilterBar" unique_id=532502335]
+[node name="TimeOptionButton" type="OptionButton" parent="VBoxContainer/FilterOptionsBar"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="LevelFilterBar" type="HBoxContainer" parent="VBoxContainer" unique_id=532502336]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="VBoxContainer/LevelFilterBar" unique_id=273293438]
+[node name="LevelLabel" type="Label" parent="VBoxContainer/FilterOptionsBar"]
 layout_mode = 2
 text = "Level:"
 
-[node name="LevelFilterContainer" type="HBoxContainer" parent="VBoxContainer/LevelFilterBar" unique_id=532502337]
+[node name="LevelOptionButton" type="OptionButton" parent="VBoxContainer/FilterOptionsBar"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

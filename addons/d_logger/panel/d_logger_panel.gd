@@ -11,16 +11,20 @@ var _active_filters: Dictionary[String, bool] = {}
 var _search_query: String = ""
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
-var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0}
+var _time_presets: Dictionary[String, float] = {
+	"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0
+}
 var _active_time_filter: float = -1.0
-var _current_time_filter_button: Button = null
 
 # Log level filtering
 var _log_levels: Array[String] = ["DEBUG", "INFO", "WARN", "ERROR"]
-var _log_level_values: Dictionary[String, int] = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
-var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3}
+var _log_level_values: Dictionary[String, int] = {
+	"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3
+}
+var _level_presets: Dictionary[String, int] = {
+	"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3
+}
 var _active_level_filter: int = 0
-var _current_level_filter_button: Button = null
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
 var _ctrl_held: bool = false
@@ -41,8 +45,8 @@ var _drag_moved: bool = false
 @onready var search_line_edit: LineEdit = %SearchLineEdit
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HBoxContainer = %FilterContainer
-@onready var time_filter_container: HBoxContainer = %TimeFilterContainer
-@onready var level_filter_container: HBoxContainer = %LevelFilterContainer
+@onready var time_option_button: OptionButton = %TimeOptionButton
+@onready var level_option_button: OptionButton = %LevelOptionButton
 
 
 # ------------- [Callbacks] -------------
@@ -62,8 +66,8 @@ func _ready() -> void:
 	# Assign shortcuts
 	_setup_shortcuts()
 
-	_add_time_filter_buttons()
-	_add_level_filter_buttons()
+	_setup_time_option_button()
+	_setup_level_option_button()
 
 	visibility_changed.connect(_on_visibility_changed)
 
@@ -119,7 +123,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed:
-		if (event.ctrl_pressed or event.command_or_control_autoremap) and event.keycode == KEY_F:
+		if (
+			(event.ctrl_pressed or event.command_or_control_autoremap)
+			and event.keycode == KEY_F
+		):
 			search_line_edit.grab_focus()
 			search_line_edit.select_all()
 			get_viewport().set_input_as_handled()
@@ -127,16 +134,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 		match event.keycode:
 			KEY_1:
-				_apply_level_filter(0, "DEBUG")  # DEBUG
+				_apply_level_filter(0)  # DEBUG
 				get_viewport().set_input_as_handled()
 			KEY_2:
-				_apply_level_filter(1, "INFO+")  # INFO+
+				_apply_level_filter(1)  # INFO+
 				get_viewport().set_input_as_handled()
 			KEY_3:
-				_apply_level_filter(2, "WARN+")  # WARN+
+				_apply_level_filter(2)  # WARN+
 				get_viewport().set_input_as_handled()
 			KEY_4:
-				_apply_level_filter(3, "ERROR")  # ERROR
+				_apply_level_filter(3)  # ERROR
 				get_viewport().set_input_as_handled()
 
 
@@ -280,33 +287,24 @@ func _add_filter_button(category: String) -> void:
 	filter_container.add_child(btn)
 
 
-func _add_time_filter_buttons() -> void:
+func _setup_time_option_button() -> void:
 	for preset_name: String in _time_presets.keys():
-		var btn := Button.new()
-		btn.text = preset_name
-		btn.toggle_mode = true
-		if preset_name == "All":
-			btn.button_pressed = true
-		btn.pressed.connect(_on_time_filter_pressed.bind(_time_presets[preset_name], btn))
-		_update_time_filter_button_style(btn, preset_name == "All")
-		time_filter_container.add_child(btn)
-		if preset_name == "All":
-			_current_time_filter_button = btn
+		var duration := _time_presets[preset_name]
+		time_option_button.add_item(preset_name, int(duration))
+	time_option_button.selected = 0
+	time_option_button.item_selected.connect(_on_time_option_selected)
 
 
-func _add_level_filter_buttons() -> void:
+func _setup_level_option_button() -> void:
 	for preset_name: String in _level_presets.keys():
-		var btn := Button.new()
-		btn.text = preset_name
-		btn.toggle_mode = true
-		if preset_name == "DEBUG":
-			btn.button_pressed = true
-		btn.pressed.connect(_on_level_filter_pressed.bind(_level_presets[preset_name], btn))
-		_update_level_filter_button_style(btn, preset_name == "DEBUG")
+		var min_level := _level_presets[preset_name]
+		level_option_button.add_item(preset_name, min_level)
 
-		# Add keyboard shortcut hint to tooltip
-		var shortcut_hint: String = ""
-		match preset_name:
+	# Add keyboard shortcut hint to tooltip
+	for i in level_option_button.item_count:
+		var text := level_option_button.get_item_text(i)
+		var shortcut_hint := ""
+		match text:
 			"DEBUG":
 				shortcut_hint = " (Press 1)"
 			"INFO+":
@@ -315,23 +313,27 @@ func _add_level_filter_buttons() -> void:
 				shortcut_hint = " (Press 3)"
 			"ERROR":
 				shortcut_hint = " (Press 4)"
-		btn.tooltip_text = preset_name + shortcut_hint
+		level_option_button.set_item_tooltip(i, text + shortcut_hint)
 
-		level_filter_container.add_child(btn)
-		if preset_name == "DEBUG":
-			_current_level_filter_button = btn
+	level_option_button.selected = 0
+	level_option_button.item_selected.connect(_on_level_option_selected)
 
 
-func _apply_level_filter(_min_level: int, preset_name: String) -> void:
-	for child: Node in level_filter_container.get_children():
-		var btn := child as Button
-		if btn and btn.text == preset_name:
-			btn.pressed.emit()
+func _apply_level_filter(min_level: int) -> void:
+	for i in level_option_button.item_count:
+		if level_option_button.get_item_id(i) == min_level:
+			level_option_button.select(i)
+			# item_selected is NOT emitted by select(), so call handler directly
+			_on_level_option_selected(i)
 			break
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_LEFT
+	):
 		if event.alt_pressed:
 			_solo_category(category)
 			get_viewport().set_input_as_handled()
@@ -354,7 +356,9 @@ func _solo_category(solo_cat: String) -> void:
 		if not btn:
 			continue
 
-		var should_be_pressed := true if is_already_soloed else (btn.text == solo_cat)
+		var should_be_pressed := (
+			true if is_already_soloed else (btn.text == solo_cat)
+		)
 		if btn.button_pressed != should_be_pressed:
 			btn.button_pressed = should_be_pressed
 		else:
@@ -366,7 +370,9 @@ func _solo_category(solo_cat: String) -> void:
 	_rebuild_log_display()
 
 
-func _on_filter_toggled(is_pressed: bool, category: String, btn: Button) -> void:
+func _on_filter_toggled(
+	is_pressed: bool, category: String, btn: Button
+) -> void:
 	_active_filters[category] = is_pressed
 	_update_button_style(btn, is_pressed)
 	if not _is_rebuilding:
@@ -377,24 +383,6 @@ func _update_button_style(btn: Button, is_pressed: bool) -> void:
 	if is_pressed:
 		# Use a visible color (e.g. cyan with some alpha) for active filters
 		btn.modulate = Color(0.3, 0.8, 1.0, 1.0)
-	else:
-		# Reset to default
-		btn.modulate = Color(1, 1, 1, 0.5)
-
-
-func _update_time_filter_button_style(btn: Button, is_active: bool) -> void:
-	if is_active:
-		# Use a green color for active time filter
-		btn.modulate = Color(0.3, 1.0, 0.3, 1.0)
-	else:
-		# Reset to default
-		btn.modulate = Color(1, 1, 1, 0.5)
-
-
-func _update_level_filter_button_style(btn: Button, is_active: bool) -> void:
-	if is_active:
-		# Use an orange color for active level filter
-		btn.modulate = Color(1.0, 0.7, 0.3, 1.0)
 	else:
 		# Reset to default
 		btn.modulate = Color(1, 1, 1, 0.5)
@@ -414,7 +402,9 @@ func _update_pause_on_error_button() -> void:
 		return
 	var es := EditorInterface.get_editor_settings()
 	if es.has_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR):
-		var val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+		var val: bool = es.get_setting(
+			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
+		)
 		if pause_on_error_button.button_pressed != val:
 			pause_on_error_button.set_pressed_no_signal(val)
 		_update_pause_on_error_button_style(val)
@@ -424,33 +414,25 @@ func _on_pause_on_error_toggled(is_pressed: bool) -> void:
 	if not Engine.is_editor_hint():
 		return
 	var es := EditorInterface.get_editor_settings()
-	var current_val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+	var current_val: bool = es.get_setting(
+		DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
+	)
 	if current_val != is_pressed:
-		es.set_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed)
+		es.set_setting(
+			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed
+		)
 	_update_pause_on_error_button_style(is_pressed)
 
 
-func _on_time_filter_pressed(duration: float, button: Button) -> void:
-	# Update previous button style
-	if _current_time_filter_button:
-		_update_time_filter_button_style(_current_time_filter_button, false)
-
-	# Set new active filter
-	_active_time_filter = duration
-	_current_time_filter_button = button
-	_update_time_filter_button_style(button, true)
+func _on_time_option_selected(index: int) -> void:
+	var duration := time_option_button.get_item_id(index)
+	_active_time_filter = float(duration)
 	_rebuild_log_display()
 
 
-func _on_level_filter_pressed(min_level: int, button: Button) -> void:
-	# Update previous button style
-	if _current_level_filter_button:
-		_update_level_filter_button_style(_current_level_filter_button, false)
-
-	# Set new active filter
+func _on_level_option_selected(index: int) -> void:
+	var min_level := level_option_button.get_item_id(index)
 	_active_level_filter = min_level
-	_current_level_filter_button = button
-	_update_level_filter_button_style(button, true)
 	_rebuild_log_display()
 
 
@@ -534,7 +516,10 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			var range_end := maxi(_drag_anchor_display_line, current_line)
 
 			# Skip if the range hasn't changed.
-			if range_start == _drag_last_range.x and range_end == _drag_last_range.y:
+			if (
+				range_start == _drag_last_range.x
+				and range_end == _drag_last_range.y
+			):
 				return
 
 			_drag_last_range = Vector2i(range_start, range_end)
@@ -612,14 +597,18 @@ func _toggle_log_selection(log_index: int) -> void:
 func _update_selection_info() -> void:
 	var count := _selected_log_indices.size()
 	if count > 0:
-		copy_button.tooltip_text = ("Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count)
+		copy_button.tooltip_text = (
+			"Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count
+		)
 	else:
 		copy_button.tooltip_text = ("Copy Logs (Ctrl+C)")
 
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
-		var is_selected := log_index >= 0 and _selected_log_indices.has(log_index)
+		var is_selected := (
+			log_index >= 0 and _selected_log_indices.has(log_index)
+		)
 		var bbcode_msg := _format_log(log_data, is_selected)
 		if is_selected:
 			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
@@ -667,13 +656,19 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 
 	var result: String
 	if is_selected:
-		result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+		result = ("[b][color={0}]{1}[/color][/b]".format(
+			[text_color, formatted_msg]
+		))
 	elif not text_color.is_empty():
 		var is_bold := level in ["INFO", "WARN", "ERROR"]
 		if is_bold:
-			result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+			result = ("[b][color={0}]{1}[/color][/b]".format(
+				[text_color, formatted_msg]
+			))
 		else:
-			result = ("[color={0}]{1}[/color]".format([text_color, formatted_msg]))
+			result = ("[color={0}]{1}[/color]".format(
+				[text_color, formatted_msg]
+			))
 	else:
 		result = formatted_msg
 
@@ -693,7 +688,11 @@ func _highlight_search_text(text: String) -> String:
 	var pos: int = lower_text.find(lower_query, last_end)
 	while pos >= 0:
 		result += text.substr(last_end, pos - last_end)
-		result += "[bgcolor=yellow][color=black]" + text.substr(pos, query.length()) + "[/color][/bgcolor]"
+		result += (
+			"[bgcolor=yellow][color=black]"
+			+ text.substr(pos, query.length())
+			+ "[/color][/bgcolor]"
+		)
 		last_end = pos + query.length()
 		pos = lower_text.find(lower_query, last_end)
 	result += text.substr(last_end)
@@ -794,29 +793,11 @@ func clear_logs() -> void:
 
 	# Reset time filter to "All"
 	_active_time_filter = -1.0
-	if _current_time_filter_button:
-		_update_time_filter_button_style(_current_time_filter_button, false)
-
-	# Find and activate the "All" button for time filter
-	for child: Node in time_filter_container.get_children():
-		var btn := child as Button
-		if btn and btn.text == "All":
-			_current_time_filter_button = btn
-			_update_time_filter_button_style(btn, true)
-			break
+	time_option_button.select(0)
 
 	# Reset level filter to "DEBUG"
 	_active_level_filter = 0
-	if _current_level_filter_button:
-		_update_level_filter_button_style(_current_level_filter_button, false)
-
-	# Find and activate the "DEBUG" button for level filter
-	for child: Node in level_filter_container.get_children():
-		var btn := child as Button
-		if btn and btn.text == "DEBUG":
-			_current_level_filter_button = btn
-			_update_level_filter_button_style(btn, true)
-			break
+	level_option_button.select(0)
 
 	_update_selection_info()
 
@@ -829,7 +810,11 @@ func _on_copy_pressed() -> void:
 	var formatted_logs: String = _get_formatted_logs()
 	if formatted_logs.is_empty():
 		return
-	var copy_count := _selected_log_indices.size() if not _selected_log_indices.is_empty() else _displayed_line_map.size()
+	var copy_count := (
+		_selected_log_indices.size()
+		if not _selected_log_indices.is_empty()
+		else _displayed_line_map.size()
+	)
 	_copy_to_clipboard(formatted_logs, copy_count)
 
 
@@ -869,7 +854,9 @@ func _get_formatted_logs() -> String:
 func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	DisplayServer.clipboard_set(text)
 
-	var toast_msg := "Copied %d log(s)" % log_count if log_count > 0 else "Copied"
+	var toast_msg := (
+		"Copied %d log(s)" % log_count if log_count > 0 else "Copied"
+	)
 	_show_toast(toast_msg)
 
 	var original_text := copy_button.text
@@ -911,10 +898,7 @@ func _animate_toast(panel: Panel, margin: float, w: float, h: float) -> void:
 		return
 
 	# Set position at bottom-center
-	panel.position = Vector2(
-		(size.x - w) * 0.5,
-		size.y - h - margin
-	)
+	panel.position = Vector2((size.x - w) * 0.5, size.y - h - margin)
 
 	# Slide up and fade out
 	var tween := panel.create_tween()
