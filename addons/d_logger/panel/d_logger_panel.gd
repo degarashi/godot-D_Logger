@@ -46,6 +46,10 @@ var _drag_moved: bool = false
 @onready var level_option_button: OptionButton = %LevelOptionButton
 @onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
 @onready var word_wrap_checkbox: CheckBox = %WordWrapCheckBox
+@onready var stats_label: Label = %StatsLabel
+
+# Per-level displayed count for the stats bar
+var _stats_level_counts: Dictionary[String, int] = {"DEBUG": 0, "INFO": 0, "WARN": 0, "ERROR": 0}
 
 
 # ------------- [Callbacks] -------------
@@ -211,6 +215,9 @@ func add_log(log_data: Dictionary) -> void:
 			_rebuild_log_display_preserve_scroll()
 		else:
 			_displayed_line_map.append(log_idx)
+			var level := log_data.get("level", "DEBUG")
+			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
+			_refresh_stats_label()
 			_append_formatted_log(log_data, log_idx)
 
 
@@ -762,14 +769,28 @@ func _should_display_log(log_data: Dictionary) -> bool:
 	return true
 
 
+func _refresh_stats_label() -> void:
+	var total_displayed := _displayed_line_map.size()
+	var total_stored := _all_logs.size()
+	var parts: Array[String] = []
+	for level: String in ["DEBUG", "INFO", "WARN", "ERROR"]:
+		parts.append("%s:%d" % [level, _stats_level_counts.get(level, 0)])
+	stats_label.text = "%s | %d / %d" % ["  ".join(parts), total_displayed, total_stored]
+
+
 func _rebuild_log_display() -> void:
 	log_display.clear()
 	_displayed_line_map.clear()
+	for level: String in _stats_level_counts:
+		_stats_level_counts[level] = 0
 	for i in range(_all_logs.size()):
 		var log_data: Dictionary = _all_logs[i]
 		if _should_display_log(log_data):
 			_displayed_line_map.append(i)
+			var level: String = log_data.get("level", "DEBUG")
+			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_append_formatted_log(log_data, i)
+	_refresh_stats_label()
 
 
 ## Rebuilds the log display while preserving the current scroll position.
@@ -841,6 +862,9 @@ func clear_logs() -> void:
 	_active_level_filter = 0
 	level_option_button.select(0)
 
+	for level: String in _stats_level_counts:
+		_stats_level_counts[level] = 0
+	_refresh_stats_label()
 	_update_selection_info()
 
 

@@ -26,6 +26,19 @@ layout_mode = 2
 layout_mode = 2
 text = "D-Logger Console"
 
+[node name="HeaderSpacer" type="Control" parent="VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="StatsLabel" type="Label" parent="VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_type_variation = &"HeaderSmall"
+text = ""
+
 [node name="FilterBar" type="HBoxContainer" parent="VBoxContainer" unique_id=1075478648]
 layout_mode = 2
 
