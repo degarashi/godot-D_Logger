@@ -82,6 +82,12 @@ placeholder_text = "Search logs..."
 alignment = 1
 clear_button_enabled = true
 
+[node name="CaseSensitiveCheckBox" type="CheckBox" parent="VBoxContainer/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Aa"
+tooltip_text = "Case-sensitive search"
+
 [node name="PauseOnErrorButton" type="Button" parent="VBoxContainer/Footer"]
 unique_name_in_owner = true
 layout_mode = 2

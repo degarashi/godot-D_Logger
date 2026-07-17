@@ -28,6 +28,7 @@ var _active_level_filter: int = 0
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
 var _ctrl_held: bool = false
+var _search_case_sensitive: bool = false
 # Maps display line number to log array index
 var _displayed_line_map: Array[int] = []
 
@@ -43,6 +44,7 @@ var _drag_moved: bool = false
 @onready var save_button: Button = %SaveButton
 @onready var pause_on_error_button: Button = %PauseOnErrorButton
 @onready var search_line_edit: LineEdit = %SearchLineEdit
+@onready var case_sensitive_checkbox: CheckBox = %CaseSensitiveCheckBox
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HFlowContainer = %FilterContainer
 @onready var show_all_button: Button = %ShowAllButton
@@ -57,6 +59,7 @@ func _ready() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	pause_on_error_button.toggled.connect(_on_pause_on_error_toggled)
 	search_line_edit.text_changed.connect(_on_search_text_changed)
+	case_sensitive_checkbox.toggled.connect(_on_case_sensitive_toggled)
 
 	log_display.bbcode_enabled = true
 	# enable automatic scrolling
@@ -697,6 +700,23 @@ func _highlight_search_text(text: String) -> String:
 	var query := _search_query
 	if query.is_empty():
 		return text
+
+	if _search_case_sensitive:
+		var result: String = ""
+		var last_end: int = 0
+		var pos: int = text.find(query, last_end)
+		while pos >= 0:
+			result += text.substr(last_end, pos - last_end)
+			result += (
+				"[bgcolor=yellow][color=black]"
+				+ text.substr(pos, query.length())
+				+ "[/color][/bgcolor]"
+			)
+			last_end = pos + query.length()
+			pos = text.find(query, last_end)
+		result += text.substr(last_end)
+		return result
+
 	var lower_text := text.to_lower()
 	var lower_query := query.to_lower()
 	var result: String = ""
@@ -753,10 +773,16 @@ func _should_display_log(log_data: Dictionary) -> bool:
 
 	# Check search query
 	if not _search_query.is_empty():
-		var query := _search_query.to_lower()
-		var message: String = log_data.get("message", "").to_lower()
-		var category: String = log_data.get("category", "").to_lower()
-		var prefix: String = log_data.get("prefix", "").to_lower()
+		var query := _search_query
+		var message: String = log_data.get("message", "")
+		var category: String = log_data.get("category", "")
+		var prefix: String = log_data.get("prefix", "")
+
+		if not _search_case_sensitive:
+			query = query.to_lower()
+			message = message.to_lower()
+			category = category.to_lower()
+			prefix = prefix.to_lower()
 
 		if not (query in message or query in category or query in prefix):
 			return false
@@ -789,6 +815,11 @@ func _rebuild_log_display_preserve_scroll() -> void:
 		v_scroll.call_deferred("set_value", saved_scroll)
 
 
+func _on_case_sensitive_toggled(button_pressed: bool) -> void:
+	_search_case_sensitive = button_pressed
+	_rebuild_log_display()
+
+
 func _on_search_text_changed(new_text: String) -> void:
 	_search_query = new_text
 	_rebuild_log_display()
@@ -805,7 +836,9 @@ func clear_logs() -> void:
 
 	# Reset search
 	_search_query = ""
+	_search_case_sensitive = false
 	search_line_edit.text = ""
+	case_sensitive_checkbox.button_pressed = false
 
 	# Reset time filter to "All"
 	_active_time_filter = -1.0
