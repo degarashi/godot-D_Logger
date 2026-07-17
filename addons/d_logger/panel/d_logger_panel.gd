@@ -636,6 +636,7 @@ func _update_selection_info() -> void:
 		copy_button.tooltip_text = ("Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count)
 	else:
 		copy_button.tooltip_text = ("Copy Logs (Ctrl+C)")
+	_refresh_stats_label()
 
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
@@ -848,7 +849,13 @@ func _refresh_stats_label() -> void:
 	var parts: Array[String] = []
 	for level: String in ["DEBUG", "INFO", "WARN", "ERROR"]:
 		parts.append("%s:%d" % [level, _stats_level_counts.get(level, 0)])
-	stats_label.text = "%s | %d / %d" % ["  ".join(parts), total_displayed, total_stored]
+	var sel_count := _selected_log_indices.size()
+	if sel_count > 0:
+		stats_label.text = (
+			"%s | (%d) %d / %d" % ["  ".join(parts), sel_count, total_displayed, total_stored]
+		)
+	else:
+		stats_label.text = "%s | %d / %d" % ["  ".join(parts), total_displayed, total_stored]
 
 
 func _rebuild_log_display() -> void:
