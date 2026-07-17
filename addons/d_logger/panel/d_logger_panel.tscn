@@ -38,6 +38,11 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="ShowAllButton" type="Button" parent="VBoxContainer/FilterBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Show All"
+
 [node name="FilterOptionsBar" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 

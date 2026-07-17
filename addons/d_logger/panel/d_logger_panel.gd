@@ -45,6 +45,7 @@ var _drag_moved: bool = false
 @onready var search_line_edit: LineEdit = %SearchLineEdit
 @onready var log_display: RichTextLabel = %RichTextLabel
 @onready var filter_container: HFlowContainer = %FilterContainer
+@onready var show_all_button: Button = %ShowAllButton
 @onready var time_option_button: OptionButton = %TimeOptionButton
 @onready var level_option_button: OptionButton = %LevelOptionButton
 
@@ -68,6 +69,7 @@ func _ready() -> void:
 
 	_setup_time_option_button()
 	_setup_level_option_button()
+	show_all_button.pressed.connect(_on_show_all_pressed)
 
 	visibility_changed.connect(_on_visibility_changed)
 
@@ -335,6 +337,22 @@ func _on_filter_gui_input(event: InputEvent, category: String) -> void:
 		if event.alt_pressed:
 			_solo_category(category)
 			get_viewport().set_input_as_handled()
+
+
+func _on_show_all_pressed() -> void:
+	_is_rebuilding = true
+	for cat: String in _active_filters:
+		_active_filters[cat] = true
+	for child in filter_container.get_children():
+		var btn := child as Button
+		if not btn:
+			continue
+		if not btn.button_pressed:
+			btn.button_pressed = true
+		else:
+			_update_button_style(btn, true)
+	_is_rebuilding = false
+	_rebuild_log_display()
 
 
 func _solo_category(solo_cat: String) -> void:
