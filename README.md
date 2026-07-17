@@ -63,23 +63,25 @@ Add metadata to your logs for easier tracking:
 # cat: Category (String)
 # ctx: Context (Object, usually 'self')
 DLogger.debug("Player jumped", [], "gameplay", self)
-# Output: [  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] Player jumped
+# Output: [  1.234s][F:123][gameplay] [Player] - [DEBUG] Player jumped
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-Settings are managed via **Editor > Editor Settings > D-Logger** (some values sync to Project Settings at runtime):
+Settings are managed via **Editor > Editor Settings > D-Logger** (some values sync to Project Settings at runtime). The `prefix` setting is configured in **Project > Project Settings > Debug > D-Logger**:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `prefix` | String | `"D-Logger"` | Global prefix for all logs. |
+| `prefix` | String | `"D-Logger"` | Global prefix for all logs. (Project Setting) |
 | `enable_console_log` | Boolean | `false` | Enable console output (Debug builds only). |
 | `min_log_level` | Enum | `DEBUG` | Minimum level to display (DEBUG, INFO, WARN, ERROR). |
 | `enable_file_log` | Boolean | `false` | Enable logging to a local file. |
 | `log_file_path` | String | `user://debug.log` | Path where the log file is saved. |
 | `auto_activate_panel`| Boolean | `true` | Show the D-Logger panel when debugging starts. |
+| `auto_clear_on_start`| Boolean | `true` | Clear the log panel when a new debug session starts. |
+| `pause_on_error` | Boolean | `false` | Automatically pause the game when an error is logged. |
 
 ---
 
@@ -121,7 +123,7 @@ Useful for skipping heavy calculations when logging is disabled.
 ### Editor Panel Shortcuts
 - **Ctrl + L**: Clear logs
 - **Ctrl + C**: Copy logs to clipboard
-- **Ctrl + S**: Save logs to a file in `user://`
+- **Ctrl + Alt + S**: Save logs to a file in `user://`
 - **1, 2, 3, 4**: Switch between log level filters
 
 ---
@@ -129,11 +131,21 @@ Useful for skipping heavy calculations when logging is disabled.
 ## 📝 Output Format
 
 Logs follow this structure:
-`[   time ][F:frame][prefix][file:line] [context] category - [LEVEL] message`
+`[   time ][F:frame][prefix|category] [file:line] [context] - [LEVEL] message`
 
-**Example (DEBUG):**
+When no category is specified, the default prefix (`D-Logger`) is used as the source label:
 ```
-[  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] Character spawned
+[  1.234s][F:123][D-Logger] - [INFO] Game started
+```
+
+When a category is given, it replaces the source label (or appends after a custom prefix):
+```
+[  1.234s][F:123][gameplay] [Player] - [DEBUG] Character spawned
+```
+
+When using a custom logger prefix:
+```
+[  1.234s][F:123][NETWORK:auth] [server.gd:42] - [WARN] Connection timeout
 ```
 
 **Note:** `[file:line]` is only included for **WARN** and **ERROR** levels to keep the console clean.

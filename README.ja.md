@@ -63,23 +63,25 @@ DLogger.debug("値: {0}", 42)
 # cat: カテゴリ (String)
 # ctx: コンテキスト (Object, 通常は 'self')
 DLogger.debug("プレイヤーがジャンプした", [], "gameplay", self)
-# 出力例: [  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] プレイヤーがジャンプした
+# 出力例: [  1.234s][F:123][gameplay] [Player] - [DEBUG] プレイヤーがジャンプした
 ```
 
 ---
 
 ## ⚙️ 設定
 
-設定は **Editor > Editor Settings > D-Logger** から管理する（一部の値は実行時に Project Settings と同期される）：
+設定は **Editor > Editor Settings > D-Logger** から管理する（一部の値は実行時に Project Settings と同期される）。`prefix` 設定は **Project > Project Settings > Debug > D-Logger** で設定する：
 
 | 設定項目 | 型 | デフォルト値 | 説明 |
 |---------|------|---------|-------------|
-| `prefix` | String | `"D-Logger"` | ログの共通プレフィックス。 |
+| `prefix` | String | `"D-Logger"` | ログの共通プレフィックス。（Project Setting） |
 | `enable_console_log` | Boolean | `false` | コンソール出力を有効化（デバッグビルドのみ）。 |
 | `min_log_level` | Enum | `DEBUG` | 表示する最小レベル（DEBUG, INFO, WARN, ERROR）。 |
 | `enable_file_log` | Boolean | `false` | ファイルへのログ出力を有効化（デバッグビルドのみ）。 |
 | `log_file_path` | String | `user://debug.log` | ログファイルの保存先パス。 |
 | `auto_activate_panel`| Boolean | `true` | デバッグ開始時に D-Logger パネルを自動表示。 |
+| `auto_clear_on_start`| Boolean | `true` | デバッグセッション開始時にパネルを自動クリア。 |
+| `pause_on_error` | Boolean | `false` | ERROR ログ出力時にゲームを自動一時停止。 |
 
 ---
 
@@ -121,7 +123,7 @@ func _ready():
 ### エディタパネルのショートカット
 - **Ctrl + L**: ログをクリア
 - **Ctrl + C**: ログをクリップボードにコピー
-- **Ctrl + S**: ログを `user://` 内のファイルに保存
+- **Ctrl + Alt + S**: ログを `user://` 内のファイルに保存
 - **1, 2, 3, 4**: ログレベルフィルタの切り替え
 
 ---
@@ -129,11 +131,21 @@ func _ready():
 ## 📝 出力形式
 
 ログは以下の形式で出力される：
-`[   time ][F:frame][prefix][file:line] [context] category - [LEVEL] message`
+`[   time ][F:frame][prefix|category] [file:line] [context] - [LEVEL] message`
 
-**例 (DEBUG):**
+カテゴリ未指定時はデフォルトプレフィックス（`D-Logger`）がラベルとして使われる：
 ```
-[  1.234s][F:123][D-Logger][Player] gameplay - [DEBUG] キャラクタースポーン
+[  1.234s][F:123][D-Logger] - [INFO] ゲームを開始した
+```
+
+カテゴリを指定すると、そのカテゴリがラベルになる：
+```
+[  1.234s][F:123][gameplay] [Player] - [DEBUG] キャラクタースポーン
+```
+
+カスタムプレフィックス使用時：
+```
+[  1.234s][F:123][NETWORK:auth] [server.gd:42] - [WARN] 接続タイムアウト
 ```
 
 **注意:** `[file:line]`（ソースファイルと行番号）は、コンソールをスッキリさせるため **WARN** と **ERROR** レベルでのみ表示される。
