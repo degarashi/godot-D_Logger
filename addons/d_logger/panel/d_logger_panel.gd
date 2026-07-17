@@ -11,19 +11,13 @@ var _active_filters: Dictionary[String, bool] = {}
 var _search_query: String = ""
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
-var _time_presets: Dictionary[String, float] = {
-	"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0
-}
+var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0}
 var _active_time_filter: float = -1.0
 
 # Log level filtering
 var _log_levels: Array[String] = ["DEBUG", "INFO", "WARN", "ERROR"]
-var _log_level_values: Dictionary[String, int] = {
-	"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3
-}
-var _level_presets: Dictionary[String, int] = {
-	"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3
-}
+var _log_level_values: Dictionary[String, int] = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
+var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3}
 var _active_level_filter: int = 0
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
@@ -50,6 +44,7 @@ var _drag_moved: bool = false
 @onready var show_all_button: Button = %ShowAllButton
 @onready var time_option_button: OptionButton = %TimeOptionButton
 @onready var level_option_button: OptionButton = %LevelOptionButton
+@onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
 
 
 # ------------- [Callbacks] -------------
@@ -62,8 +57,8 @@ func _ready() -> void:
 	case_sensitive_checkbox.toggled.connect(_on_case_sensitive_toggled)
 
 	log_display.bbcode_enabled = true
-	# enable automatic scrolling
-	log_display.scroll_following = true
+	log_display.scroll_following = auto_scroll_checkbox.button_pressed
+	auto_scroll_checkbox.toggled.connect(_on_auto_scroll_toggled)
 	log_display.meta_clicked.connect(_on_log_meta_clicked)
 	log_display.gui_input.connect(_on_log_display_gui_input)
 
@@ -128,10 +123,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed:
-		if (
-			(event.ctrl_pressed or event.command_or_control_autoremap)
-			and event.keycode == KEY_F
-		):
+		if (event.ctrl_pressed or event.command_or_control_autoremap) and event.keycode == KEY_F:
 			search_line_edit.grab_focus()
 			search_line_edit.select_all()
 			get_viewport().set_input_as_handled()
@@ -332,11 +324,7 @@ func _apply_level_filter(min_level: int) -> void:
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
-	if (
-		event is InputEventMouseButton
-		and event.pressed
-		and event.button_index == MOUSE_BUTTON_LEFT
-	):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.alt_pressed:
 			_solo_category(category)
 			get_viewport().set_input_as_handled()
@@ -375,9 +363,7 @@ func _solo_category(solo_cat: String) -> void:
 		if not btn:
 			continue
 
-		var should_be_pressed := (
-			true if is_already_soloed else (btn.text == solo_cat)
-		)
+		var should_be_pressed := true if is_already_soloed else (btn.text == solo_cat)
 		if btn.button_pressed != should_be_pressed:
 			btn.button_pressed = should_be_pressed
 		else:
@@ -389,9 +375,7 @@ func _solo_category(solo_cat: String) -> void:
 	_rebuild_log_display()
 
 
-func _on_filter_toggled(
-	is_pressed: bool, category: String, btn: Button
-) -> void:
+func _on_filter_toggled(is_pressed: bool, category: String, btn: Button) -> void:
 	_active_filters[category] = is_pressed
 	_update_button_style(btn, is_pressed)
 	if not _is_rebuilding:
@@ -421,9 +405,7 @@ func _update_pause_on_error_button() -> void:
 		return
 	var es := EditorInterface.get_editor_settings()
 	if es.has_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR):
-		var val: bool = es.get_setting(
-			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
-		)
+		var val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
 		if pause_on_error_button.button_pressed != val:
 			pause_on_error_button.set_pressed_no_signal(val)
 		_update_pause_on_error_button_style(val)
@@ -433,13 +415,9 @@ func _on_pause_on_error_toggled(is_pressed: bool) -> void:
 	if not Engine.is_editor_hint():
 		return
 	var es := EditorInterface.get_editor_settings()
-	var current_val: bool = es.get_setting(
-		DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
-	)
+	var current_val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
 	if current_val != is_pressed:
-		es.set_setting(
-			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed
-		)
+		es.set_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed)
 	_update_pause_on_error_button_style(is_pressed)
 
 
@@ -535,10 +513,7 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			var range_end := maxi(_drag_anchor_display_line, current_line)
 
 			# Skip if the range hasn't changed.
-			if (
-				range_start == _drag_last_range.x
-				and range_end == _drag_last_range.y
-			):
+			if range_start == _drag_last_range.x and range_end == _drag_last_range.y:
 				return
 
 			_drag_last_range = Vector2i(range_start, range_end)
@@ -616,18 +591,14 @@ func _toggle_log_selection(log_index: int) -> void:
 func _update_selection_info() -> void:
 	var count := _selected_log_indices.size()
 	if count > 0:
-		copy_button.tooltip_text = (
-			"Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count
-		)
+		copy_button.tooltip_text = ("Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count)
 	else:
 		copy_button.tooltip_text = ("Copy Logs (Ctrl+C)")
 
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
-		var is_selected := (
-			log_index >= 0 and _selected_log_indices.has(log_index)
-		)
+		var is_selected := log_index >= 0 and _selected_log_indices.has(log_index)
 		var bbcode_msg := _format_log(log_data, is_selected)
 		if is_selected:
 			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
@@ -675,19 +646,13 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 
 	var result: String
 	if is_selected:
-		result = ("[b][color={0}]{1}[/color][/b]".format(
-			[text_color, formatted_msg]
-		))
+		result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
 	elif not text_color.is_empty():
 		var is_bold := level in ["INFO", "WARN", "ERROR"]
 		if is_bold:
-			result = ("[b][color={0}]{1}[/color][/b]".format(
-				[text_color, formatted_msg]
-			))
+			result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
 		else:
-			result = ("[color={0}]{1}[/color]".format(
-				[text_color, formatted_msg]
-			))
+			result = ("[color={0}]{1}[/color]".format([text_color, formatted_msg]))
 	else:
 		result = formatted_msg
 
@@ -803,7 +768,13 @@ func _rebuild_log_display() -> void:
 ## Rebuilds the log display while preserving the current scroll position.
 ## Call this instead of _rebuild_log_display() when the user has actively
 ## positioned the viewport (e.g. after a selection change).
+## When auto-scroll is enabled, preservation is skipped so the view stays
+## at the bottom.
 func _rebuild_log_display_preserve_scroll() -> void:
+	if auto_scroll_checkbox.button_pressed:
+		_rebuild_log_display()
+		return
+
 	var v_scroll := log_display.get_v_scroll_bar()
 	var saved_scroll: float = v_scroll.value if v_scroll else 0.0
 	log_display.scroll_following = false
@@ -813,6 +784,15 @@ func _rebuild_log_display_preserve_scroll() -> void:
 		# scroll bar's max_value reflects the new content height.
 		# Without this, the first selection can jump the viewport.
 		v_scroll.call_deferred("set_value", saved_scroll)
+
+
+func _on_auto_scroll_toggled(button_pressed: bool) -> void:
+	log_display.scroll_following = button_pressed
+	if button_pressed:
+		# Immediately scroll to bottom when re-enabling auto-scroll.
+		var v_scroll := log_display.get_v_scroll_bar()
+		if v_scroll:
+			v_scroll.value = v_scroll.max_value
 
 
 func _on_case_sensitive_toggled(button_pressed: bool) -> void:
@@ -903,9 +883,7 @@ func _get_formatted_logs() -> String:
 func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	DisplayServer.clipboard_set(text)
 
-	var toast_msg := (
-		"Copied %d log(s)" % log_count if log_count > 0 else "Copied"
-	)
+	var toast_msg := "Copied %d log(s)" % log_count if log_count > 0 else "Copied"
 	_show_toast(toast_msg)
 
 	var original_text := copy_button.text

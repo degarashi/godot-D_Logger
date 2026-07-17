@@ -88,6 +88,13 @@ layout_mode = 2
 text = "Aa"
 tooltip_text = "Case-sensitive search"
 
+[node name="AutoScrollCheckBox" type="CheckBox" parent="VBoxContainer/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Auto-scroll"
+button_pressed = true
+tooltip_text = "Auto-scroll to bottom when new logs arrive"
+
 [node name="PauseOnErrorButton" type="Button" parent="VBoxContainer/Footer"]
 unique_name_in_owner = true
 layout_mode = 2
