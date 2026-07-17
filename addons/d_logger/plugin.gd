@@ -198,8 +198,11 @@ func _on_debugger_session_started() -> void:
 	var es := get_editor_interface().get_editor_settings()
 
 	var auto_clear: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_CLEAR_ON_START)
-	if _panel_instance and auto_clear:
-		_panel_instance.clear_logs()
+	if _panel_instance:
+		if auto_clear:
+			_panel_instance.clear_logs()
+		else:
+			_panel_instance.call_deferred("_reset_auto_scroll")
 
 	# Show the panel when debug session starts
 	var auto_activate: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL)

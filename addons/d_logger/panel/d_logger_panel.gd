@@ -31,6 +31,8 @@ var _selected_log_indices: Dictionary = {}
 var _ctrl_held: bool = false
 var _search_case_sensitive: bool = false
 var _search_regex: RegEx = null
+# Smart auto-scroll: tracks whether the user is at the bottom of the log view
+var _is_auto_scrolling: bool = true
 # Maps display line number to log array index
 var _displayed_line_map: Array[int] = []
 
@@ -52,7 +54,6 @@ var _drag_moved: bool = false
 @onready var show_all_button: Button = %ShowAllButton
 @onready var time_option_button: OptionButton = %TimeOptionButton
 @onready var level_option_button: OptionButton = %LevelOptionButton
-@onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
 @onready var word_wrap_checkbox: CheckBox = %WordWrapCheckBox
 @onready var regex_checkbox: CheckBox = %RegexCheckBox
 @onready var relative_checkbox: CheckBox = %RelativeCheckBox
@@ -74,8 +75,7 @@ func _ready() -> void:
 	relative_checkbox.toggled.connect(_on_relative_toggled)
 
 	log_display.bbcode_enabled = true
-	log_display.scroll_following = auto_scroll_checkbox.button_pressed
-	auto_scroll_checkbox.toggled.connect(_on_auto_scroll_toggled)
+	log_display.scroll_following = true
 	log_display.autowrap_mode = (
 		TextServer.AUTOWRAP_WORD_SMART
 		if word_wrap_checkbox.button_pressed
@@ -481,6 +481,11 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 				accept_event()
 				return
 
+		# Detect user scroll on the log display — re-check position after
+		# mouse wheel or right-drag so auto-scroll re-engages at the bottom.
+		if event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			call_deferred("_update_auto_scroll_from_scrollbar")
+
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			# Grab focus so subsequent keyboard shortcuts (e.g. Ctrl+C) work
 			grab_focus()
@@ -536,6 +541,7 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			else:
 				_is_right_dragging = false
 				log_display.mouse_default_cursor_shape = Control.CURSOR_ARROW
+				call_deferred("_update_auto_scroll_from_scrollbar")
 			accept_event()
 
 	if event is InputEventMouseMotion and _is_right_dragging:
@@ -648,6 +654,8 @@ func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 		if is_selected:
 			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
 		log_display.append_text(bbcode_msg + "\n")
+		if _is_auto_scrolling:
+			call_deferred("_scroll_to_bottom")
 
 
 func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
@@ -877,6 +885,8 @@ func _rebuild_log_display() -> void:
 			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_append_formatted_log(log_data, i)
 	_refresh_stats_label()
+	if _is_auto_scrolling:
+		call_deferred("_scroll_to_bottom")
 
 
 ## Rebuilds the log display while preserving the current scroll position.
@@ -885,7 +895,7 @@ func _rebuild_log_display() -> void:
 ## When auto-scroll is enabled, preservation is skipped so the view stays
 ## at the bottom.
 func _rebuild_log_display_preserve_scroll() -> void:
-	if auto_scroll_checkbox.button_pressed:
+	if _is_auto_scrolling:
 		_rebuild_log_display()
 		return
 
@@ -900,13 +910,18 @@ func _rebuild_log_display_preserve_scroll() -> void:
 		v_scroll.call_deferred("set_value", saved_scroll)
 
 
-func _on_auto_scroll_toggled(button_pressed: bool) -> void:
-	log_display.scroll_following = button_pressed
-	if button_pressed:
-		# Immediately scroll to bottom when re-enabling auto-scroll.
-		var v_scroll := log_display.get_v_scroll_bar()
-		if v_scroll:
-			v_scroll.value = v_scroll.max_value
+func _scroll_to_bottom() -> void:
+	var v_scroll := log_display.get_v_scroll_bar()
+	if v_scroll and v_scroll.max_value > 0:
+		v_scroll.value = v_scroll.max_value
+
+
+func _update_auto_scroll_from_scrollbar() -> void:
+	var v_scroll := log_display.get_v_scroll_bar()
+	if not v_scroll:
+		return
+	_is_auto_scrolling = v_scroll.value >= v_scroll.max_value - 0.5
+	log_display.scroll_following = _is_auto_scrolling
 
 
 func _on_word_wrap_toggled(button_pressed: bool) -> void:
@@ -983,6 +998,14 @@ func clear_logs() -> void:
 		_stats_level_counts[level] = 0
 	_refresh_stats_label()
 	_update_selection_info()
+	_reset_auto_scroll()
+
+
+func _reset_auto_scroll() -> void:
+	_is_auto_scrolling = true
+	log_display.scroll_following = true
+	_scroll_to_bottom()
+	call_deferred("_scroll_to_bottom")
 
 
 func _on_clear_pressed() -> void:
