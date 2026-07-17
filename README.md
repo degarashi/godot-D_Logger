@@ -15,11 +15,18 @@ A lightweight, powerful, and extensible logging system for Godot Engine. D-Logge
   - **Category Filtering**: Toggle display for specific categories. `Alt + Click` to "Solo" a category.
   - **Time Filtering**: View logs from the last 30s, 1m, or 5m.
   - **Level Filtering**: Quickly switch between DEBUG, INFO+, WARN+, and ERROR views.
+  - **Search & Regex**: Filter logs in real-time with text search or regex patterns, with case-sensitive option.
+  - **Log Stacking**: Consecutive identical log entries are stacked with a `(xN)` counter.
+  - **Selection & Drag-to-Select**: Click, Ctrl+Click, or drag to select log entries; copy selected or all visible logs.
+  - **Word Wrap & Font Size**: Toggle word wrap, adjust font size with Ctrl+MouseWheel.
+  - **Relative Timestamps**: Switch between absolute timestamps and relative (time since latest log).
+  - **Stats Bar**: Per-level log counts (DEBUG/INFO/WARN/ERROR) with displayed vs total count.
 - ⚙️ **Project & Editor Settings**: Configure prefixes, log levels, and file paths directly from Godot's settings menus.
-- 🧩 **Instance-based Configuration**: Create dedicated logger instances for specific subsystems (e.g., Network, AI) with unique prefixes and levels.
-- 🎨 **Rich Text Output**: BBCode-supported log display in the editor panel for better visibility.
-- ⚡ **Performance Optimized**: Automatically skips complex string formatting when the log level is disabled.
-- 🛠️ **Debug-Only by Design**: Console and file outputs are automatically disabled in release builds to prevent performance overhead.
+- 🧩 **Instance-based Configuration**: Create dedicated logger instances for specific subsystems (e.g., Network, AI) with unique prefixes, levels, and file paths.
+- 🧬 **Node-based Loggers**: Use `DLoggerNode` or `DLoggerFinder` nodes to integrate logging into scene trees.
+- 🎨 **Rich Text Output**: BBCode-supported log display in the editor panel with clickable file:line links and category filters.
+- ⚡ **Performance Optimized**: Automatically skips complex string formatting when the log level is disabled. Time/frame values are cached once per dispatch for all downstream loggers.
+- 🛠️ **Debug-Only by Design**: Console and file outputs are automatically disabled in release builds; warning and error logs still propagate via `push_warning()`/`push_error()`.
 
 ---
 
@@ -70,68 +77,132 @@ DLogger.debug("Player jumped", [], "gameplay", self)
 
 ## ⚙️ Configuration
 
-Settings are managed via **Editor > Editor Settings > D-Logger** (some values sync to Project Settings at runtime). The `prefix` setting is configured in **Project > Project Settings > Debug > D-Logger**:
+Settings are managed via **Editor > Editor Settings > D-Logger** (values sync to Project Settings at runtime when applicable). The `prefix` setting is configured in **Project > Project Settings > Debug > D-Logger**:
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `prefix` | String | `"D-Logger"` | Global prefix for all logs. (Project Setting) |
-| `enable_console_log` | Boolean | `false` | Enable console output (Debug builds only). |
-| `min_log_level` | Enum | `DEBUG` | Minimum level to display (DEBUG, INFO, WARN, ERROR). |
-| `enable_file_log` | Boolean | `false` | Enable logging to a local file. |
-| `log_file_path` | String | `user://debug.log` | Path where the log file is saved. |
-| `auto_activate_panel`| Boolean | `true` | Show the D-Logger panel when debugging starts. |
-| `auto_clear_on_start`| Boolean | `true` | Clear the log panel when a new debug session starts. |
-| `pause_on_error` | Boolean | `false` | Automatically pause the game when an error is logged. |
+| Setting | Type | Default | Location | Description |
+|---------|------|---------|----------|-------------|
+| `prefix` | String | `"D-Logger"` | Project Setting | Global prefix for all logs. |
+| `enable_console_log` | Boolean | `false` | Editor Setting | Enable console output (Debug builds only). |
+| `min_log_level` | Enum | `DEBUG` | Editor Setting | Minimum level to display (DEBUG, INFO, WARN, ERROR). |
+| `enable_file_log` | Boolean | `false` | Editor Setting | Enable logging to a local file. |
+| `log_file_path` | String | `user://debug.log` | Editor Setting | Path where the log file is saved. |
+| `auto_activate_panel` | Boolean | `true` | Editor Setting | Show the D-Logger panel when debugging starts. |
+| `auto_clear_on_start` | Boolean | `true` | Editor Setting | Clear the log panel when a new debug session starts. |
+| `pause_on_error` | Boolean | `false` | Editor Setting | Automatically pause the game when an error is logged. |
+| `panel_font_size` | Integer | `14` | Editor Setting | Font size for the panel log display (adjusted via Ctrl+ScrollWheel). |
 
 ---
 
 ## 🔧 Custom Logger Instances
 
-For specific systems like Networking or AI, you can create dedicated logger instances:
+For specific systems like Networking or AI, you can create dedicated logger instances. The constructor accepts prefix, minimum log level, console override, and file path:
 
 ```gdscript
 var network_log: DLoggerClass
 
 func _init():
-    # Arguments: prefix, min_level, console_enabled, file_path
+    # DLoggerClass.new(prefix, min_level, console_enabled, file_path)
     network_log = DLoggerClass.new("NETWORK", DLoggerConstants.LogLevel.INFO)
 
 func _ready():
     network_log.info("Connecting to server...")
 ```
 
+### DLoggerNode (Scene-based Logger)
+
+The autoload `DLogger` is a `DLoggerNode` which listens to `ProjectSettings.settings_changed` and reconfigures automatically. You can also drop `DLoggerNode` in a scene and configure it via `DLoggerInitParam` resource exports:
+
+```
+DLoggerNode (in scene tree)
+  └─ DLoggerInitParam (exported Resource)
+       ├─ prefix_override
+       ├─ min_level_override
+       ├─ console_enabled_override
+       └─ file_path_override
+```
+
+### DLoggerFinder (Ancestor Search)
+
+`DLoggerFinder` searches ancestor nodes for a logger via `DLoggerFunc.find_logger_from_ancestor()` and emits `on_log_found(logger)` when found. Useful for inheriting a parent's logger configuration.
+
 ---
 
 ## 📖 API Reference
 
 ### Logging Methods
+
 All methods return `true`, allowing them to be used inside `assert()` for debug-only execution.
 
-- `debug(msg, values=[], category="", context=null, prefix="")`
-- `info(msg, values=[], category="", context=null, prefix="")`
-- `warn(msg, values=[], category="", context=null, prefix="")`
-- `error(msg, values=[], category="", context=null, prefix="")`
+| # | Parameter | Type | Default | Description |
+|---|-----------|------|---------|-------------|
+| 1 | `msg` | `String` | — | Log message with optional `{0}`, `{name}` placeholders |
+| 2 | `v` | `Variant` | `[]` | Values for `String.format()`: Array, Dictionary, or single value |
+| 3 | `cat` | `String` | `""` | Category for filtering (pipe-separated `"foo\|bar"` supported) |
+| 4 | `ctx` | `Object` | `null` | Context object (usually `self`) |
+| 5 | `p` | `String` | `""` | Override prefix for this call only |
+
+```gdscript
+debug(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+info(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+warn(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+error(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+```
+
+These same signatures are available on `DLoggerNode`, `DLoggerNodeBase` (as forwarding methods), and all `DLoggerBase` subclasses.
 
 ### Level Checks
 Useful for skipping heavy calculations when logging is disabled.
 
-- `is_debug_enabled()`
-- `is_info_enabled()`
-- `is_warn_enabled()`
-- `is_error_enabled()`
+- `is_debug_enabled() -> bool`
+- `is_info_enabled() -> bool`
+- `is_warn_enabled() -> bool`
+- `is_error_enabled() -> bool`
+
+### DLoggerClass Constructor
+
+```gdscript
+DLoggerClass.new(
+    p_prefix: Variant = null,                      # Override prefix (null = use ProjectSetting)
+    p_min_lvl: int = NOT_SPECIFIED,                 # Override min level (-1 = use ProjectSetting)
+    p_console_enabled: Variant = null,              # Override console (null = use ProjectSetting)
+    p_file_path: String = ""                        # Override file path ("" = use ProjectSetting)
+) -> DLoggerClass
+```
+
+### DLoggerInitParam Resource
+
+Exportable resource for inspector configuration of `DLoggerNode`:
+
+```gdscript
+prefix_override: String
+min_level_override: int
+console_enabled_override: Variant  # null = use ProjectSettings
+file_path_override: String
+```
 
 ### Editor Panel Shortcuts
-- **Ctrl + L**: Clear logs
-- **Ctrl + C**: Copy logs to clipboard
-- **Ctrl + Alt + S**: Save logs to a file in `user://`
-- **1, 2, 3, 4**: Switch between log level filters
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl + L** | Clear logs |
+| **Ctrl + C** | Copy selected (or all visible) logs to clipboard |
+| **Ctrl + Alt + S** | Save logs to a timestamped file in `user://` |
+| **Ctrl + F** | Focus the search box |
+| **Ctrl + MouseWheel** | Adjust font size |
+| **1 / 2 / 3 / 4** | Switch level filter: DEBUG / INFO+ / WARN+ / ERROR |
+| **Alt + Click** (category) | Solo that category filter |
+| **Escape** | Clear current selection |
+| **Right-drag** | Scroll the log view |
+| **Drag** (left click) | Select multiple log entries |
 
 ---
 
 ## 📝 Output Format
 
 Logs follow this structure:
-`[   time ][F:frame][prefix|category] [file:line] [context] - [LEVEL] message`
+```
+[   time ][F:frame][source] [file:line] [context] - [LEVEL] message
+```
 
 When no category is specified, the default prefix (`D-Logger`) is used as the source label:
 ```
@@ -143,12 +214,12 @@ When a category is given, it replaces the source label (or appends after a custo
 [  1.234s][F:123][gameplay] [Player] - [DEBUG] Character spawned
 ```
 
-When using a custom logger prefix:
+When using a custom logger prefix with a category:
 ```
 [  1.234s][F:123][NETWORK:auth] [server.gd:42] - [WARN] Connection timeout
 ```
 
-**Note:** `[file:line]` is only included for **WARN** and **ERROR** levels to keep the console clean.
+**Note:** `[file:line]` (caller info) is only included for **WARN** and **ERROR** levels for performance reasons — `get_stack()` is not called for DEBUG/INFO logs.
 
 ---
 
@@ -169,6 +240,15 @@ Since logging methods return `true`, you can use them in `assert` to ensure they
 assert(DLogger.debug("This only runs in debug builds"))
 ```
 
+### Pipe-Separated Categories
+Categories can contain multiple tags separated by `|` for multi-faceted filtering:
+
+```gdscript
+DLogger.info("Match started", [], "match|player|combat", self)
+```
+
+Each tag becomes an individual toggle button in the editor panel filter bar.
+
 ---
 
 ## 🐛 Troubleshooting
@@ -177,7 +257,7 @@ assert(DLogger.debug("This only runs in debug builds"))
 - Ensure the plugin is enabled in **Project Settings**.
 - Check if `enable_console_log` is `true` in **Editor Settings**.
 - Verify your `min_log_level`.
-- Remember: D-Logger defaults to **silence in Release builds**.
+- Remember: D-Logger defaults to **silence in Release builds** (console and file outputs disabled; WARN/ERROR still go through `push_warning()`/`push_error()`).
 
 ### Log file not found?
 - Check your `log_file_path` in settings.

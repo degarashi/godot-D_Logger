@@ -15,11 +15,18 @@ Godot向けの軽量かつ強力で拡張性の高いロギングシステム。
   - **カテゴリフィルタリング**: 特定のカテゴリの表示/非表示を切り替え。`Alt + Click` でそのカテゴリのみを表示（Solo モード）。
   - **時間フィルタリング**: 直近 30秒、1分、5分のログを絞り込み。
   - **レベルフィルタリング**: DEBUG, INFO+, WARN+, ERROR の表示を素早く切り替え。
+  - **検索 & 正規表現**: テキスト検索または正規表現でリアルタイムフィルタリング。大文字小文字の区別も可能。
+  - **ログスタッキング**: 同一の連続ログエントリは `(xN)` カウンターでスタック表示。
+  - **選択 & ドラッグ選択**: クリック、Ctrl+Click、ドラッグでログを選択。選択行または表示中の全ログをコピー可能。
+  - **折り返し & フォントサイズ**: 折り返し表示のON/OFF切り替え、Ctrl+マウスホイールでフォントサイズ調整。
+  - **相対タイムスタンプ**: 絶対時刻と最新ログからの相対時刻を切り替え可能。
+  - **統計バー**: レベルごとのログ数（DEBUG/INFO/WARN/ERROR）と表示中/全ログ数を表示。
 - ⚙️ **Project & Editor Settings**: プレフィックス、ログレベル、ファイルパスなどを Godot の設定メニューから直接管理。
 - 🧩 **インスタンス単位の設定**: ネットワークやAIなど、特定のサブシステム向けに独自のプレフィックスやレベルを持つロガーを作成可能。
-- 🎨 **リッチテキスト出力**: エディタパネル上で BBCode をサポートし、視認性の高いログ表示を実現。
-- ⚡ **パフォーマンス重視**: ログレベルが無効な場合、複雑な文字列フォーマット処理を自動的にスキップ。
-- 🛠️ **デバッグ専用設計**: コンソールおよびファイル出力はリリースビルドで自動的に無効化され、本番環境でのオーバーヘッドを防止。
+- 🧬 **ノードベースロガー**: `DLoggerNode` や `DLoggerFinder` ノードを使ってシーンツリーにロギングを統合。
+- 🎨 **リッチテキスト出力**: エディタパネル上で BBCode をサポートし、クリック可能なファイル:行リンクやカテゴリフィルターを提供。
+- ⚡ **パフォーマンス重視**: ログレベルが無効な場合、複雑な文字列フォーマット処理を自動的にスキップ。時刻/フレーム値はディスパッチごとに1回だけ計算され、全ロガーで共有される。
+- 🛠️ **デバッグ専用設計**: コンソールおよびファイル出力はリリースビルドで自動的に無効化される。WARN/ERROR は `push_warning()`/`push_error()` を通じて伝達される。
 
 ---
 
@@ -70,85 +77,149 @@ DLogger.debug("プレイヤーがジャンプした", [], "gameplay", self)
 
 ## ⚙️ 設定
 
-設定は **Editor > Editor Settings > D-Logger** から管理する（一部の値は実行時に Project Settings と同期される）。`prefix` 設定は **Project > Project Settings > Debug > D-Logger** で設定する：
+設定は **Editor > Editor Settings > D-Logger** から管理する（該当する値は実行時に Project Settings と同期される）。`prefix` 設定は **Project > Project Settings > Debug > D-Logger** で設定する：
 
-| 設定項目 | 型 | デフォルト値 | 説明 |
-|---------|------|---------|-------------|
-| `prefix` | String | `"D-Logger"` | ログの共通プレフィックス。（Project Setting） |
-| `enable_console_log` | Boolean | `false` | コンソール出力を有効化（デバッグビルドのみ）。 |
-| `min_log_level` | Enum | `DEBUG` | 表示する最小レベル（DEBUG, INFO, WARN, ERROR）。 |
-| `enable_file_log` | Boolean | `false` | ファイルへのログ出力を有効化（デバッグビルドのみ）。 |
-| `log_file_path` | String | `user://debug.log` | ログファイルの保存先パス。 |
-| `auto_activate_panel`| Boolean | `true` | デバッグ開始時に D-Logger パネルを自動表示。 |
-| `auto_clear_on_start`| Boolean | `true` | デバッグセッション開始時にパネルを自動クリア。 |
-| `pause_on_error` | Boolean | `false` | ERROR ログ出力時にゲームを自動一時停止。 |
+| 設定項目 | 型 | デフォルト値 | 保存先 | 説明 |
+|---------|------|---------|----------|-------------|
+| `prefix` | String | `"D-Logger"` | Project Setting | ログの共通プレフィックス。 |
+| `enable_console_log` | Boolean | `false` | Editor Setting | コンソール出力を有効化（デバッグビルドのみ）。 |
+| `min_log_level` | Enum | `DEBUG` | Editor Setting | 表示する最小レベル（DEBUG, INFO, WARN, ERROR）。 |
+| `enable_file_log` | Boolean | `false` | Editor Setting | ファイルへのログ出力を有効化。 |
+| `log_file_path` | String | `user://debug.log` | Editor Setting | ログファイルの保存先パス。 |
+| `auto_activate_panel` | Boolean | `true` | Editor Setting | デバッグ開始時に D-Logger パネルを自動表示。 |
+| `auto_clear_on_start` | Boolean | `true` | Editor Setting | デバッグセッション開始時にパネルを自動クリア。 |
+| `pause_on_error` | Boolean | `false` | Editor Setting | ERROR ログ出力時にゲームを自動一時停止。 |
+| `panel_font_size` | Integer | `14` | Editor Setting | パネルログ表示のフォントサイズ（Ctrl+マウスホイールで調整）。 |
 
 ---
 
 ## 🔧 インスタンスごとのロガー
 
-特定のシステム専用のロガーが必要な場合は、個別のインスタンスを作成できる：
+特定のシステム専用のロガーが必要な場合は、個別のインスタンスを作成できる。コンストラクタはプレフィックス、最小ログレベル、コンソール上書き、ファイルパスを受け付ける：
 
 ```gdscript
 var network_log: DLoggerClass
 
 func _init():
-    # 引数: prefix, min_level, console_enabled, file_path
+    # DLoggerClass.new(prefix, min_level, console_enabled, file_path)
     network_log = DLoggerClass.new("NETWORK", DLoggerConstants.LogLevel.INFO)
 
 func _ready():
     network_log.info("サーバーに接続中...")
 ```
 
+### DLoggerNode（シーンベースロガー）
+
+Autoload の `DLogger` は `DLoggerNode` であり、`ProjectSettings.settings_changed` を監視して自動再構成を行う。シーン内に `DLoggerNode` を配置し、`DLoggerInitParam` リソースのエクスポートで設定することも可能：
+
+```
+DLoggerNode (シーンツリー内)
+  └─ DLoggerInitParam (エクスポート済み Resource)
+       ├─ prefix_override
+       ├─ min_level_override
+       ├─ console_enabled_override
+       └─ file_path_override
+```
+
+### DLoggerFinder（祖先ノード検索）
+
+`DLoggerFinder` は `DLoggerFunc.find_logger_from_ancestor()` を使用して祖先ノードからロガーを検索し、見つかったら `on_log_found(logger)` シグナルを発火する。親のロガー設定を継承したい場合に有用。
+
 ---
 
 ## 📖 API リファレンス
 
 ### ロギングメソッド
+
 すべてのメソッドは `true` を返す。これにより、`assert()` 内で使用してデバッグ時のみ実行させることが可能だ。
 
-- `debug(msg, values=[], category="", context=null, prefix="")`
-- `info(msg, values=[], category="", context=null, prefix="")`
-- `warn(msg, values=[], category="", context=null, prefix="")`
-- `error(msg, values=[], category="", context=null, prefix="")`
+| # | 引数 | 型 | デフォルト | 説明 |
+|---|------|------|---------|-------------|
+| 1 | `msg` | `String` | — | ログメッセージ。`{0}`, `{name}` プレースホルダー使用可 |
+| 2 | `v` | `Variant` | `[]` | `String.format()` 用の値: Array, Dictionary, 単一値 |
+| 3 | `cat` | `String` | `""` | フィルタリング用カテゴリ（パイプ区切り `"foo|bar"` 対応） |
+| 4 | `ctx` | `Object` | `null` | コンテキストオブジェクト（通常は `self`） |
+| 5 | `p` | `String` | `""` | この呼び出しのみのプレフィックス上書き |
+
+```gdscript
+debug(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+info(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+warn(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+error(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
+```
+
+これらのシグネチャは `DLoggerNode`, `DLoggerNodeBase`（転送メソッド）、およびすべての `DLoggerBase` サブクラスでも利用可能。
 
 ### レベルチェック
 重い計算を伴うログ出力の前に使用すると効果的だ。
 
-- `is_debug_enabled()`
-- `is_info_enabled()`
-- `is_warn_enabled()`
-- `is_error_enabled()`
+- `is_debug_enabled() -> bool`
+- `is_info_enabled() -> bool`
+- `is_warn_enabled() -> bool`
+- `is_error_enabled() -> bool`
+
+### DLoggerClass コンストラクタ
+
+```gdscript
+DLoggerClass.new(
+    p_prefix: Variant = null,                      # プレフィックス上書き（null = ProjectSetting使用）
+    p_min_lvl: int = NOT_SPECIFIED,                 # 最小レベルの上書き（-1 = ProjectSetting使用）
+    p_console_enabled: Variant = null,               # コンソール出力の上書き（null = ProjectSetting使用）
+    p_file_path: String = ""                        # ファイルパスの上書き（"" = ProjectSetting使用）
+) -> DLoggerClass
+```
+
+### DLoggerInitParam Resource
+
+`DLoggerNode` のインスペクタ設定用エクスポートリソース：
+
+```gdscript
+prefix_override: String
+min_level_override: int
+console_enabled_override: Variant  # null = ProjectSettings使用
+file_path_override: String
+```
 
 ### エディタパネルのショートカット
-- **Ctrl + L**: ログをクリア
-- **Ctrl + C**: ログをクリップボードにコピー
-- **Ctrl + Alt + S**: ログを `user://` 内のファイルに保存
-- **1, 2, 3, 4**: ログレベルフィルタの切り替え
+
+| ショートカット | 動作 |
+|----------|--------|
+| **Ctrl + L** | ログをクリア |
+| **Ctrl + C** | 選択中（または表示中の全）ログをクリップボードにコピー |
+| **Ctrl + Alt + S** | タイムスタンプ付きファイルとして `user://` に保存 |
+| **Ctrl + F** | 検索ボックスにフォーカス |
+| **Ctrl + マウスホイール** | フォントサイズ調整 |
+| **1 / 2 / 3 / 4** | レベルフィルタ切替: DEBUG / INFO+ / WARN+ / ERROR |
+| **Alt + Click**（カテゴリ） | そのカテゴリのみ表示（Solo） |
+| **Escape** | 選択をクリア |
+| **右ドラッグ** | ログビューをスクロール |
+| **左ドラッグ** | 複数ログエントリを選択 |
 
 ---
 
 ## 📝 出力形式
 
 ログは以下の形式で出力される：
-`[   time ][F:frame][prefix|category] [file:line] [context] - [LEVEL] message`
+```
+[   time ][F:frame][source] [file:line] [context] - [LEVEL] message
+```
 
 カテゴリ未指定時はデフォルトプレフィックス（`D-Logger`）がラベルとして使われる：
 ```
 [  1.234s][F:123][D-Logger] - [INFO] ゲームを開始した
 ```
 
-カテゴリを指定すると、そのカテゴリがラベルになる：
+カテゴリを指定すると、そのカテゴリがラベルになる（またはカスタムプレフィックスに追加される）：
 ```
 [  1.234s][F:123][gameplay] [Player] - [DEBUG] キャラクタースポーン
 ```
 
-カスタムプレフィックス使用時：
+カスタムプレフィックスとカテゴリ使用時：
 ```
 [  1.234s][F:123][NETWORK:auth] [server.gd:42] - [WARN] 接続タイムアウト
 ```
 
-**注意:** `[file:line]`（ソースファイルと行番号）は、コンソールをスッキリさせるため **WARN** と **ERROR** レベルでのみ表示される。
+**注意:** `[file:line]`（呼び出し元情報）は、パフォーマンス上の理由から **WARN** と **ERROR** レベルでのみ表示される — `get_stack()` は DEBUG/INFO では呼び出されない。
 
 ---
 
@@ -169,6 +240,15 @@ if DLogger.is_debug_enabled():
 assert(DLogger.debug("このログはデバッグビルドでのみ出力される"))
 ```
 
+### パイプ区切りカテゴリ
+カテゴリは `|` で区切ることで複数タグを持たせ、多角的なフィルタリングが可能：
+
+```gdscript
+DLogger.info("試合が開始した", [], "match|player|combat", self)
+```
+
+各タグはエディタパネルのフィルターバーで個別のトグルボタンになる。
+
 ---
 
 ## 🐛 トラブルシューティング
@@ -177,7 +257,7 @@ assert(DLogger.debug("このログはデバッグビルドでのみ出力され�
 - プラグインが **Project Settings** で有効になっているか確認する。
 - **Editor Settings** の `enable_console_log` が `true` になっているか確認する。
 - `min_log_level`（最小ログレベル）の設定を確認する。
-- 注意：D-Logger はデフォルトで **リリースビルドでは何も出力しない**。
+- 注意：D-Logger はデフォルトで **リリースビルドではコンソール/ファイル出力を行わない**（WARN/ERROR は `push_warning()`/`push_error()` を通じて伝達される）。
 
 ### ログファイルが作成されない
 - 設定の `log_file_path` を確認する。
