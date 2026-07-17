@@ -4,7 +4,14 @@ extends Control
 const MAX_LOG_COUNT = 10000
 const LOG_TRIM_BATCH_SIZE = 100
 
+const MIN_FONT_SIZE := 8
+const MAX_FONT_SIZE := 32
+const DEFAULT_FONT_SIZE := 14
+const FONT_SIZE_STEP := 2
+const EDITOR_SETTING_FONT_SIZE := "d_logger/panel_font_size"
+
 # ------------- [Private Variable] -------------
+var _log_font_size: int = DEFAULT_FONT_SIZE
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
@@ -72,6 +79,13 @@ func _ready() -> void:
 	word_wrap_checkbox.toggled.connect(_on_word_wrap_toggled)
 	log_display.meta_clicked.connect(_on_log_meta_clicked)
 	log_display.gui_input.connect(_on_log_display_gui_input)
+
+	# Load and apply saved font size (EditorSettings persists between sessions).
+	if Engine.is_editor_hint():
+		var es := EditorInterface.get_editor_settings()
+		if es.has_setting(EDITOR_SETTING_FONT_SIZE):
+			_log_font_size = es.get_setting(EDITOR_SETTING_FONT_SIZE)
+	_apply_font_size()
 
 	# Assign shortcuts
 	_setup_shortcuts()
@@ -451,6 +465,17 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		_ctrl_held = (event.ctrl_pressed or event.command_or_control_autoremap)
 
+		# Ctrl+MouseWheel to adjust font size
+		if _ctrl_held and event.pressed:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_change_font_size(FONT_SIZE_STEP)
+				accept_event()
+				return
+			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				_change_font_size(-FONT_SIZE_STEP)
+				accept_event()
+				return
+
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			# Grab focus so subsequent keyboard shortcuts (e.g. Ctrl+C) work
 			grab_focus()
@@ -767,6 +792,24 @@ func _should_display_log(log_data: Dictionary) -> bool:
 			return false
 
 	return true
+
+
+func _apply_font_size() -> void:
+	_log_font_size = clampi(_log_font_size, MIN_FONT_SIZE, MAX_FONT_SIZE)
+	log_display.add_theme_font_size_override(&"normal_font_size", _log_font_size)
+	log_display.add_theme_font_size_override(&"bold_font_size", _log_font_size)
+	if Engine.is_editor_hint():
+		var es := EditorInterface.get_editor_settings()
+		if not es.has_setting(EDITOR_SETTING_FONT_SIZE):
+			es.set_setting(EDITOR_SETTING_FONT_SIZE, _log_font_size)
+		es.set_setting(EDITOR_SETTING_FONT_SIZE, _log_font_size)
+
+
+func _change_font_size(delta: int) -> void:
+	var new_size := clampi(_log_font_size + delta, MIN_FONT_SIZE, MAX_FONT_SIZE)
+	if new_size != _log_font_size:
+		_log_font_size = new_size
+		_apply_font_size()
 
 
 func _refresh_stats_label() -> void:
