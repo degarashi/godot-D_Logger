@@ -45,6 +45,7 @@ var _drag_moved: bool = false
 @onready var time_option_button: OptionButton = %TimeOptionButton
 @onready var level_option_button: OptionButton = %LevelOptionButton
 @onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
+@onready var word_wrap_checkbox: CheckBox = %WordWrapCheckBox
 
 
 # ------------- [Callbacks] -------------
@@ -59,6 +60,12 @@ func _ready() -> void:
 	log_display.bbcode_enabled = true
 	log_display.scroll_following = auto_scroll_checkbox.button_pressed
 	auto_scroll_checkbox.toggled.connect(_on_auto_scroll_toggled)
+	log_display.autowrap_mode = (
+		TextServer.AUTOWRAP_WORD_SMART
+		if word_wrap_checkbox.button_pressed
+		else TextServer.AUTOWRAP_OFF
+	)
+	word_wrap_checkbox.toggled.connect(_on_word_wrap_toggled)
 	log_display.meta_clicked.connect(_on_log_meta_clicked)
 	log_display.gui_input.connect(_on_log_display_gui_input)
 
@@ -793,6 +800,12 @@ func _on_auto_scroll_toggled(button_pressed: bool) -> void:
 		var v_scroll := log_display.get_v_scroll_bar()
 		if v_scroll:
 			v_scroll.value = v_scroll.max_value
+
+
+func _on_word_wrap_toggled(button_pressed: bool) -> void:
+	log_display.autowrap_mode = (
+		TextServer.AUTOWRAP_WORD_SMART if button_pressed else TextServer.AUTOWRAP_OFF
+	)
 
 
 func _on_case_sensitive_toggled(button_pressed: bool) -> void:

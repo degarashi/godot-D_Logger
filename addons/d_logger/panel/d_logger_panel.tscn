@@ -95,6 +95,12 @@ text = "Auto-scroll"
 button_pressed = true
 tooltip_text = "Auto-scroll to bottom when new logs arrive"
 
+[node name="WordWrapCheckBox" type="CheckBox" parent="VBoxContainer/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Wrap"
+tooltip_text = "Toggle word wrapping for long log messages"
+
 [node name="PauseOnErrorButton" type="Button" parent="VBoxContainer/Footer"]
 unique_name_in_owner = true
 layout_mode = 2
