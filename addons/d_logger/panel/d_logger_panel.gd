@@ -199,14 +199,12 @@ func add_log(log_data: Dictionary) -> void:
 	if _should_display_log(log_data):
 		var log_idx := _all_logs.size() - 1
 		if is_stacked:
-			# Update only the last visible line
-			var pc := log_display.get_paragraph_count()
-			if pc > 0:
-				log_display.remove_paragraph(pc - 1)
 			# Update the last entry in the line map
 			if not _displayed_line_map.is_empty():
 				_displayed_line_map[-1] = log_idx
-			_append_formatted_log(log_data, log_idx)
+			# Full rebuild is more reliable than remove_paragraph + append_text,
+			# which can cause visual glitches in Godot's RichTextLabel.
+			_rebuild_log_display_preserve_scroll()
 		else:
 			_displayed_line_map.append(log_idx)
 			_append_formatted_log(log_data, log_idx)
