@@ -30,6 +30,7 @@ var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
 var _ctrl_held: bool = false
 var _search_case_sensitive: bool = false
+var _search_regex: RegEx = null
 # Maps display line number to log array index
 var _displayed_line_map: Array[int] = []
 
@@ -53,6 +54,7 @@ var _drag_moved: bool = false
 @onready var level_option_button: OptionButton = %LevelOptionButton
 @onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
 @onready var word_wrap_checkbox: CheckBox = %WordWrapCheckBox
+@onready var regex_checkbox: CheckBox = %RegexCheckBox
 @onready var stats_label: Label = %StatsLabel
 
 # Per-level displayed count for the stats bar
@@ -67,6 +69,7 @@ func _ready() -> void:
 	pause_on_error_button.toggled.connect(_on_pause_on_error_toggled)
 	search_line_edit.text_changed.connect(_on_search_text_changed)
 	case_sensitive_checkbox.toggled.connect(_on_case_sensitive_toggled)
+	regex_checkbox.toggled.connect(_on_regex_toggled)
 
 	log_display.bbcode_enabled = true
 	log_display.scroll_following = auto_scroll_checkbox.button_pressed
@@ -701,10 +704,29 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 ## Highlights occurrences of the search query in the given text using BBCode.
 ## Wraps each match with a yellow background and black text for visibility.
 func _highlight_search_text(text: String) -> String:
-	var query := _search_query
-	if query.is_empty():
+	if _search_query.is_empty():
 		return text
 
+	if _search_regex:
+		var matches := _search_regex.search_all(text)
+		if matches.is_empty():
+			return text
+		var result: String = ""
+		var last_end: int = 0
+		for match: RegExMatch in matches:
+			var start := match.get_start()
+			var end := match.get_end()
+			result += text.substr(last_end, start - last_end)
+			result += (
+				"[bgcolor=yellow][color=black]"
+				+ text.substr(start, end - start)
+				+ "[/color][/bgcolor]"
+			)
+			last_end = end
+		result += text.substr(last_end)
+		return result
+
+	var query := _search_query
 	if _search_case_sensitive:
 		var result: String = ""
 		var last_end: int = 0
@@ -777,19 +799,27 @@ func _should_display_log(log_data: Dictionary) -> bool:
 
 	# Check search query
 	if not _search_query.is_empty():
-		var query := _search_query
 		var message: String = log_data.get("message", "")
 		var category: String = log_data.get("category", "")
 		var prefix: String = log_data.get("prefix", "")
 
-		if not _search_case_sensitive:
-			query = query.to_lower()
-			message = message.to_lower()
-			category = category.to_lower()
-			prefix = prefix.to_lower()
+		if _search_regex:
+			if not (
+				_search_regex.search(message)
+				or _search_regex.search(category)
+				or _search_regex.search(prefix)
+			):
+				return false
+		else:
+			var query := _search_query
+			if not _search_case_sensitive:
+				query = query.to_lower()
+				message = message.to_lower()
+				category = category.to_lower()
+				prefix = prefix.to_lower()
 
-		if not (query in message or query in category or query in prefix):
-			return false
+			if not (query in message or query in category or query in prefix):
+				return false
 
 	return true
 
@@ -872,13 +902,38 @@ func _on_word_wrap_toggled(button_pressed: bool) -> void:
 	)
 
 
+func _on_regex_toggled(button_pressed: bool) -> void:
+	if button_pressed:
+		_compile_search_regex()
+	else:
+		_search_regex = null
+	_rebuild_log_display()
+
+
+func _compile_search_regex() -> void:
+	_search_regex = null
+	var pattern := _search_query
+	if pattern.is_empty():
+		return
+	if not _search_case_sensitive:
+		pattern = "(?i)" + pattern
+	var regex := RegEx.new()
+	var err := regex.compile(pattern)
+	if err == OK:
+		_search_regex = regex
+
+
 func _on_case_sensitive_toggled(button_pressed: bool) -> void:
 	_search_case_sensitive = button_pressed
+	if regex_checkbox.button_pressed:
+		_compile_search_regex()
 	_rebuild_log_display()
 
 
 func _on_search_text_changed(new_text: String) -> void:
 	_search_query = new_text
+	if regex_checkbox.button_pressed:
+		_compile_search_regex()
 	_rebuild_log_display()
 
 
@@ -894,8 +949,10 @@ func clear_logs() -> void:
 	# Reset search
 	_search_query = ""
 	_search_case_sensitive = false
+	_search_regex = null
 	search_line_edit.text = ""
 	case_sensitive_checkbox.button_pressed = false
+	regex_checkbox.button_pressed = false
 
 	# Reset time filter to "All"
 	_active_time_filter = -1.0
