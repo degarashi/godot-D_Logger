@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 
 const _ARRAY = preload("res://addons/d_logger/logger/d_logger_array.gd")
 const _QUIET = preload("res://addons/d_logger/logger/d_logger_quiet.gd")
+const _FULL = preload("res://addons/d_logger/logger/d_logger_full.gd")
 
 
 # ------------- [Constructor] -------------
@@ -137,3 +138,34 @@ func test_dispatch_empty_list() -> void:
 	assert_bool(arr.info("test")).is_true()
 	assert_bool(arr.warn("test")).is_true()
 	assert_bool(arr.error("test")).is_true()
+
+
+# ------------- [Mixed Logger Types] -------------
+func test_dispatch_to_mixed_logger_types() -> void:
+	var arr := _ARRAY.new()
+	arr.add(_FULL.new())
+	arr.add(_QUIET.new())
+	# Dispatch all levels to mixed types - should not crash
+	assert_bool(arr.debug("mixed test")).is_true()
+	assert_bool(arr.info("mixed test")).is_true()
+	assert_bool(arr.warn("mixed test")).is_true()
+	assert_bool(arr.error("mixed test")).is_true()
+
+
+func test_dispatch_with_values_to_mixed() -> void:
+	var arr := _ARRAY.new()
+	arr.add(_FULL.new())
+	arr.add(_QUIET.new())
+	assert_bool(arr.info("val: {0}", [42])).is_true()
+	assert_bool(arr.info("dict: {k}", {"k": "v"})).is_true()
+	assert_bool(arr.info("raw: {0}", "str")).is_true()
+
+
+func test_dispatch_with_category_context_to_mixed() -> void:
+	var arr := _ARRAY.new()
+	arr.add(_FULL.new())
+	arr.add(_QUIET.new())
+	var node := Node.new()
+	assert_bool(arr.info("cat msg", [], "Network", node)).is_true()
+	assert_bool(arr.warn("cat msg", [], "System", node, "CUSTOM")).is_true()
+	node.free()

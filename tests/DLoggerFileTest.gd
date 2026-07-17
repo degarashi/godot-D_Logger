@@ -143,3 +143,76 @@ func test_info_writes_no_flush() -> void:
 	var content := file.get_as_text()
 	file.close()
 	assert_str(content).contains("info without flush")
+
+
+# ------------- [Append Session Header] -------------
+func test_append_creates_second_session_header() -> void:
+	var path := _temp_dir.path_join("session_header.log")
+
+	# First session
+	var logger1 := _FILE_LOGGER.new(path)
+	logger1.warn("first message")
+	logger1 = null
+
+	# Second session - should append new header
+	var logger2 := _FILE_LOGGER.new(path)
+	logger2.warn("second message")
+	logger2 = null
+
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+
+	# Count session headers: 2 for new file (store_line + _write_line) + 1 for append (_write_line only)
+	var lines := content.split("\n")
+	var session_count := 0
+	for line in lines:
+		if line.contains("New Session Started"):
+			session_count += 1
+	assert_int(session_count).is_equal(3)
+	assert_str(content).contains("first message")
+	assert_str(content).contains("second message")
+
+
+func test_append_preserves_first_session_content() -> void:
+	var path := _temp_dir.path_join("preserve.log")
+
+	var logger1 := _FILE_LOGGER.new(path)
+	logger1.warn("session1 data")
+	logger1 = null
+
+	var logger2 := _FILE_LOGGER.new(path)
+	logger2.warn("session2 data")
+	logger2 = null
+
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+
+	assert_str(content).contains("session1 data")
+	assert_str(content).contains("session2 data")
+
+
+func test_append_with_multiple_flushes() -> void:
+	var path := _temp_dir.path_join("multi_flush.log")
+
+	var logger1 := _FILE_LOGGER.new(path)
+	logger1.warn("warn1")
+	logger1.debug("debug1")
+	logger1.error("error1")
+	logger1 = null
+
+	var logger2 := _FILE_LOGGER.new(path)
+	logger2.info("info2")
+	logger2.warn("warn2")
+	logger2 = null
+
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+
+	assert_str(content).contains("warn1")
+	assert_str(content).contains("warn2")
+	assert_str(content).contains("error1")
+	assert_str(content).contains("info2")
+	assert_str(content).contains("debug1")

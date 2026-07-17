@@ -230,3 +230,74 @@ func test_dispatch_invalid_type_values() -> void:
 	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
 	# Non-array non-dict non-null value should be wrapped in array
 	assert_bool(logger.info("Message: {0}", "string_val")).is_true()
+
+
+# ------------- [Edge Cases] -------------
+func test_unicode_message() -> void:
+	var logger := _CLASS.new("UNICODE", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("日本語メッセージ")).is_true()
+	assert_bool(logger.info("Emoji: 🎉🚀💡")).is_true()
+	assert_bool(logger.info("Mixed: Hello 世界 {0}", ["🌍"])).is_true()
+
+
+func test_long_message() -> void:
+	var logger := _CLASS.new("LONG", _CONST.LogLevel.DEBUG)
+	var long_msg := "A"
+	long_msg = long_msg.repeat(10000)
+	assert_bool(logger.info(long_msg)).is_true()
+
+
+func test_null_prefix_constructor() -> void:
+	# Passing null (Variant) as first argument - should NOT set prefix override
+	var logger: DLoggerClass = _CLASS.new(null)
+	assert_bool(logger._has_prefix_override).is_false()
+	assert_bool(logger._initialized).is_true()
+
+
+func test_format_with_special_chars() -> void:
+	var logger := _CLASS.new("SPECIAL", _CONST.LogLevel.DEBUG)
+	# Message with braces that are not placeholders
+	assert_bool(logger.info("Dictionary {key: value}")).is_true()
+	assert_bool(logger.info("Curly {braces} in text")).is_true()
+
+
+func test_dispatch_pause_on_error_disabled() -> void:
+	var prev_pause = ProjectSettings.get_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	var logger := _CLASS.new("PAUSE", _CONST.LogLevel.DEBUG)
+	# Should not pause when setting is disabled
+	assert_bool(logger.error("test error")).is_true()
+	assert_bool(get_tree().paused).is_false()
+	# Cleanup
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, prev_pause)
+	get_tree().paused = false
+
+
+func test_format_with_empty_dict() -> void:
+	var logger := _CLASS.new("EDGE", _CONST.LogLevel.DEBUG)
+	# Empty dict as values - should not crash, treat as no formatting
+	assert_bool(logger.info("empty dict", {})).is_true()
+
+
+func test_format_with_empty_array() -> void:
+	var logger := _CLASS.new("EDGE", _CONST.LogLevel.DEBUG)
+	# Empty array as values - should not crash
+	assert_bool(logger.info("empty array", [])).is_true()
+
+
+func test_format_with_bool_value() -> void:
+	var logger := _CLASS.new("EDGE", _CONST.LogLevel.DEBUG)
+	# Bool value wrapped in array by _dispatch
+	assert_bool(logger.info("bool: {0}", true)).is_true()
+
+
+func test_format_with_float_value() -> void:
+	var logger := _CLASS.new("EDGE", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("float: {0}", 3.14)).is_true()
+
+
+func test_null_prefix_second_arg() -> void:
+	# null prefix with valid level (the null is Variant)
+	var logger: DLoggerClass = _CLASS.new(null, _CONST.LogLevel.ERROR)
+	assert_bool(logger._has_prefix_override).is_false()
+	assert_int(logger._override_min_level).is_equal(_CONST.LogLevel.ERROR)

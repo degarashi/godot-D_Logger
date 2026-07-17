@@ -111,3 +111,68 @@ func test_create_logger_from_settings_with_file_path() -> void:
 	var param := _INIT_PARAM.new("", -1, null, "user://test.log")
 	var logger := _NODE._create_logger_from_settings(param)
 	assert_str(logger._override_file_path).is_equal("user://test.log")
+
+
+# ------------- [_on_settings_changed] -------------
+func test_on_settings_changed_rebuilds_logger() -> void:
+	var node := _NODE.new()
+	add_child(node)
+	await get_tree().process_frame
+
+	var logger := node.get_logger()
+	assert_object(logger).is_not_null()
+	assert_bool(logger._initialized).is_true()
+
+	# Call _on_settings_changed to simulate ProjectSettings change
+	node._on_settings_changed()
+
+	# Logger should still be the same instance but dispatcher rebuilt
+	assert_object(node.get_logger()).is_equal(logger)
+	assert_bool(logger._initialized).is_true()
+
+	node.free()
+
+
+func test_on_settings_changed_with_init_param_skipped() -> void:
+	var node := _NODE.new()
+	var param := _INIT_PARAM.new("PARAM_PREFIX")
+	node._init_param = param
+	add_child(node)
+	await get_tree().process_frame
+
+	# With _init_param set, _on_settings_changed should NOT have been called at _ready
+	assert_object(node.get_logger()).is_not_null()
+	assert_str(node.get_logger().get_prefix()).is_equal("PARAM_PREFIX")
+
+	# Manually call _on_settings_changed - should be a no-op when _init_param exists
+	node._on_settings_changed()
+
+	# Logger should still work
+	assert_bool(node.get_logger().info("test")).is_true()
+
+	node.free()
+
+
+func test_on_settings_changed_before_ready_no_crash() -> void:
+	var node := _NODE.new()
+	# _on_settings_changed should not crash when _logger is null
+	node._on_settings_changed()
+	assert_object(node._logger).is_null()
+	node.free()
+
+
+func test_on_settings_changed_idempotent() -> void:
+	var node := _NODE.new()
+	add_child(node)
+	await get_tree().process_frame
+
+	var logger := node.get_logger()
+	# Call multiple times - should not crash or create issues
+	node._on_settings_changed()
+	node._on_settings_changed()
+	node._on_settings_changed()
+
+	assert_object(node.get_logger()).is_equal(logger)
+	assert_bool(node.get_logger().info("idempotent test")).is_true()
+
+	node.free()

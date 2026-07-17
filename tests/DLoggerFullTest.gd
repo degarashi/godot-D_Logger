@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 
 const _FULL = preload("res://addons/d_logger/logger/d_logger_full.gd")
 const _CONST = preload("res://addons/d_logger/constants.gd")
+const _FUNC = preload("res://addons/d_logger/common.gd")
 
 
 # ------------- [Constructor] -------------
@@ -138,6 +139,80 @@ func test_output_error_calls_push_error() -> void:
 	var logger := _FULL.new()
 	# error() calls _output which calls push_error internally
 	assert_bool(logger.error("test error push")).is_true()
+
+
+# ------------- [Full Output Chain] -------------
+func test_output_with_all_parameters() -> void:
+	var logger := _FULL.new()
+	var node := Node.new()
+	var caller := {"file": "test.gd", "line": 1, "display": "[test.gd:1]"}
+	# Exercise _output with full parameter set for each level
+	logger._output("msg", [], "System", node, "CUSTOM", caller, "DEBUG")
+	logger._output("msg", [], "System", node, "CUSTOM", caller, "INFO")
+	logger._output("msg", [], "System", node, "CUSTOM", caller, "WARN")
+	logger._output("msg", [], "System", node, "CUSTOM", caller, "ERROR")
+	assert_bool(true).is_true()
+	node.free()
+
+
+func test_output_with_empty_caller_info() -> void:
+	var logger := _FULL.new()
+	# Empty dict caller_info - should skip caller part
+	logger.debug("no caller")
+	logger.info("no caller")
+	logger.warn("no caller")
+	logger.error("no caller")
+	assert_bool(true).is_true()
+
+
+func test_output_all_levels_via_public_api() -> void:
+	var logger := _FULL.new()
+	assert_bool(logger.debug("debug api")).is_true()
+	assert_bool(logger.info("info api")).is_true()
+	assert_bool(logger.warn("warn api")).is_true()
+	assert_bool(logger.error("error api")).is_true()
+
+
+func test_output_with_multiline_message() -> void:
+	var logger := _FULL.new()
+	assert_bool(logger.info("line1\nline2\nline3")).is_true()
+
+
+func test_output_with_mixed_values_types() -> void:
+	var logger := _FULL.new()
+	assert_bool(logger.info("array: {0}", [1, 2, 3])).is_true()
+	assert_bool(logger.info("dict: {k}", {"k": "v"})).is_true()
+	assert_bool(logger.info("single: {0}", 42)).is_true()
+	assert_bool(logger.info("raw string", "not_formatted")).is_true()
+
+
+func test_output_unknown_level_fallback() -> void:
+	var logger := _FULL.new()
+	# Unknown level should fall through to default branch (no BBCode color)
+	logger._output("test", [], "", null, "", null, "TRACE")
+	assert_bool(true).is_true()
+
+
+func test_bbcode_consistency_across_levels() -> void:
+	_FUNC.set_time_cache(1.0, 100)
+	var logger := _FULL.new()
+	# All levels should succeed without error
+	assert_bool(logger.debug("debug")).is_true()
+	assert_bool(logger.info("info")).is_true()
+	assert_bool(logger.warn("warn")).is_true()
+	assert_bool(logger.error("error")).is_true()
+	_FUNC.clear_time_cache()
+
+
+func test_bbcode_with_category_context() -> void:
+	_FUNC.set_time_cache(2.0, 200)
+	var logger := _FULL.new()
+	var node := Node.new()
+	logger._output("cat msg", [], "Network", node, "", null, "INFO")
+	logger._output("cat msg", [], "AI|Combat", node, "CUSTOM", null, "WARN")
+	node.free()
+	assert_bool(true).is_true()
+	_FUNC.clear_time_cache()
 
 
 

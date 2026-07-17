@@ -155,3 +155,128 @@ func test_finder_with_direct_logger_object() -> void:
 
 	finder.free()
 	parent.free()
+
+
+# ------------- [Signal Emission] -------------
+var _signal_emitted := false
+var _signal_logger: Variant = null
+var _signal_count := 0
+
+
+func _on_log_found(l: Variant) -> void:
+	_signal_emitted = true
+	_signal_logger = l
+	_signal_count += 1
+
+
+func test_on_log_found_emitted_with_ancestor() -> void:
+	var parent := Node.new()
+	var logger_node := _NODE_BASE.new()
+	var test_logger := _CLASS.new("SIGNAL_TEST")
+	logger_node._logger = test_logger
+	parent.add_child(logger_node)
+
+	var finder := _FINDER.new()
+	_signal_emitted = false
+	finder.on_log_found.connect(_on_log_found)
+	parent.add_child(finder)
+	finder._ready()
+
+	assert_bool(_signal_emitted).is_true()
+
+	finder.free()
+	logger_node.free()
+	parent.free()
+
+
+func test_on_log_found_emits_correct_logger() -> void:
+	var parent := Node.new()
+	var logger_node := _NODE_BASE.new()
+	var test_logger := _CLASS.new("SIGNAL_TEST")
+	logger_node._logger = test_logger
+	parent.add_child(logger_node)
+
+	var finder := _FINDER.new()
+	_signal_logger = null
+	finder.on_log_found.connect(_on_log_found)
+	parent.add_child(finder)
+	finder._ready()
+
+	assert_object(_signal_logger).is_not_null()
+	assert_object(_signal_logger).is_equal(test_logger)
+
+	finder.free()
+	logger_node.free()
+	parent.free()
+
+
+func test_on_log_found_not_emitted_without_ancestor() -> void:
+	var parent := Node.new()
+
+	var finder := _FINDER.new()
+	_signal_emitted = false
+	finder.on_log_found.connect(_on_log_found)
+	parent.add_child(finder)
+	finder._ready()
+
+	assert_bool(_signal_emitted).is_false()
+
+	finder.free()
+	parent.free()
+
+
+func test_on_log_found_with_nested_ancestor() -> void:
+	# Hierarchy:
+	#   root
+	#   ├── logger_node (has logger)
+	#   └── mid
+	#       └── leaf
+	#           └── finder
+	# find_logger_from_ancestor walks UP and finds logger_node as sibling of mid
+	var root := Node.new()
+	var logger_node := _NODE_BASE.new()
+	logger_node._logger = _CLASS.new("NESTED")
+	root.add_child(logger_node)
+
+	var mid := Node.new()
+	root.add_child(mid)
+	var leaf := Node.new()
+	mid.add_child(leaf)
+
+	var finder := _FINDER.new()
+	_signal_logger = null
+	finder.on_log_found.connect(_on_log_found)
+	leaf.add_child(finder)
+	finder._ready()
+
+	assert_object(_signal_logger).is_not_null()
+
+	finder.free()
+	leaf.free()
+	mid.free()
+	logger_node.free()
+	root.free()
+
+
+func test_on_log_found_multiple_finders() -> void:
+	var parent := Node.new()
+	var logger_node := _NODE_BASE.new()
+	logger_node._logger = _CLASS.new("MULTI")
+	parent.add_child(logger_node)
+
+	_signal_count = 0
+	var finder1 := _FINDER.new()
+	var finder2 := _FINDER.new()
+	finder1.on_log_found.connect(_on_log_found)
+	finder2.on_log_found.connect(_on_log_found)
+	parent.add_child(finder1)
+	parent.add_child(finder2)
+	finder1._ready()
+	finder2._ready()
+
+	assert_int(_signal_count).is_equal(2)
+
+	finder1.free()
+	finder2.free()
+	logger_node.free()
+	parent.free()
