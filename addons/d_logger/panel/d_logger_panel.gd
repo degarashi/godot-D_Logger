@@ -44,7 +44,7 @@ var _drag_moved: bool = false
 @onready var pause_on_error_button: Button = %PauseOnErrorButton
 @onready var search_line_edit: LineEdit = %SearchLineEdit
 @onready var log_display: RichTextLabel = %RichTextLabel
-@onready var filter_container: HBoxContainer = %FilterContainer
+@onready var filter_container: HFlowContainer = %FilterContainer
 @onready var time_option_button: OptionButton = %TimeOptionButton
 @onready var level_option_button: OptionButton = %LevelOptionButton
 
