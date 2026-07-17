@@ -55,6 +55,7 @@ var _drag_moved: bool = false
 @onready var auto_scroll_checkbox: CheckBox = %AutoScrollCheckBox
 @onready var word_wrap_checkbox: CheckBox = %WordWrapCheckBox
 @onready var regex_checkbox: CheckBox = %RegexCheckBox
+@onready var relative_checkbox: CheckBox = %RelativeCheckBox
 @onready var stats_label: Label = %StatsLabel
 
 # Per-level displayed count for the stats bar
@@ -70,6 +71,7 @@ func _ready() -> void:
 	search_line_edit.text_changed.connect(_on_search_text_changed)
 	case_sensitive_checkbox.toggled.connect(_on_case_sensitive_toggled)
 	regex_checkbox.toggled.connect(_on_regex_toggled)
+	relative_checkbox.toggled.connect(_on_relative_toggled)
 
 	log_display.bbcode_enabled = true
 	log_display.scroll_following = auto_scroll_checkbox.button_pressed
@@ -662,6 +664,10 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	if not _search_query.is_empty():
 		message = _highlight_search_text(message)
 
+	# Convert to relative timestamp when enabled.
+	if relative_checkbox.button_pressed:
+		time = _get_max_log_time() - time
+
 	# Use source string formatting with clickable BBCode.
 	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
 
@@ -914,6 +920,10 @@ func _on_regex_toggled(button_pressed: bool) -> void:
 		_compile_search_regex()
 	else:
 		_search_regex = null
+	_rebuild_log_display()
+
+
+func _on_relative_toggled(_button_pressed: bool) -> void:
 	_rebuild_log_display()
 
 

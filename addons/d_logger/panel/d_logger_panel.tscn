@@ -107,6 +107,12 @@ layout_mode = 2
 text = ".*"
 tooltip_text = "Use regex for search"
 
+[node name="RelativeCheckBox" type="CheckBox" parent="VBoxContainer/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Rel"
+tooltip_text = "Show timestamps relative to the newest log"
+
 [node name="AutoScrollCheckBox" type="CheckBox" parent="VBoxContainer/Footer"]
 unique_name_in_owner = true
 layout_mode = 2
