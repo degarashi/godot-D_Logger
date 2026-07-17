@@ -326,6 +326,125 @@ func test_should_display_log_search_in_category() -> void:
 	panel.free()
 
 
+# ------------- [Regex Search] -------------
+func test_should_display_log_regex_matches_message() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "err.*\\d+"
+	panel._compile_search_regex()
+
+	var match_msg: Dictionary = _make_log("error 404 occurred")
+	var no_match: Dictionary = _make_log("all good")
+
+	assert_bool(panel._should_display_log(match_msg)).is_true()
+	assert_bool(panel._should_display_log(no_match)).is_false()
+	panel.free()
+
+
+func test_should_display_log_regex_matches_category() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "Net.*rk"
+	panel._compile_search_regex()
+
+	var match_cat: Dictionary = _make_log("msg", "INFO", "D-Logger", "Network")
+	var no_match: Dictionary = _make_log("msg", "INFO", "D-Logger", "Gameplay")
+
+	assert_bool(panel._should_display_log(match_cat)).is_true()
+	assert_bool(panel._should_display_log(no_match)).is_false()
+	panel.free()
+
+
+func test_should_display_log_regex_case_insensitive_by_default() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "ERROR"
+	panel._compile_search_regex()
+
+	var match_msg: Dictionary = _make_log("error occurred")
+	assert_bool(panel._should_display_log(match_msg)).is_true()
+	panel.free()
+
+
+func test_should_display_log_regex_case_sensitive() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "ERROR"
+	panel._search_case_sensitive = true
+	panel._compile_search_regex()
+
+	var no_match: Dictionary = _make_log("error occurred")
+	var match_exact: Dictionary = _make_log("ERROR occurred")
+	assert_bool(panel._should_display_log(no_match)).is_false()
+	assert_bool(panel._should_display_log(match_exact)).is_true()
+	panel.free()
+
+
+func test_should_display_log_regex_empty_query_shows_all() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = ""
+	panel._compile_search_regex()
+
+	var msg: Dictionary = _make_log("anything")
+	assert_bool(panel._should_display_log(msg)).is_true()
+	panel.free()
+
+
+func test_should_display_log_regex_invalid_falls_back_to_plain_text() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "[invalid"
+	panel._compile_search_regex()
+	assert_bool(panel._search_regex == null).is_true()
+
+	# Fallback to plain-text substring search — "[invalid" not in "test"
+	var msg: Dictionary = _make_log("test")
+	assert_bool(panel._should_display_log(msg)).is_false()
+	panel.free()
+
+
+func test_compile_search_regex_null_on_empty() -> void:
+	var panel := await _instantiate_panel()
+	panel._compile_search_regex()
+	assert_bool(panel._search_regex == null).is_true()
+	panel.free()
+
+
+func test_compile_search_regex_null_on_invalid_pattern() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "("
+	panel._compile_search_regex()
+	assert_bool(panel._search_regex == null).is_true()
+	panel.free()
+
+
+func test_clear_logs_resets_regex_state() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "test"
+	panel._compile_search_regex()
+	assert_bool(panel._search_regex != null).is_true()
+
+	panel.clear_logs()
+
+	assert_bool(panel._search_regex == null).is_true()
+	assert_bool(panel.regex_checkbox.button_pressed).is_false()
+	panel.free()
+
+
+func test_rebuild_log_display_with_regex() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("hello world"))
+	panel._all_logs.append(_make_log("say hello back"))
+	panel._all_logs.append(_make_log("goodbye"))
+	panel._rebuild_log_display()
+
+	var all_count: int = panel._displayed_line_map.size()
+	assert_int(all_count).is_equal(3)
+
+	# "^hello" = regex anchor (start-of-string) — not a substring match
+	panel._search_query = "^hello"
+	panel._compile_search_regex()
+	panel._rebuild_log_display()
+
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+	panel.free()
+
+
 # ------------- [Get Log Tags] -------------
 func test_get_log_tags_with_category() -> void:
 	var panel := await _instantiate_panel()
