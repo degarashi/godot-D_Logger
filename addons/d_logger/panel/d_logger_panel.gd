@@ -478,7 +478,7 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 					_drag_anchor_display_line = line_idx
 					_is_dragging_selection = true
 					_drag_moved = false
-					_drag_last_range = Vector2i(line_idx, line_idx)
+					_drag_last_range = Vector2i(-1, -1)
 				else:
 					# Click outside any log line: clear selection.
 					if not _ctrl_held:
