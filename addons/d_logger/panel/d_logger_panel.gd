@@ -727,7 +727,7 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 
 	# Convert to relative timestamp when enabled.
 	if relative_checkbox.button_pressed:
-		time = _get_max_log_time() - time
+		time = time - _get_max_log_time()
 
 	# Use source string formatting with clickable BBCode.
 	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
