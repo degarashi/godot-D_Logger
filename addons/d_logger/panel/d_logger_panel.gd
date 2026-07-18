@@ -9,6 +9,7 @@ const MAX_FONT_SIZE := 32
 const DEFAULT_FONT_SIZE := 14
 const FONT_SIZE_STEP := 2
 const EDITOR_SETTING_FONT_SIZE := "d_logger/panel_font_size"
+const EDITOR_SETTING_LEVEL_FILTER := "d_logger/panel_level_filter"
 
 # ------------- [Private Variable] -------------
 var _log_font_size: int = DEFAULT_FONT_SIZE
@@ -18,13 +19,19 @@ var _active_filters: Dictionary[String, bool] = {}
 var _search_query: String = ""
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
-var _time_presets: Dictionary[String, float] = {"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0}
+var _time_presets: Dictionary[String, float] = {
+	"All": -1.0, "30s": 30.0, "1m": 60.0, "5m": 300.0
+}
 var _active_time_filter: float = -1.0
 
 # Log level filtering
 var _log_levels: Array[String] = ["DEBUG", "INFO", "WARN", "ERROR"]
-var _log_level_values: Dictionary[String, int] = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
-var _level_presets: Dictionary[String, int] = {"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3}
+var _log_level_values: Dictionary[String, int] = {
+	"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3
+}
+var _level_presets: Dictionary[String, int] = {
+	"DEBUG": 0, "INFO+": 1, "WARN+": 2, "ERROR": 3
+}
 var _active_level_filter: int = 0
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
@@ -60,7 +67,9 @@ var _drag_moved: bool = false
 @onready var stats_label: Label = %StatsLabel
 
 # Per-level displayed count for the stats bar
-var _stats_level_counts: Dictionary[String, int] = {"DEBUG": 0, "INFO": 0, "WARN": 0, "ERROR": 0}
+var _stats_level_counts: Dictionary[String, int] = {
+	"DEBUG": 0, "INFO": 0, "WARN": 0, "ERROR": 0
+}
 
 
 # ------------- [Callbacks] -------------
@@ -153,7 +162,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed:
-		if (event.ctrl_pressed or event.command_or_control_autoremap) and event.keycode == KEY_F:
+		if (
+			(event.ctrl_pressed or event.command_or_control_autoremap)
+			and event.keycode == KEY_F
+		):
 			search_line_edit.grab_focus()
 			search_line_edit.select_all()
 			get_viewport().set_input_as_handled()
@@ -343,7 +355,18 @@ func _setup_level_option_button() -> void:
 				shortcut_hint = " (Press 4)"
 		level_option_button.set_item_tooltip(i, text + shortcut_hint)
 
-	level_option_button.selected = 0
+	# Restore saved level filter from EditorSettings
+	var saved_level := 0
+	if Engine.is_editor_hint():
+		var es := EditorInterface.get_editor_settings()
+		if es.has_setting(EDITOR_SETTING_LEVEL_FILTER):
+			saved_level = es.get_setting(EDITOR_SETTING_LEVEL_FILTER)
+	_active_level_filter = saved_level
+	for i in level_option_button.item_count:
+		if level_option_button.get_item_id(i) == saved_level:
+			level_option_button.select(i)
+			break
+
 	level_option_button.item_selected.connect(_on_level_option_selected)
 
 
@@ -357,7 +380,11 @@ func _apply_level_filter(min_level: int) -> void:
 
 
 func _on_filter_gui_input(event: InputEvent, category: String) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_LEFT
+	):
 		if event.alt_pressed:
 			_solo_category(category)
 			get_viewport().set_input_as_handled()
@@ -396,7 +423,9 @@ func _solo_category(solo_cat: String) -> void:
 		if not btn:
 			continue
 
-		var should_be_pressed := true if is_already_soloed else (btn.text == solo_cat)
+		var should_be_pressed := (
+			true if is_already_soloed else (btn.text == solo_cat)
+		)
 		if btn.button_pressed != should_be_pressed:
 			btn.button_pressed = should_be_pressed
 		else:
@@ -408,7 +437,9 @@ func _solo_category(solo_cat: String) -> void:
 	_rebuild_log_display()
 
 
-func _on_filter_toggled(is_pressed: bool, category: String, btn: Button) -> void:
+func _on_filter_toggled(
+	is_pressed: bool, category: String, btn: Button
+) -> void:
 	_active_filters[category] = is_pressed
 	_update_button_style(btn, is_pressed)
 	if not _is_rebuilding:
@@ -438,7 +469,9 @@ func _update_pause_on_error_button() -> void:
 		return
 	var es := EditorInterface.get_editor_settings()
 	if es.has_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR):
-		var val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+		var val: bool = es.get_setting(
+			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
+		)
 		if pause_on_error_button.button_pressed != val:
 			pause_on_error_button.set_pressed_no_signal(val)
 		_update_pause_on_error_button_style(val)
@@ -448,9 +481,13 @@ func _on_pause_on_error_toggled(is_pressed: bool) -> void:
 	if not Engine.is_editor_hint():
 		return
 	var es := EditorInterface.get_editor_settings()
-	var current_val: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR)
+	var current_val: bool = es.get_setting(
+		DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR
+	)
 	if current_val != is_pressed:
-		es.set_setting(DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed)
+		es.set_setting(
+			DLoggerConstants.EDITOR_SETTING_PAUSE_ON_ERROR, is_pressed
+		)
 	_update_pause_on_error_button_style(is_pressed)
 
 
@@ -463,6 +500,9 @@ func _on_time_option_selected(index: int) -> void:
 func _on_level_option_selected(index: int) -> void:
 	var min_level := level_option_button.get_item_id(index)
 	_active_level_filter = min_level
+	if Engine.is_editor_hint():
+		var es := EditorInterface.get_editor_settings()
+		es.set_setting(EDITOR_SETTING_LEVEL_FILTER, min_level)
 	_rebuild_log_display()
 
 
@@ -483,7 +523,13 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 
 		# Detect user scroll on the log display — re-check position after
 		# mouse wheel or right-drag so auto-scroll re-engages at the bottom.
-		if event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		if (
+			event.pressed
+			and (
+				event.button_index
+				in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]
+			)
+		):
 			call_deferred("_update_auto_scroll_from_scrollbar")
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -563,7 +609,10 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			var range_end := maxi(_drag_anchor_display_line, current_line)
 
 			# Skip if the range hasn't changed.
-			if range_start == _drag_last_range.x and range_end == _drag_last_range.y:
+			if (
+				range_start == _drag_last_range.x
+				and range_end == _drag_last_range.y
+			):
 				return
 
 			_drag_last_range = Vector2i(range_start, range_end)
@@ -641,7 +690,9 @@ func _toggle_log_selection(log_index: int) -> void:
 func _update_selection_info() -> void:
 	var count := _selected_log_indices.size()
 	if count > 0:
-		copy_button.tooltip_text = ("Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count)
+		copy_button.tooltip_text = (
+			"Copy Selected (%d) (Ctrl+C)\nEsc: Clear" % count
+		)
 	else:
 		copy_button.tooltip_text = ("Copy Logs (Ctrl+C)")
 	_refresh_stats_label()
@@ -649,7 +700,9 @@ func _update_selection_info() -> void:
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
-		var is_selected := log_index >= 0 and _selected_log_indices.has(log_index)
+		var is_selected := (
+			log_index >= 0 and _selected_log_indices.has(log_index)
+		)
 		var bbcode_msg := _format_log(log_data, is_selected)
 		if is_selected:
 			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
@@ -703,13 +756,19 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 
 	var result: String
 	if is_selected:
-		result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+		result = ("[b][color={0}]{1}[/color][/b]".format(
+			[text_color, formatted_msg]
+		))
 	elif not text_color.is_empty():
 		var is_bold := level in ["INFO", "WARN", "ERROR"]
 		if is_bold:
-			result = ("[b][color={0}]{1}[/color][/b]".format([text_color, formatted_msg]))
+			result = ("[b][color={0}]{1}[/color][/b]".format(
+				[text_color, formatted_msg]
+			))
 		else:
-			result = ("[color={0}]{1}[/color]".format([text_color, formatted_msg]))
+			result = ("[color={0}]{1}[/color]".format(
+				[text_color, formatted_msg]
+			))
 	else:
 		result = formatted_msg
 
@@ -841,7 +900,9 @@ func _should_display_log(log_data: Dictionary) -> bool:
 
 func _apply_font_size() -> void:
 	_log_font_size = clampi(_log_font_size, MIN_FONT_SIZE, MAX_FONT_SIZE)
-	log_display.add_theme_font_size_override(&"normal_font_size", _log_font_size)
+	log_display.add_theme_font_size_override(
+		&"normal_font_size", _log_font_size
+	)
 	log_display.add_theme_font_size_override(&"bold_font_size", _log_font_size)
 	if Engine.is_editor_hint():
 		var es := EditorInterface.get_editor_settings()
@@ -866,10 +927,13 @@ func _refresh_stats_label() -> void:
 	var sel_count := _selected_log_indices.size()
 	if sel_count > 0:
 		stats_label.text = (
-			"%s | (%d) %d / %d" % ["  ".join(parts), sel_count, total_displayed, total_stored]
+			"%s | (%d) %d / %d"
+			% ["  ".join(parts), sel_count, total_displayed, total_stored]
 		)
 	else:
-		stats_label.text = "%s | %d / %d" % ["  ".join(parts), total_displayed, total_stored]
+		stats_label.text = (
+			"%s | %d / %d" % ["  ".join(parts), total_displayed, total_stored]
+		)
 
 
 func _rebuild_log_display() -> void:
@@ -926,7 +990,9 @@ func _update_auto_scroll_from_scrollbar() -> void:
 
 func _on_word_wrap_toggled(button_pressed: bool) -> void:
 	log_display.autowrap_mode = (
-		TextServer.AUTOWRAP_WORD_SMART if button_pressed else TextServer.AUTOWRAP_OFF
+		TextServer.AUTOWRAP_WORD_SMART
+		if button_pressed
+		else TextServer.AUTOWRAP_OFF
 	)
 
 
@@ -990,9 +1056,17 @@ func clear_logs() -> void:
 	_active_time_filter = -1.0
 	time_option_button.select(0)
 
-	# Reset level filter to "DEBUG"
-	_active_level_filter = 0
-	level_option_button.select(0)
+	# Restore saved level filter from EditorSettings
+	var saved_level := 0
+	if Engine.is_editor_hint():
+		var es := EditorInterface.get_editor_settings()
+		if es.has_setting(EDITOR_SETTING_LEVEL_FILTER):
+			saved_level = es.get_setting(EDITOR_SETTING_LEVEL_FILTER)
+	_active_level_filter = saved_level
+	for i in level_option_button.item_count:
+		if level_option_button.get_item_id(i) == saved_level:
+			level_option_button.select(i)
+			break
 
 	for level: String in _stats_level_counts:
 		_stats_level_counts[level] = 0
@@ -1060,7 +1134,9 @@ func _get_formatted_logs() -> String:
 func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	DisplayServer.clipboard_set(text)
 
-	var toast_msg := "Copied %d log(s)" % log_count if log_count > 0 else "Copied"
+	var toast_msg := (
+		"Copied %d log(s)" % log_count if log_count > 0 else "Copied"
+	)
 	_show_toast(toast_msg)
 
 	var original_text := copy_button.text
