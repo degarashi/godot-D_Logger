@@ -249,7 +249,11 @@ func add_log(log_data: Dictionary) -> void:
 			var level := log_data.get("level", "DEBUG")
 			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_refresh_stats_label()
-			_append_formatted_log(log_data, log_idx)
+			# In relative mode, rebuild all timestamps against the new max.
+			if relative_checkbox.button_pressed:
+				_rebuild_log_display_preserve_scroll()
+			else:
+				_append_formatted_log(log_data, log_idx)
 
 
 # ------------- [Private Method] -------------
