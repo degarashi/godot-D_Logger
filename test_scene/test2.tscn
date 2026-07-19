@@ -9,6 +9,7 @@
 
 [sub_resource type="Resource" id="Resource_74unx"]
 script = ExtResource("3_xeyx1")
+console_enabled_override = null
 
 [node name="Test2" type="Node" unique_id=2118779868]
 script = ExtResource("1_j0872")
