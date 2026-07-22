@@ -340,6 +340,7 @@ func _setup_time_option_button() -> void:
 
 
 func _setup_level_option_button() -> void:
+	level_option_button.clear()
 	for preset_name: String in _level_presets.keys():
 		var min_level := _level_presets[preset_name]
 		level_option_button.add_item(preset_name, min_level)
