@@ -33,4 +33,4 @@ while getopts "a:" opt; do
 done
 shift $((OPTIND - 1))
 
-exec "$GDUNIT_RUNNER" -a "$TEST_DIR" "$@"
+exec "$GDUNIT_RUNNER" -a "$TEST_DIR" --headless --ignoreHeadlessMode "$@"
