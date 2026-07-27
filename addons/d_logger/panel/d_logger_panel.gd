@@ -734,8 +734,19 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	if relative_checkbox.button_pressed:
 		time = time - _get_max_log_time()
 
-	# Use source string formatting with clickable BBCode.
-	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
+	# Generate source string with clickable filter URLs matching actual filter
+	# button texts (from _get_log_tags). Must handle the case where the
+	# displayed text (prefix "D-Logger") differs from the tag ("Default")
+	# for category-less logs with default prefix.
+	var log_tags: Array = log_data.get("_log_tags", [])
+	var source_str: String
+	if log_tags.is_empty():
+		source_str = DLoggerFunc.get_source_string(prefix, category, true)
+	elif category.is_empty() and prefix == DLoggerConstants.DEFAULT_PREFIX:
+		# Show [D-Logger] but URL target = "Default" (the actual filter tag).
+		source_str = "[[url=filter:%s]%s[/url]]" % [log_tags[0], prefix]
+	else:
+		source_str = DLoggerFunc.get_source_string(prefix, category, true)
 
 	var formatted_msg := DLoggerFunc.get_formatted_line(
 		time, frame, source_str, caller_info, context_str, level, message, true
