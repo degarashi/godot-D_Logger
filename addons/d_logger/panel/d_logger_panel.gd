@@ -50,6 +50,9 @@ var _drag_is_additive: bool = false
 var _drag_last_range: Vector2i = Vector2i(-1, -1)
 var _drag_moved: bool = false
 
+# Hover tooltip state
+var _hovered_line_idx: int = -1
+
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
 @onready var save_button: Button = %SaveButton
@@ -601,6 +604,25 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			v_scroll.value -= event.relative.y
 		accept_event()
 
+	# Hover tooltip: update tooltip text when hovering over a log line.
+	if (
+		event is InputEventMouseMotion
+		and not _is_right_dragging
+		and not _is_dragging_selection
+	):
+		var line_idx := _get_line_at_mouse_pos(event.position)
+		if line_idx >= 0 and line_idx < _displayed_line_map.size():
+			var log_idx := _displayed_line_map[line_idx]
+			if log_idx >= 0 and log_idx < _all_logs.size():
+				if _hovered_line_idx != line_idx:
+					_hovered_line_idx = line_idx
+					var full_text := _format_log_plain(_all_logs[log_idx])
+					log_display.tooltip_text = full_text
+		else:
+			if _hovered_line_idx != -1:
+				_hovered_line_idx = -1
+				log_display.tooltip_text = ""
+
 	# Drag-to-select: update range while left mouse is held.
 	if (
 		event is InputEventMouseMotion
@@ -714,6 +736,28 @@ func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 		log_display.append_text(bbcode_msg + "\n")
 		if _is_auto_scrolling:
 			call_deferred("_scroll_to_bottom")
+
+
+func _format_log_plain(log_data: Dictionary) -> String:
+	var time: float = log_data.get("time", 0.0)
+	var frame: int = log_data.get("frame", 0)
+	var level: String = log_data.get("level", "DEBUG")
+	var prefix: String = log_data.get("prefix", "")
+	var category: String = log_data.get("category", "")
+	var context_str: String = log_data.get("context_str", "")
+	var caller_info = log_data.get("caller_info", {})
+	var message: String = log_data.get("message", "")
+
+	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
+	var formatted_msg := DLoggerFunc.get_formatted_line(
+		time, frame, source_str, caller_info, context_str, level, message, false
+	)
+
+	var count: int = log_data.get("count", 1)
+	if count > 1:
+		formatted_msg += " (x%d)" % count
+
+	return formatted_msg
 
 
 func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
