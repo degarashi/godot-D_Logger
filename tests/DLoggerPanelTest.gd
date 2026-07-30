@@ -936,6 +936,115 @@ func test_gui_input_ctrl_click_outside_preserves_selection() -> void:
 	panel.free()
 
 
+# ------------- [drag-to-select clamping] -------------
+func test_drag_select_basic_range() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	# Start drag at line 2
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 2
+	panel._drag_moved = false
+	panel._drag_last_range = Vector2i(-1, -1)
+	# Move to line 5
+	var event := InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = Vector2(0, 5 * 20)  # Approximate line height
+	panel._on_log_display_gui_input(event)
+	# Should select lines 2-5
+	assert_int(panel._selected_log_indices.size()).is_equal(4)
+	assert_bool(panel._selected_log_indices.has(2)).is_true()
+	assert_bool(panel._selected_log_indices.has(5)).is_true()
+	panel._is_dragging_selection = false
+	panel.free()
+
+
+func test_drag_select_clamp_after_shrink() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	# Start drag at line 8 (near end)
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 8
+	panel._drag_moved = false
+	panel._drag_last_range = Vector2i(-1, -1)
+	# Shrink the map to 5 lines (simulating filter change)
+	panel._displayed_line_map.resize(5)
+	# Move to line 4
+	var event := InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = Vector2(0, 4 * 20)
+	panel._on_log_display_gui_input(event)
+	# Clamp should prevent out-of-bounds: no index >= map_size should be selected
+	for idx in panel._selected_log_indices:
+		assert_int(idx).is_less(5)
+	panel._is_dragging_selection = false
+	panel.free()
+
+
+func test_drag_select_clamp_anchor_out_of_range() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	# Start drag at line 2
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 2
+	panel._drag_moved = false
+	panel._drag_last_range = Vector2i(-1, -1)
+	# Shrink the map to 3 lines
+	panel._displayed_line_map.resize(3)
+	# Move to line 1
+	var event := InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = Vector2(0, 1 * 20)
+	panel._on_log_display_gui_input(event)
+	# Clamp should prevent out-of-bounds: no index >= map_size should be selected
+	for idx in panel._selected_log_indices:
+		assert_int(idx).is_less(3)
+	panel._is_dragging_selection = false
+	panel.free()
+
+
+func test_drag_select_skip_unchanged_range() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	# Start drag at line 3
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 3
+	panel._drag_moved = false
+	panel._drag_last_range = Vector2i(-1, -1)
+	# Move to line 5
+	var event := InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = Vector2(0, 5 * 20)
+	panel._on_log_display_gui_input(event)
+	var first_count: int = panel._selected_log_indices.size()
+	# Move again to same relative position (same range)
+	panel._on_log_display_gui_input(event)
+	# Should not add more selections (range unchanged)
+	assert_int(panel._selected_log_indices.size()).is_equal(first_count)
+	panel._is_dragging_selection = false
+	panel.free()
+
+
+func test_drag_select_reverse_direction() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	# Start drag at line 7
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 7
+	panel._drag_moved = false
+	panel._drag_last_range = Vector2i(-1, -1)
+	# Move backward to line 3
+	var event := InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = Vector2(0, 3 * 20)
+	panel._on_log_display_gui_input(event)
+	# Should select lines 3-7 (5 lines)
+	assert_int(panel._selected_log_indices.size()).is_equal(5)
+	assert_bool(panel._selected_log_indices.has(3)).is_true()
+	assert_bool(panel._selected_log_indices.has(7)).is_true()
+	panel._is_dragging_selection = false
+	panel.free()
+
+
 # ------------- [_rebuild_log_display_preserve_scroll] -------------
 func test_rebuild_preserve_scroll() -> void:
 	var panel := await _instantiate_panel()
