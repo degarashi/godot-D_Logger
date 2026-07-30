@@ -634,6 +634,9 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 		if current_line >= 0 and current_line < _displayed_line_map.size():
 			var range_start := mini(_drag_anchor_display_line, current_line)
 			var range_end := maxi(_drag_anchor_display_line, current_line)
+			var map_size := _displayed_line_map.size()
+			range_start = clampi(range_start, 0, map_size - 1)
+			range_end = clampi(range_end, 0, map_size - 1)
 
 			# Skip if the range hasn't changed.
 			if (
