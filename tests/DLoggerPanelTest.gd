@@ -149,6 +149,17 @@ func test_update_selection_info_after_clear() -> void:
 	panel.free()
 
 
+func test_clear_logs_clears_displayed_line_map() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+
+	panel.clear_logs()
+
+	assert_int(panel._all_logs.size()).is_equal(0)
+	assert_int(panel._displayed_line_map.size()).is_equal(0)
+	panel.free()
+
+
 # ------------- [Get Formatted Logs] -------------
 func test_get_formatted_logs_no_selection() -> void:
 	var panel := await _instantiate_panel()
@@ -456,7 +467,9 @@ func test_get_log_tags_with_category() -> void:
 
 func test_get_log_tags_with_multiple_tags() -> void:
 	var panel := await _instantiate_panel()
-	var log_data: Dictionary = _make_log("test", "INFO", "D-Logger", "AI|Combat")
+	var log_data: Dictionary = _make_log(
+		"test", "INFO", "D-Logger", "AI|Combat"
+	)
 	var tags: Array = panel._get_log_tags(log_data)
 	assert_array(tags).contains_exactly_in_any_order("AI", "Combat")
 	panel.free()

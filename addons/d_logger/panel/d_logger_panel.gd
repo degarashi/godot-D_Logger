@@ -1102,6 +1102,7 @@ func clear_logs() -> void:
 	_all_logs.clear()
 	_selected_log_indices.clear()
 	log_display.clear()
+	_displayed_line_map.clear()
 
 	for child: Node in filter_container.get_children():
 		child.queue_free()
