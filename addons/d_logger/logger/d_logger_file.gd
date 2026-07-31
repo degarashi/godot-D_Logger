@@ -19,10 +19,6 @@ func _init(path: String) -> void:
 	# If the file does not exist, create it in WRITE mode and start the session
 	if not FileAccess.file_exists(_file_path):
 		_file = FileAccess.open(_file_path, FileAccess.WRITE)
-		if _file:
-			var init_msg := "=== New Session Started: {0} ==="
-			_file.store_line(init_msg.format([Time.get_datetime_string_from_system()]))
-			# Do not close it here, let it flow directly to the session process
 	else:
 		# If it exists, open it in READ_WRITE mode and seek to the end
 		_file = FileAccess.open(_file_path, FileAccess.READ_WRITE)
@@ -32,7 +28,9 @@ func _init(path: String) -> void:
 	# Common process if the file is successfully opened
 	if _file:
 		var session_msg := "=== New Session Started: {0} ==="
-		_write_line(session_msg.format([Time.get_datetime_string_from_system()]))
+		_write_line(
+			session_msg.format([Time.get_datetime_string_from_system()])
+		)
 		# Ensure the data is written to the disk
 		_file.flush()
 	else:
@@ -57,7 +55,11 @@ func _output(
 	p_caller_info: Variant,
 	level: String
 ) -> void:
-	_write_line(DLoggerFunc.format_log(msg, category, level, context, prefix, p_caller_info))
+	_write_line(
+		DLoggerFunc.format_log(
+			msg, category, level, context, prefix, p_caller_info
+		)
+	)
 
 	# Flush immediately for warnings and errors
 	if level == "WARN" or level == "ERROR":

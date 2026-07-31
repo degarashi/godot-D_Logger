@@ -163,13 +163,13 @@ func test_append_creates_second_session_header() -> void:
 	var content := file.get_as_text()
 	file.close()
 
-	# Count session headers: 2 for new file (store_line + _write_line) + 1 for append (_write_line only)
+	# Count session headers: 1 for each logger session
 	var lines := content.split("\n")
 	var session_count := 0
 	for line in lines:
 		if line.contains("New Session Started"):
 			session_count += 1
-	assert_int(session_count).is_equal(3)
+	assert_int(session_count).is_equal(2)
 	assert_str(content).contains("first message")
 	assert_str(content).contains("second message")
 
