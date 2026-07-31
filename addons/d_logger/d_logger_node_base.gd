@@ -20,19 +20,19 @@ func get_logger() -> DLoggerClass:
 # ------------- [Forwarding Methods] -------------
 # These allow using the node directly as a _logger if needed
 func is_debug_enabled() -> bool:
-	return _logger.is_debug_enabled()
+	return _logger.is_debug_enabled() if _logger else false
 
 
 func is_info_enabled() -> bool:
-	return _logger.is_info_enabled()
+	return _logger.is_info_enabled() if _logger else false
 
 
 func is_warn_enabled() -> bool:
-	return _logger.is_warn_enabled()
+	return _logger.is_warn_enabled() if _logger else false
 
 
 func is_error_enabled() -> bool:
-	return _logger.is_error_enabled()
+	return _logger.is_error_enabled() if _logger else false
 
 
 func debug(
@@ -43,7 +43,9 @@ func debug(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return _logger.debug(msg, v, cat, ctx, p, p_caller_info)
+	return (
+		_logger.debug(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+	)
 
 
 func info(
@@ -54,7 +56,7 @@ func info(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return _logger.info(msg, v, cat, ctx, p, p_caller_info)
+	return _logger.info(msg, v, cat, ctx, p, p_caller_info) if _logger else true
 
 
 func warn(
@@ -65,7 +67,7 @@ func warn(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return _logger.warn(msg, v, cat, ctx, p, p_caller_info)
+	return _logger.warn(msg, v, cat, ctx, p, p_caller_info) if _logger else true
 
 
 func error(
@@ -76,4 +78,6 @@ func error(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return _logger.error(msg, v, cat, ctx, p, p_caller_info)
+	return (
+		_logger.error(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+	)

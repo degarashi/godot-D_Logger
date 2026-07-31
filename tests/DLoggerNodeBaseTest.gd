@@ -169,3 +169,17 @@ func test_get_logger_no_crash_when_null() -> void:
 	var node := _NODE_BASE.new()
 	assert_object(node.get_logger()).is_null()
 	node.free()
+
+
+func test_forwarding_is_safe_when_logger_is_null() -> void:
+	var node := _NODE_BASE.new()
+
+	assert_bool(node.is_debug_enabled()).is_false()
+	assert_bool(node.is_info_enabled()).is_false()
+	assert_bool(node.is_warn_enabled()).is_false()
+	assert_bool(node.is_error_enabled()).is_false()
+	assert_bool(node.debug("debug")).is_true()
+	assert_bool(node.info("info")).is_true()
+	assert_bool(node.warn("warn")).is_true()
+	assert_bool(node.error("error")).is_true()
+	node.free()
