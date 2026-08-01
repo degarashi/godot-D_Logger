@@ -1290,6 +1290,8 @@ func _on_save_pressed() -> void:
 		var original_text := save_button.text
 		save_button.text = "Saved!"
 		await get_tree().create_timer(1.0).timeout
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
 		save_button.text = original_text
 	else:
 		push_error("Failed to save logs to %s" % file_path)
