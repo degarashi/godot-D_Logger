@@ -1098,6 +1098,14 @@ func _compile_search_regex() -> void:
 	var err := regex.compile(pattern)
 	if err == OK:
 		_search_regex = regex
+	else:
+		# The engine already logs the PCRE2 error detail for the failed
+		# compile; attribute it here so the fallback is not silent.
+		push_warning(
+			"Invalid regex pattern \"%s\" (error %d). "
+			% [_search_query, err]
+			+ "Falling back to plain text search."
+		)
 
 
 func _on_case_sensitive_toggled(button_pressed: bool) -> void:
