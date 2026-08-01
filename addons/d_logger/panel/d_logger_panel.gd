@@ -342,6 +342,7 @@ func _add_filter_button(category: String) -> void:
 
 
 func _setup_time_option_button() -> void:
+	time_option_button.clear()
 	for preset_name: String in _time_presets.keys():
 		var duration := _time_presets[preset_name]
 		time_option_button.add_item(preset_name, int(duration))

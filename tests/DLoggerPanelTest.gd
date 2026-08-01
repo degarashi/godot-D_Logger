@@ -3,6 +3,17 @@ extends GdUnitTestSuite
 
 const _PANEL_SCENE = preload("res://addons/d_logger/panel/d_logger_panel.tscn")
 
+var _temp_dir: String = ""
+
+
+func before_test() -> void:
+	_temp_dir = create_temp_dir("dlogger_panel_test")
+
+
+func after_test() -> void:
+	if not _temp_dir.is_empty():
+		DirAccess.remove_absolute(_temp_dir)
+
 
 # ------------- [Helper] -------------
 func _instantiate_panel() -> Control:
@@ -867,6 +878,8 @@ func test_unhandled_input_key_4_changes_level_filter() -> void:
 func test_input_ctrl_c_triggers_copy() -> void:
 	var panel := await _instantiate_panel()
 	_populate_logs(panel, 3)
+	# The panel only handles Ctrl+C when focus is inside it
+	panel.grab_focus()
 	var event := InputEventKey.new()
 	event.keycode = KEY_C
 	event.ctrl_pressed = true
@@ -1069,4 +1082,628 @@ func test_rebuild_preserve_scroll() -> void:
 		panel._rebuild_log_display_preserve_scroll()
 		await get_tree().process_frame
 		assert_float(v_scroll.value).is_equal(expected)
+	panel.free()
+
+
+# ------------- [_highlight_search_text] -------------
+func test_highlight_search_text_wraps_matches() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "abc"
+	var result: String = panel._highlight_search_text("xxabcyy")
+	assert_str(result).contains("[bgcolor=yellow][color=black]abc[/color][/bgcolor]")
+	panel.free()
+
+
+func test_highlight_search_text_empty_query_unchanged() -> void:
+	var panel := await _instantiate_panel()
+	var result: String = panel._highlight_search_text("hello")
+	assert_str(result).is_equal("hello")
+	panel.free()
+
+
+func test_highlight_search_text_multiple_matches() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "ab"
+	var result: String = panel._highlight_search_text("ab ab ab")
+	assert_int(result.count("[bgcolor=yellow]")).is_equal(3)
+	panel.free()
+
+
+func test_highlight_search_text_case_insensitive_by_default() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "ABC"
+	var result: String = panel._highlight_search_text("xxabcxx")
+	assert_str(result).contains("[color=black]abc[/color]")
+	panel.free()
+
+
+func test_highlight_search_text_case_sensitive() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "ABC"
+	panel._search_case_sensitive = true
+	var result: String = panel._highlight_search_text("xxabcxx")
+	assert_str(result).is_equal("xxabcxx")
+	panel.free()
+
+
+func test_highlight_search_text_regex() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "a+b"
+	panel._compile_search_regex()
+	var result: String = panel._highlight_search_text("xaabz")
+	assert_str(result).contains("[color=black]aab[/color]")
+	panel.free()
+
+
+# ------------- [_format_log_plain] -------------
+func test_format_log_plain_has_no_bbcode() -> void:
+	var panel := await _instantiate_panel()
+	var result: String = panel._format_log_plain(_make_log("hello world"))
+	assert_str(result).contains("hello world")
+	assert_bool(result.contains("[color=")).is_false()
+	assert_bool(result.contains("[b]")).is_false()
+	panel.free()
+
+
+func test_format_log_plain_with_count() -> void:
+	var panel := await _instantiate_panel()
+	var log_data := _make_log("dup")
+	log_data["count"] = 4
+	var result: String = panel._format_log_plain(log_data)
+	assert_str(result).contains("(x4)")
+	panel.free()
+
+
+# ------------- [Relative Time] -------------
+func test_format_log_relative_time() -> void:
+	var panel := await _instantiate_panel()
+	panel.relative_checkbox.button_pressed = true
+	panel._all_logs.append(_make_log("first"))
+	panel._all_logs.append(_make_log("second"))
+	panel._all_logs.append(_make_log("third"))
+	panel._all_logs[0]["time"] = 1.0
+	panel._all_logs[1]["time"] = 2.0
+	panel._all_logs[2]["time"] = 5.0
+	var result: String = panel._format_log(panel._all_logs[0])
+	assert_str(result).contains("-4.000s")
+	panel.free()
+
+
+func test_relative_toggle_rebuilds_display() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 2)
+	var before: int = panel.log_display.get_paragraph_count()
+	panel._on_relative_toggled(true)
+	assert_int(panel.log_display.get_paragraph_count()).is_equal(before)
+	panel.free()
+
+
+# ------------- [_get_max_log_time] -------------
+func test_get_max_log_time_empty() -> void:
+	var panel := await _instantiate_panel()
+	assert_float(panel._get_max_log_time()).is_equal(0.0)
+	panel.free()
+
+
+func test_get_max_log_time_returns_latest() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("a"))
+	panel._all_logs.append(_make_log("b"))
+	panel._all_logs.append(_make_log("c"))
+	panel._all_logs[2]["time"] = 42.0
+	assert_float(panel._get_max_log_time()).is_equal(42.0)
+	panel.free()
+
+
+# ------------- [_get_log_level_value] -------------
+func test_get_log_level_value_known_levels() -> void:
+	var panel := await _instantiate_panel()
+	assert_int(panel._get_log_level_value("DEBUG")).is_equal(0)
+	assert_int(panel._get_log_level_value("INFO")).is_equal(1)
+	assert_int(panel._get_log_level_value("WARN")).is_equal(2)
+	assert_int(panel._get_log_level_value("ERROR")).is_equal(3)
+	panel.free()
+
+
+func test_get_log_level_value_unknown_defaults_to_debug() -> void:
+	var panel := await _instantiate_panel()
+	assert_int(panel._get_log_level_value("TRACE")).is_equal(0)
+	panel.free()
+
+
+# ------------- [_apply_level_filter] -------------
+func test_apply_level_filter_selects_matching_item() -> void:
+	var panel := await _instantiate_panel()
+	panel._apply_level_filter(2)
+	assert_int(panel._active_level_filter).is_equal(2)
+	var selected_index: int = panel.level_option_button.selected
+	assert_int(panel.level_option_button.get_item_id(selected_index)).is_equal(2)
+	panel.free()
+
+
+func test_apply_level_filter_unknown_level_is_noop() -> void:
+	var panel := await _instantiate_panel()
+	var before: int = panel._active_level_filter
+	panel._apply_level_filter(99)
+	assert_int(panel._active_level_filter).is_equal(before)
+	panel.free()
+
+
+# ------------- [_change_font_size / _apply_font_size] -------------
+func test_change_font_size_increases() -> void:
+	var panel := await _instantiate_panel()
+	panel._change_font_size(2)
+	assert_int(panel._log_font_size).is_equal(16)
+	assert_int(panel.log_display.get_theme_font_size("normal_font_size")).is_equal(16)
+	panel.free()
+
+
+func test_change_font_size_clamps_at_max() -> void:
+	var panel := await _instantiate_panel()
+	panel._log_font_size = 31
+	panel._change_font_size(2)
+	assert_int(panel._log_font_size).is_equal(32)
+	panel.free()
+
+
+func test_change_font_size_clamps_at_min() -> void:
+	var panel := await _instantiate_panel()
+	panel._log_font_size = 9
+	panel._change_font_size(-2)
+	assert_int(panel._log_font_size).is_equal(8)
+	panel.free()
+
+
+func test_apply_font_size_clamps_out_of_range() -> void:
+	var panel := await _instantiate_panel()
+	panel._log_font_size = 100
+	panel._apply_font_size()
+	assert_int(panel._log_font_size).is_equal(32)
+	panel.free()
+
+
+# ------------- [_refresh_stats_label] -------------
+func test_refresh_stats_label_shows_counts() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("a"))
+	panel._all_logs.append(_make_log("b"))
+	panel._displayed_line_map.append(0)
+	panel._displayed_line_map.append(1)
+	panel._stats_level_counts["INFO"] = 2
+	panel._refresh_stats_label()
+	assert_str(panel.stats_label.text).contains("INFO:2")
+	assert_str(panel.stats_label.text).contains("2 / 2")
+	panel.free()
+
+
+func test_refresh_stats_label_with_selection() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("a"))
+	panel._displayed_line_map.append(0)
+	panel._stats_level_counts["INFO"] = 1
+	panel._selected_log_indices[0] = true
+	panel._refresh_stats_label()
+	assert_str(panel.stats_label.text).contains("(1)")
+	panel.free()
+
+
+# ------------- [Filter Buttons] -------------
+func test_add_filter_button_creates_toggle() -> void:
+	var panel := await _instantiate_panel()
+	panel._add_filter_button("System")
+	var found: Button = null
+	for child in panel.filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == "System":
+			found = btn
+	assert_object(found).is_not_null()
+	assert_bool(found.toggle_mode).is_true()
+	assert_bool(found.button_pressed).is_true()
+	assert_bool(panel._active_filters["System"]).is_true()
+	panel.free()
+
+
+func test_filter_toggle_off_updates_state_and_style() -> void:
+	var panel := await _instantiate_panel()
+	panel._add_filter_button("System")
+	var btn: Button = panel.filter_container.get_child(0)
+	panel._on_filter_toggled(false, "System", btn)
+	assert_bool(panel._active_filters["System"]).is_false()
+	assert_float(btn.modulate.a).is_equal(0.5)
+	panel.free()
+
+
+func test_filter_toggle_on_updates_state_and_style() -> void:
+	var panel := await _instantiate_panel()
+	panel._add_filter_button("System")
+	var btn: Button = panel.filter_container.get_child(0)
+	panel._on_filter_toggled(true, "System", btn)
+	assert_bool(panel._active_filters["System"]).is_true()
+	assert_float(btn.modulate.r).is_equal_approx(0.3, 0.001)
+	assert_float(btn.modulate.g).is_equal_approx(0.8, 0.001)
+	panel.free()
+
+
+func test_update_button_style_active() -> void:
+	var panel := await _instantiate_panel()
+	var btn := Button.new()
+	panel._update_button_style(btn, true)
+	assert_float(btn.modulate.r).is_equal_approx(0.3, 0.001)
+	assert_float(btn.modulate.g).is_equal_approx(0.8, 0.001)
+	assert_float(btn.modulate.b).is_equal_approx(1.0, 0.001)
+	btn.free()
+	panel.free()
+
+
+func test_update_button_style_inactive() -> void:
+	var panel := await _instantiate_panel()
+	var btn := Button.new()
+	panel._update_button_style(btn, false)
+	assert_float(btn.modulate.r).is_equal_approx(1.0, 0.001)
+	assert_float(btn.modulate.g).is_equal_approx(1.0, 0.001)
+	assert_float(btn.modulate.b).is_equal_approx(1.0, 0.001)
+	assert_float(btn.modulate.a).is_equal_approx(0.5, 0.001)
+	btn.free()
+	panel.free()
+
+
+func test_show_all_reactivates_all_filters() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("m1", "INFO", "P", "System"))
+	panel.add_log(_make_log("m2", "INFO", "P", "Network"))
+	for child in panel.filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == "Network":
+			btn.button_pressed = false
+	assert_bool(panel._active_filters["Network"]).is_false()
+
+	panel._on_show_all_pressed()
+
+	for cat in panel._active_filters:
+		assert_bool(panel._active_filters[cat]).is_true()
+	for child in panel.filter_container.get_children():
+		var btn := child as Button
+		if btn:
+			assert_bool(btn.button_pressed).is_true()
+	panel.free()
+
+
+func test_filter_gui_input_alt_click_solos() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("m1", "INFO", "P", "System"))
+	panel.add_log(_make_log("m2", "INFO", "P", "Network"))
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.alt_pressed = true
+	panel._on_filter_gui_input(event, "System")
+	assert_bool(panel._active_filters["System"]).is_true()
+	assert_bool(panel._active_filters["Network"]).is_false()
+	panel.free()
+
+
+func test_filter_gui_input_plain_click_ignored() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("m1", "INFO", "P", "System"))
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	panel._on_filter_gui_input(event, "System")
+	assert_bool(panel._active_filters["System"]).is_true()
+	panel.free()
+
+
+# ------------- [Shortcuts] -------------
+func test_create_shortcut_ctrl() -> void:
+	var panel := await _instantiate_panel()
+	var shortcut: Shortcut = panel._create_shortcut(KEY_L, true)
+	var event := shortcut.events[0] as InputEventKey
+	assert_int(event.keycode).is_equal(KEY_L)
+	assert_bool(event.ctrl_pressed).is_true()
+	panel.free()
+
+
+func test_create_shortcut_shift() -> void:
+	var panel := await _instantiate_panel()
+	var shortcut: Shortcut = panel._create_shortcut(KEY_P, false, true)
+	var event := shortcut.events[0] as InputEventKey
+	assert_bool(event.shift_pressed).is_true()
+	assert_bool(event.ctrl_pressed).is_false()
+	panel.free()
+
+
+func test_create_shortcut_alt_with_ctrl() -> void:
+	var panel := await _instantiate_panel()
+	var shortcut: Shortcut = panel._create_shortcut(KEY_S, true, false, true)
+	var event := shortcut.events[0] as InputEventKey
+	assert_int(event.keycode).is_equal(KEY_S)
+	assert_bool(event.ctrl_pressed).is_true()
+	assert_bool(event.alt_pressed).is_true()
+	panel.free()
+
+
+func test_setup_shortcuts_assigns_to_buttons() -> void:
+	var panel := await _instantiate_panel()
+	assert_object(panel.clear_button.shortcut).is_not_null()
+	assert_object(panel.copy_button.shortcut).is_not_null()
+	assert_object(panel.save_button.shortcut).is_not_null()
+	assert_str(panel.save_button.tooltip_text).contains("Ctrl+Alt+S")
+	panel.free()
+
+
+# ------------- [_save_to_file] -------------
+func test_save_to_file_writes_content() -> void:
+	var panel := await _instantiate_panel()
+	var path := _temp_dir.path_join("saved.txt")
+	var result: int = panel._save_to_file(path, "line1\nline2")
+	assert_int(result).is_equal(OK)
+	var file := FileAccess.open(path, FileAccess.READ)
+	assert_object(file).is_not_null()
+	assert_str(file.get_as_text()).is_equal("line1\nline2")
+	file.close()
+	panel.free()
+
+
+func test_save_to_file_missing_directory_returns_error() -> void:
+	var panel := await _instantiate_panel()
+	var result: int = panel._save_to_file(
+		_temp_dir.path_join("no_dir").path_join("x.txt"), "x"
+	)
+	assert_int(result).is_not_equal(OK)
+	panel.free()
+
+
+# ------------- [_on_clear_pressed] -------------
+func test_on_clear_pressed_clears_all() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	var before: int = panel.log_display.get_paragraph_count()
+	panel._on_clear_pressed()
+	assert_int(panel._all_logs.size()).is_equal(0)
+	assert_int(panel.log_display.get_paragraph_count()).is_less(before)
+	panel.free()
+
+
+# ------------- [Auto Scroll] -------------
+func test_reset_auto_scroll_enables_following() -> void:
+	var panel := await _instantiate_panel()
+	panel._is_auto_scrolling = false
+	panel.log_display.scroll_following = false
+	panel._reset_auto_scroll()
+	assert_bool(panel._is_auto_scrolling).is_true()
+	assert_bool(panel.log_display.scroll_following).is_true()
+	panel.free()
+
+
+func test_update_auto_scroll_from_scrollbar_at_bottom() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
+	if v_scroll and v_scroll.max_value > 0.0:
+		panel._is_auto_scrolling = false
+		v_scroll.value = v_scroll.max_value
+		panel._update_auto_scroll_from_scrollbar()
+		assert_bool(panel._is_auto_scrolling).is_true()
+	panel.free()
+
+
+func test_update_auto_scroll_from_scrollbar_above_bottom() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
+	if v_scroll and v_scroll.max_value > 0.0:
+		panel._is_auto_scrolling = true
+		v_scroll.value = maxf(0.0, v_scroll.max_value - 10.0)
+		panel._update_auto_scroll_from_scrollbar()
+		assert_bool(panel._is_auto_scrolling).is_false()
+	panel.free()
+
+
+# ------------- [_on_word_wrap_toggled] -------------
+func test_word_wrap_on() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_word_wrap_toggled(true)
+	assert_int(panel.log_display.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
+	panel.free()
+
+
+func test_word_wrap_off() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_word_wrap_toggled(false)
+	assert_int(panel.log_display.autowrap_mode).is_equal(TextServer.AUTOWRAP_OFF)
+	panel.free()
+
+
+# ------------- [_on_visibility_changed] -------------
+func test_visibility_changed_hidden_resets_right_drag() -> void:
+	var panel := await _instantiate_panel()
+	panel._is_right_dragging = true
+	panel.visible = false
+	assert_bool(panel._is_right_dragging).is_false()
+	panel.free()
+
+
+# ------------- [Toast] -------------
+func test_make_toast_stylebox_rounded() -> void:
+	var panel := await _instantiate_panel()
+	var sb: StyleBoxFlat = panel._make_toast_stylebox()
+	assert_int(sb.corner_radius_top_left).is_equal(6)
+	assert_int(sb.corner_radius_bottom_right).is_equal(6)
+	assert_float(sb.bg_color.a).is_equal_approx(0.92, 0.001)
+	panel.free()
+
+
+func test_show_toast_creates_panel_and_positions_it() -> void:
+	var panel := await _instantiate_panel()
+	panel._show_toast("hello")
+	await get_tree().process_frame
+	var toast: Panel = null
+	for child in panel.get_children():
+		if child is Panel:
+			toast = child
+	assert_object(toast).is_not_null()
+	var label := toast.get_child(0) as Label
+	assert_object(label).is_not_null()
+	assert_str(label.text).is_equal("hello")
+	var expected_pos := Vector2(
+		(panel.size.x - 220.0) * 0.5, panel.size.y - 36.0 - 12.0
+	)
+	assert_float(toast.position.x).is_equal(expected_pos.x)
+	# The slide-up tween has already started by the time the deferred
+	# _animate_toast runs, so y animates between its start and start - 20.
+	assert_float(toast.position.y).is_between(expected_pos.y - 20.0, expected_pos.y)
+	panel.free()
+
+
+# ------------- [_get_line_at_mouse_pos] -------------
+func test_get_line_at_mouse_pos_empty_display_returns_minus_one() -> void:
+	var panel := await _instantiate_panel()
+	# A y above the first paragraph matches no line
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, -1000))).is_equal(-1)
+	panel.free()
+
+
+func test_get_line_at_mouse_pos_matches_paragraph() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+	# Let the display lay out so paragraph offsets are computed
+	await get_tree().process_frame
+	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
+	if v_scroll:
+		v_scroll.value = 0.0
+	var style: StyleBox = panel.log_display.get_theme_stylebox(&"normal")
+	var top_padding: float = style.content_margin_top if style else 0.0
+	for i in range(panel.log_display.get_paragraph_count()):
+		var y: float = panel.log_display.get_paragraph_offset(i) + top_padding + 1
+		assert_int(panel._get_line_at_mouse_pos(Vector2(0, y))).is_equal(i)
+	panel.free()
+
+
+# ------------- [Scheduled Rebuild] -------------
+func test_schedule_display_rebuild_coalesces() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("a"))
+	panel._schedule_display_rebuild()
+	assert_bool(panel._rebuild_pending).is_true()
+	panel._schedule_display_rebuild()
+	assert_bool(panel._rebuild_pending).is_true()
+	await get_tree().process_frame
+	assert_bool(panel._rebuild_pending).is_false()
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+	panel.free()
+
+
+func test_flush_display_rebuild_rebuilds_display() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("a"))
+	panel._all_logs.append(_make_log("b"))
+	panel._rebuild_pending = true
+	panel._flush_display_rebuild()
+	assert_bool(panel._rebuild_pending).is_false()
+	assert_int(panel._displayed_line_map.size()).is_equal(2)
+	assert_int(panel.log_display.get_paragraph_count()).is_greater_equal(2)
+	panel.free()
+
+
+func test_add_log_stacking_schedules_rebuild() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("same"))
+	panel.add_log(_make_log("same"))
+	assert_bool(panel._rebuild_pending).is_true()
+	await get_tree().process_frame
+	assert_bool(panel._rebuild_pending).is_false()
+	assert_int(panel._all_logs[0].get("count")).is_equal(2)
+	panel.free()
+
+
+# ------------- [_append_formatted_log] -------------
+func test_append_formatted_log_appends_line() -> void:
+	var panel := await _instantiate_panel()
+	panel._append_formatted_log(_make_log("appended"))
+	assert_int(panel.log_display.get_paragraph_count()).is_greater(0)
+	panel.free()
+
+
+func test_append_formatted_log_selected() -> void:
+	var panel := await _instantiate_panel()
+	panel._selected_log_indices[0] = true
+	panel._append_formatted_log(_make_log("sel"), 0)
+	assert_int(panel.log_display.get_paragraph_count()).is_greater(0)
+	panel.free()
+
+
+# ------------- [Option Button Setup] -------------
+func test_time_option_button_presets() -> void:
+	var panel := await _instantiate_panel()
+	assert_int(panel.time_option_button.item_count).is_equal(4)
+	# "All" is added with id -1 which Godot auto-assigns to the item index (0)
+	assert_str(panel.time_option_button.get_item_text(0)).is_equal("All")
+	assert_int(panel.time_option_button.get_item_id(1)).is_equal(30)
+	assert_int(panel.time_option_button.get_item_id(2)).is_equal(60)
+	assert_int(panel.time_option_button.get_item_id(3)).is_equal(300)
+	panel.free()
+
+
+func test_level_option_button_presets() -> void:
+	var panel := await _instantiate_panel()
+	assert_int(panel.level_option_button.item_count).is_equal(4)
+	for i in range(4):
+		assert_int(panel.level_option_button.get_item_id(i)).is_equal(i)
+	panel.free()
+
+
+# ------------- [Search UI Handlers] -------------
+func test_search_text_changed_sets_query() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_search_text_changed("abc")
+	assert_str(panel._search_query).is_equal("abc")
+	panel.free()
+
+
+func test_regex_toggle_on_compiles_regex() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "^hello"
+	panel._on_regex_toggled(true)
+	assert_object(panel._search_regex).is_not_null()
+	panel.free()
+
+
+func test_regex_toggle_off_clears_regex() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "^hello"
+	panel._compile_search_regex()
+	assert_object(panel._search_regex).is_not_null()
+	panel._on_regex_toggled(false)
+	assert_object(panel._search_regex).is_null()
+	panel.free()
+
+
+func test_case_sensitive_toggle_updates_flag() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_case_sensitive_toggled(true)
+	assert_bool(panel._search_case_sensitive).is_true()
+	panel.free()
+
+
+# ------------- [Pause on Error Button Style] -------------
+func test_update_pause_on_error_button_style_active() -> void:
+	var panel := await _instantiate_panel()
+	panel._update_pause_on_error_button_style(true)
+	assert_float(panel.pause_on_error_button.modulate.r).is_equal_approx(1.0, 0.001)
+	assert_float(panel.pause_on_error_button.modulate.g).is_equal_approx(0.4, 0.001)
+	panel.free()
+
+
+func test_update_pause_on_error_button_style_inactive() -> void:
+	var panel := await _instantiate_panel()
+	panel._update_pause_on_error_button_style(false)
+	assert_float(panel.pause_on_error_button.modulate.a).is_equal(0.5)
+	panel.free()
+
+
+# ------------- [_on_save_pressed] -------------
+func test_on_save_pressed_empty_returns_early() -> void:
+	var panel := await _instantiate_panel()
+	panel._on_save_pressed()
+	assert_str(panel.save_button.text).is_not_equal("Saved!")
 	panel.free()
