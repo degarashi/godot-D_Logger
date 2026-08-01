@@ -1206,6 +1206,8 @@ func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	var original_text := copy_button.text
 	copy_button.text = "Copied!"
 	await get_tree().create_timer(1.0).timeout
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
 	copy_button.text = original_text
 
 
