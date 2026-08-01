@@ -34,5 +34,5 @@ static func _create_logger_from_settings(param: DLoggerInitParam) -> DLoggerClas
 
 # ------------- [Private Method] -------------
 func _on_settings_changed() -> void:
-	if not _init_param and _logger:
+	if _logger:
 		_logger.setup_logger()

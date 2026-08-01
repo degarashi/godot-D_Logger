@@ -86,6 +86,15 @@ func test_create_logger_from_settings_default() -> void:
 	var logger := _NODE._create_logger_from_settings(param)
 	assert_object(logger).is_not_null()
 	assert_bool(logger is _CLASS).is_true()
+	assert_bool(logger._has_console_override).is_false()
+
+
+func test_autoload_default_param_uses_project_settings_for_console() -> void:
+	var scene := preload("res://addons/d_logger/d_logger_node.tscn").instantiate()
+	var logger := _NODE._create_logger_from_settings(scene._init_param)
+	assert_object(scene._init_param.console_enabled_override).is_null()
+	assert_bool(logger._has_console_override).is_false()
+	scene.free()
 
 
 func test_create_logger_from_settings_with_prefix() -> void:
@@ -133,23 +142,24 @@ func test_on_settings_changed_rebuilds_logger() -> void:
 	node.free()
 
 
-func test_on_settings_changed_with_init_param_skipped() -> void:
+func test_on_settings_changed_with_init_param_rebuilds_settings() -> void:
 	var node := _NODE.new()
 	var param := _INIT_PARAM.new("PARAM_PREFIX")
 	node._init_param = param
 	add_child(node)
 	await get_tree().process_frame
 
-	# With _init_param set, _on_settings_changed should NOT have been called at _ready
 	assert_object(node.get_logger()).is_not_null()
 	assert_str(node.get_logger().get_prefix()).is_equal("PARAM_PREFIX")
 
-	# Manually call _on_settings_changed - should be a no-op when _init_param exists
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.ERROR)
 	node._on_settings_changed()
-
-	# Logger should still work
+	assert_int(node.get_logger().get_min_level()).is_equal(_CONST.LogLevel.ERROR)
+	assert_str(node.get_logger().get_prefix()).is_equal("PARAM_PREFIX")
 	assert_bool(node.get_logger().info("test")).is_true()
 
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.DEBUG)
+	node._on_settings_changed()
 	node.free()
 
 
