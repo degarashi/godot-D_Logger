@@ -58,6 +58,20 @@ func test_finder_with_logger_ancestor() -> void:
 	parent.free()
 
 
+func test_finder_with_logger_as_direct_parent() -> void:
+	var logger_node := _NODE_BASE.new()
+	logger_node._logger = _CLASS.new("PARENT_LOGGER")
+	var finder := _FINDER.new()
+	logger_node.add_child(finder)
+
+	finder._ready()
+
+	assert_object(finder.get_logger()).is_equal(logger_node._logger)
+
+	finder.free()
+	logger_node.free()
+
+
 func test_finder_without_logger_ancestor() -> void:
 	# Create a parent without any logger
 	var parent := Node.new()

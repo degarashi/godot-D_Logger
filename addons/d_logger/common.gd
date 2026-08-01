@@ -66,14 +66,22 @@ static func is_logger(logger: Object) -> bool:
 ## @param start_node The node to start the search from
 ## @return The child object implementing the logger interface if found, null otherwise
 static func find_logger_from_ancestor(start_node: Node) -> Object:
-	var current := start_node
+	if not start_node:
+		return null
+
+	var current := start_node.get_parent()
 	while current:
+		var ancestor_logger := get_logger(current)
+		if ancestor_logger:
+			return ancestor_logger
+
 		for child: Node in current.get_children():
 			if child == start_node:
 				continue
 			var logger := get_logger(child)
 			if logger:
 				return logger
+		start_node = current
 		current = current.get_parent()
 
 	return null
