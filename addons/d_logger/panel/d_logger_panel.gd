@@ -42,6 +42,8 @@ var _search_regex: RegEx = null
 var _is_auto_scrolling: bool = true
 # Maps display line number to log array index
 var _displayed_line_map: Array[int] = []
+# Coalesces stacked-log display rebuilds into one per frame
+var _rebuild_pending: bool = false
 
 # Drag-to-select state
 var _is_dragging_selection: bool = false
@@ -241,12 +243,11 @@ func add_log(log_data: Dictionary) -> void:
 	if _should_display_log(log_data):
 		var log_idx := _all_logs.size() - 1
 		if is_stacked:
-			# Update the last entry in the line map
-			if not _displayed_line_map.is_empty():
-				_displayed_line_map[-1] = log_idx
-			# Full rebuild is more reliable than remove_paragraph + append_text,
-			# which can cause visual glitches in Godot's RichTextLabel.
-			_rebuild_log_display_preserve_scroll()
+			# Only the last line changes, but full rebuild is more reliable
+			# than remove_paragraph + append_text, which can cause visual
+			# glitches in Godot's RichTextLabel. Coalesce rebuilds so a flood
+			# of identical logs doesn't trigger an O(n) rebuild per log.
+			_schedule_display_rebuild()
 		else:
 			_displayed_line_map.append(log_idx)
 			var level := log_data.get("level", "DEBUG")
@@ -1035,6 +1036,21 @@ func _rebuild_log_display_preserve_scroll() -> void:
 		# scroll bar's max_value reflects the new content height.
 		# Without this, the first selection can jump the viewport.
 		v_scroll.call_deferred("set_value", saved_scroll)
+
+
+## Schedules a display rebuild at the end of the current frame. Multiple
+## calls within one frame collapse into a single rebuild, so rapid log
+## stacking doesn't rebuild the whole display per log.
+func _schedule_display_rebuild() -> void:
+	if _rebuild_pending:
+		return
+	_rebuild_pending = true
+	call_deferred("_flush_display_rebuild")
+
+
+func _flush_display_rebuild() -> void:
+	_rebuild_pending = false
+	_rebuild_log_display_preserve_scroll()
 
 
 func _scroll_to_bottom() -> void:
