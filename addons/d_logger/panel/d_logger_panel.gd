@@ -141,6 +141,12 @@ func _input(event: InputEvent) -> void:
 	var focused := get_window().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit:
 		return
+	# Only handle when focus is within this panel or its children, so the
+	# editor's other docks keep their own Ctrl+C behavior.
+	if not focused:
+		return
+	if focused != self and not is_ancestor_of(focused):
+		return
 	_on_copy_pressed()
 	get_viewport().set_input_as_handled()
 
