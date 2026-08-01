@@ -28,6 +28,12 @@ const SETTING_PAUSE_ON_ERROR := "debug/d_logger/pause_on_error"
 const DEFAULT_PREFIX := "D-Logger"
 const DEFAULT_FILE_PATH := "user://debug.log"
 
+# --- File Logging ---
+# Maximum log file size before rotating to <path><LOG_FILE_BACKUP_SUFFIX>
+const MAX_LOG_FILE_SIZE := 10 * 1024 * 1024
+# Suffix appended to the log file path for the rotated backup
+const LOG_FILE_BACKUP_SUFFIX := ".1"
+
 # --- Autoload Info ---
 const AUTOLOAD_NAME := "DLogger"
 const AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.tscn"

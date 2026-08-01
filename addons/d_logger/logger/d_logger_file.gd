@@ -42,7 +42,54 @@ func _init(path: String) -> void:
 # ------------- [Private Method] -------------
 func _write_line(line: String) -> void:
 	if _file:
-		_file.store_line(line)
+		if _file.get_length() > DLoggerConstants.MAX_LOG_FILE_SIZE:
+			_rotate_log_file()
+		if _file:
+			_file.store_line(line)
+
+
+## Rotates the current log file to <path><LOG_FILE_BACKUP_SUFFIX> and starts
+## a fresh file. Keeps at most one backup generation, so disk usage is
+## bounded to roughly 2x MAX_LOG_FILE_SIZE.
+func _rotate_log_file() -> void:
+	if _file == null:
+		return
+	_file.flush()
+	_file.close()
+	_file = null
+
+	var backup_path := (
+		_file_path + DLoggerConstants.LOG_FILE_BACKUP_SUFFIX
+	)
+	if FileAccess.file_exists(backup_path):
+		DirAccess.remove_absolute(backup_path)
+	if DirAccess.rename_absolute(_file_path, backup_path) != OK:
+		# Keep appending to the current file if rotation fails; the size
+		# check will retry on the next write.
+		push_error(
+			"DLoggerFile: Failed to rotate log file to %s" % backup_path
+		)
+		_file = FileAccess.open(_file_path, FileAccess.READ_WRITE)
+		if _file:
+			_file.seek_end()
+		else:
+			push_error(
+				"DLoggerFile: Failed to reopen log file: %s" % _file_path
+			)
+		return
+
+	_file = FileAccess.open(_file_path, FileAccess.WRITE)
+	if _file:
+		var rotation_msg := "=== Log Rotated: {0} ==="
+		_write_line(
+			rotation_msg.format([Time.get_datetime_string_from_system()])
+		)
+		_file.flush()
+	else:
+		push_error(
+			"DLoggerFile: Failed to reopen log file after rotation: %s"
+			% _file_path
+		)
 
 
 # ------------- [Output] -------------
