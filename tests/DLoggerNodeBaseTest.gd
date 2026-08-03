@@ -183,3 +183,18 @@ func test_forwarding_is_safe_when_logger_is_null() -> void:
 	assert_bool(node.warn("warn")).is_true()
 	assert_bool(node.error("error")).is_true()
 	node.free()
+
+
+# ------------- [benchmark Forwarding] -------------
+func test_benchmark_forwards_to_logger() -> void:
+	var node := _NODE_BASE.new()
+	node._logger = _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	var result: Variant = node.benchmark("forwarded_call", func() -> int: return 7)
+	assert_int(result).is_equal(7)
+	node.free()
+
+
+func test_benchmark_null_logger_returns_null() -> void:
+	var node := _NODE_BASE.new()
+	assert_object(node.benchmark("no_logger", func() -> void: pass)).is_null()
+	node.free()

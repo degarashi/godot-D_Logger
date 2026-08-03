@@ -256,3 +256,31 @@ func error(
 	if is_error_enabled():
 		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info)
 	return true
+
+
+# ------------- [Benchmark] -------------
+## Measures the execution time of a callable and logs the result.
+## Normal results are logged at INFO (category "PERF"); when the elapsed time
+## exceeds `spike_threshold_ms` (default 16ms, one frame budget) the result
+## is logged at WARN instead. Returns the callable's return value unchanged.
+func benchmark(
+	name: String,
+	callable: Callable,
+	spike_threshold_ms: float = 16.0
+) -> Variant:
+	var start_usec := Time.get_ticks_usec()
+	var result: Variant = callable.call()
+	var elapsed_ms := (Time.get_ticks_usec() - start_usec) / 1000.0
+
+	if elapsed_ms >= spike_threshold_ms:
+		warn(
+			"PERF {0}: {1:.2f} ms (spike >= {2:.1f} ms)".format(
+				[name, elapsed_ms, spike_threshold_ms]
+			),
+			[],
+			"PERF"
+		)
+	else:
+		info("PERF {0}: {1:.2f} ms".format([name, elapsed_ms]), [], "PERF")
+
+	return result

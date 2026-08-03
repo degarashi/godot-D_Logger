@@ -301,3 +301,62 @@ func test_null_prefix_second_arg() -> void:
 	var logger: DLoggerClass = _CLASS.new(null, _CONST.LogLevel.ERROR)
 	assert_bool(logger._has_prefix_override).is_false()
 	assert_int(logger._override_min_level).is_equal(_CONST.LogLevel.ERROR)
+
+
+# ------------- [benchmark] -------------
+class LevelSpy:
+	extends DLoggerBase
+
+	var levels: Array[String] = []
+	var messages: Array[String] = []
+
+	func _output(
+		msg: String,
+		values: Variant,
+		category: String,
+		context: Object,
+		prefix: String,
+		p_caller_info: Variant,
+		level: String
+	) -> void:
+		levels.append(level)
+		messages.append(msg)
+
+
+func test_benchmark_returns_callable_result() -> void:
+	var logger := _CLASS.new()
+	var spy := LevelSpy.new()
+	logger._dispatcher.add(spy)
+
+	var result: Variant = logger.benchmark("test_call", func() -> int: return 42)
+
+	assert_int(result).is_equal(42)
+	assert_int(spy.levels.size()).is_equal(1)
+	assert_str(spy.levels[0]).is_equal("INFO")
+	assert_str(spy.messages[0]).contains("PERF test_call:")
+
+
+func test_benchmark_spike_logs_warning() -> void:
+	var logger := _CLASS.new()
+	var spy := LevelSpy.new()
+	logger._dispatcher.add(spy)
+
+	logger.benchmark("slow_call", func() -> void: pass, 0.0)
+
+	assert_int(spy.levels.size()).is_equal(1)
+	assert_str(spy.levels[0]).is_equal("WARN")
+	assert_str(spy.messages[0]).contains("spike")
+
+
+func test_benchmark_respects_level_checks() -> void:
+	var logger := _CLASS.new(null, _CONST.LogLevel.WARN)
+	var spy := LevelSpy.new()
+	logger._dispatcher.add(spy)
+
+	logger.benchmark("normal_call", func() -> void: pass)
+	# INFO is suppressed at WARN minimum level
+	assert_int(spy.levels.size()).is_equal(0)
+
+	logger.benchmark("spike_call", func() -> void: pass, 0.0)
+	assert_int(spy.levels.size()).is_equal(1)
+	assert_str(spy.levels[0]).is_equal("WARN")

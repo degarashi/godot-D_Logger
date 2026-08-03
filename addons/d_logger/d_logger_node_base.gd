@@ -81,3 +81,13 @@ func error(
 	return (
 		_logger.error(msg, v, cat, ctx, p, p_caller_info) if _logger else true
 	)
+
+
+func benchmark(
+	name: String,
+	callable: Callable,
+	spike_threshold_ms: float = 16.0
+) -> Variant:
+	return (
+		_logger.benchmark(name, callable, spike_threshold_ms) if _logger else null
+	)
