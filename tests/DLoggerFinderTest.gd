@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 
 const _FINDER = preload("res://addons/d_logger/d_logger_finder_node.gd")
 const _NODE_BASE = preload("res://addons/d_logger/d_logger_node_base.gd")
+const _NODE = preload("res://addons/d_logger/d_logger_node.gd")
 const _CLASS = preload("res://addons/d_logger/d_logger.gd")
 
 
@@ -70,6 +71,25 @@ func test_finder_with_logger_as_direct_parent() -> void:
 
 	finder.free()
 	logger_node.free()
+
+
+func test_finder_child_of_logger_node_finds_logger_after_ready() -> void:
+	# Regression: finder._ready() runs before the parent DLoggerNode._ready()
+	# creates its internal logger (children _ready first, siblings in tree
+	# order). The deferred retry must still find the logger and emit
+	# on_log_found exactly once after all _ready callbacks have completed.
+	var node := _NODE.new()
+	var finder := _FINDER.new()
+	var emitted: Array = []
+	finder.on_log_found.connect(func(logger: Variant) -> void: emitted.append(logger))
+	node.add_child(finder)
+	add_child(node)
+	await get_tree().process_frame
+	assert_object(finder.get_logger()).is_not_null()
+	assert_int(emitted.size()).is_equal(1)
+
+	finder.free()
+	node.free()
 
 
 func test_finder_without_logger_ancestor() -> void:
