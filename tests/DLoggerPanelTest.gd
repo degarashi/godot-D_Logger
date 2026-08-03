@@ -1074,14 +1074,21 @@ func test_drag_select_reverse_direction() -> void:
 # ------------- [_rebuild_log_display_preserve_scroll] -------------
 func test_rebuild_preserve_scroll() -> void:
 	var panel := await _instantiate_panel()
-	_populate_logs(panel, 20)
+	panel.size = Vector2(800, 300)
+	_populate_logs(panel, 40)
+	await get_tree().process_frame
 	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
-	if v_scroll and v_scroll.max_value > 0.0:
-		var expected := v_scroll.max_value * 0.3
-		v_scroll.value = expected
-		panel._rebuild_log_display_preserve_scroll()
-		await get_tree().process_frame
-		assert_float(v_scroll.value).is_equal(expected)
+	assert_object(v_scroll).is_not_null()
+	# Precondition: content must overflow the viewport, otherwise the
+	# preserve-scroll path is not exercised. Fail loudly instead of
+	# silently skipping the assertions.
+	assert_bool(v_scroll.max_value > 0.0).is_true()
+	panel._is_auto_scrolling = false
+	var expected := v_scroll.max_value * 0.3
+	v_scroll.value = expected
+	panel._rebuild_log_display_preserve_scroll()
+	await get_tree().process_frame
+	assert_float(v_scroll.value).is_equal(expected)
 	panel.free()
 
 
@@ -1498,25 +1505,32 @@ func test_reset_auto_scroll_enables_following() -> void:
 
 func test_update_auto_scroll_from_scrollbar_at_bottom() -> void:
 	var panel := await _instantiate_panel()
-	_populate_logs(panel, 5)
+	panel.size = Vector2(800, 300)
+	_populate_logs(panel, 40)
+	await get_tree().process_frame
 	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
-	if v_scroll and v_scroll.max_value > 0.0:
-		panel._is_auto_scrolling = false
-		v_scroll.value = v_scroll.max_value
-		panel._update_auto_scroll_from_scrollbar()
-		assert_bool(panel._is_auto_scrolling).is_true()
+	assert_object(v_scroll).is_not_null()
+	assert_bool(v_scroll.max_value > 0.0).is_true()
+	panel._is_auto_scrolling = false
+	# Setting value = max_value clamps to max_value - page (the true bottom).
+	v_scroll.value = v_scroll.max_value
+	panel._update_auto_scroll_from_scrollbar()
+	assert_bool(panel._is_auto_scrolling).is_true()
 	panel.free()
 
 
 func test_update_auto_scroll_from_scrollbar_above_bottom() -> void:
 	var panel := await _instantiate_panel()
-	_populate_logs(panel, 5)
+	panel.size = Vector2(800, 300)
+	_populate_logs(panel, 40)
+	await get_tree().process_frame
 	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
-	if v_scroll and v_scroll.max_value > 0.0:
-		panel._is_auto_scrolling = true
-		v_scroll.value = maxf(0.0, v_scroll.max_value - 10.0)
-		panel._update_auto_scroll_from_scrollbar()
-		assert_bool(panel._is_auto_scrolling).is_false()
+	assert_object(v_scroll).is_not_null()
+	assert_bool(v_scroll.max_value > 0.0).is_true()
+	panel._is_auto_scrolling = true
+	v_scroll.value = maxf(0.0, v_scroll.max_value - v_scroll.page - 10.0)
+	panel._update_auto_scroll_from_scrollbar()
+	assert_bool(panel._is_auto_scrolling).is_false()
 	panel.free()
 
 
