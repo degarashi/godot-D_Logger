@@ -20,6 +20,9 @@ static func clear_time_cache() -> void:
 ## @param logger The object to be checked
 ## @return True if it implements all required methods, false otherwise
 static func has_logger_interface(logger: Object) -> bool:
+	if not logger:
+		return false
+
 	const REQUIRED_METHODS: PackedStringArray = [
 		"is_debug_enabled",
 		"is_info_enabled",
