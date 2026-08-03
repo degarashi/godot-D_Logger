@@ -26,10 +26,8 @@ func test_has_logger_interface_with_node() -> void:
 
 
 func test_has_logger_interface_with_null() -> void:
-	# has_logger_interface crashes on null input (calls has_method on null)
-	# This verifies the function does not gracefully handle null - it crashes
-	# so we test via get_logger which does handle null
-	assert_object(_FUNC.get_logger(null)).is_null()
+	# Regression: null input must be handled gracefully, not crash.
+	assert_bool(_FUNC.has_logger_interface(null)).is_false()
 
 
 # ------------- [escape_bbcode] -------------
