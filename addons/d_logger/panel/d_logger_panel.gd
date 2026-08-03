@@ -17,7 +17,7 @@ var _log_font_size: int = DEFAULT_FONT_SIZE
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
-var _search_query: String = ""
+var _search := DLoggerSearch.new()
 # Incremented on every search input; a pending debounced rebuild is superseded
 # when the token it captured no longer matches.
 var _search_rebuild_token := 0
@@ -40,8 +40,6 @@ var _active_level_filter: int = 0
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
 var _ctrl_held: bool = false
-var _search_case_sensitive: bool = false
-var _search_regex: RegEx = null
 # Smart auto-scroll: tracks whether the user is at the bottom of the log view
 var _is_auto_scrolling: bool = true
 # Maps display line number to log array index
@@ -272,21 +270,7 @@ func add_log(log_data: Dictionary) -> void:
 
 # ------------- [Private Method] -------------
 func _get_log_tags(log_data: Dictionary) -> Array[String]:
-	var category: String = log_data.get("category", "")
-	if not category.is_empty():
-		var tags: Array[String] = []
-		for tag in category.split("|"):
-			var t := tag.strip_edges()
-			if not t.is_empty():
-				tags.append(t)
-		if not tags.is_empty():
-			return tags
-
-	var prefix: String = log_data.get("prefix", "")
-	if not prefix.is_empty() and prefix != DLoggerConstants.DEFAULT_PREFIX:
-		return [prefix]
-
-	return ["Default"]
+	return DLoggerPanelFormat.get_log_tags(log_data)
 
 
 func _setup_shortcuts() -> void:
@@ -745,171 +729,24 @@ func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 		)
 		var bbcode_msg := _format_log(log_data, is_selected)
 		if is_selected:
-			bbcode_msg = "[bgcolor=#44686868]%s[/bgcolor]" % bbcode_msg
+			bbcode_msg = "[bgcolor=#44686868]{0}[/bgcolor]".format([bbcode_msg])
 		log_display.append_text(bbcode_msg + "\n")
 		if _is_auto_scrolling:
 			call_deferred("_scroll_to_bottom")
 
 
 func _format_log_plain(log_data: Dictionary) -> String:
-	var time: float = log_data.get("time", 0.0)
-	var frame: int = log_data.get("frame", 0)
-	var level: String = log_data.get("level", "DEBUG")
-	var prefix: String = log_data.get("prefix", "")
-	var category: String = log_data.get("category", "")
-	var context_str: String = log_data.get("context_str", "")
-	var caller_info = log_data.get("caller_info", {})
-	var message: String = log_data.get("message", "")
-
-	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
-	var formatted_msg := DLoggerFunc.get_formatted_line(
-		time, frame, source_str, caller_info, context_str, level, message, false
-	)
-
-	var count: int = log_data.get("count", 1)
-	if count > 1:
-		formatted_msg += " (x%d)" % count
-
-	return formatted_msg
+	return DLoggerPanelFormat.format_log_plain(log_data)
 
 
 func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
-	var time: float = log_data.get("time", 0.0)
-	var frame: int = log_data.get("frame", 0)
-	var level: String = log_data.get("level", "DEBUG")
-	var prefix: String = log_data.get("prefix", "")
-	var category: String = log_data.get("category", "")
-	var context_str: String = log_data.get("context_str", "")
-	var caller_info = log_data.get("caller_info", {})
-	var message: String = log_data.get("message", "")
-
-	# Escape brackets before BBCode embedding/highlighting so user-provided
-	# message text cannot inject markup (e.g. [url=filter:...] link spoofing).
-	message = DLoggerFunc.escape_bbcode(message)
-
-	# Highlight search keyword in the message text
-	if not _search_query.is_empty():
-		message = _highlight_search_text(message)
-
-	# Convert to relative timestamp when enabled.
-	if relative_checkbox.button_pressed:
-		time = time - _get_max_log_time()
-
-	# Generate source string with clickable filter URLs matching actual filter
-	# button texts (from _get_log_tags). Must handle the case where the
-	# displayed text (prefix "D-Logger") differs from the tag ("Default")
-	# for category-less logs with default prefix.
-	var log_tags: Array = log_data.get("_log_tags", [])
-	var source_str: String
-	if log_tags.is_empty():
-		source_str = DLoggerFunc.get_source_string(prefix, category, true)
-	elif category.is_empty() and prefix == DLoggerConstants.DEFAULT_PREFIX:
-		# Show [D-Logger] but URL target = "Default" (the actual filter tag).
-		source_str = "[[url=filter:%s]%s[/url]]" % [log_tags[0], prefix]
-	else:
-		source_str = DLoggerFunc.get_source_string(prefix, category, true)
-
-	var formatted_msg := DLoggerFunc.get_formatted_line(
-		time, frame, source_str, caller_info, context_str, level, message, true
+	return DLoggerPanelFormat.format_log(
+		log_data,
+		_search,
+		relative_checkbox.button_pressed,
+		_get_max_log_time(),
+		is_selected
 	)
-
-	var count: int = log_data.get("count", 1)
-	if count > 1:
-		formatted_msg += " [b](x%d)[/b]" % count
-
-	var text_color := ""
-	if is_selected:
-		text_color = "#ffffff"
-	else:
-		match level:
-			"DEBUG":
-				text_color = "gray"
-			"INFO":
-				text_color = "cyan"
-			"WARN":
-				text_color = "yellow"
-			"ERROR":
-				text_color = "red"
-
-	var result: String
-	if is_selected:
-		result = ("[b][color={0}]{1}[/color][/b]".format(
-			[text_color, formatted_msg]
-		))
-	elif not text_color.is_empty():
-		var is_bold := level in ["INFO", "WARN", "ERROR"]
-		if is_bold:
-			result = ("[b][color={0}]{1}[/color][/b]".format(
-				[text_color, formatted_msg]
-			))
-		else:
-			result = ("[color={0}]{1}[/color]".format(
-				[text_color, formatted_msg]
-			))
-	else:
-		result = formatted_msg
-
-	return result
-
-
-## Highlights occurrences of the search query in the given text using BBCode.
-## Wraps each match with a yellow background and black text for visibility.
-func _highlight_search_text(text: String) -> String:
-	if _search_query.is_empty():
-		return text
-
-	if _search_regex:
-		var matches := _search_regex.search_all(text)
-		if matches.is_empty():
-			return text
-		var result: String = ""
-		var last_end: int = 0
-		for match: RegExMatch in matches:
-			var start := match.get_start()
-			var end := match.get_end()
-			result += text.substr(last_end, start - last_end)
-			result += (
-				"[bgcolor=yellow][color=black]"
-				+ text.substr(start, end - start)
-				+ "[/color][/bgcolor]"
-			)
-			last_end = end
-		result += text.substr(last_end)
-		return result
-
-	var query := _search_query
-	if _search_case_sensitive:
-		var result: String = ""
-		var last_end: int = 0
-		var pos: int = text.find(query, last_end)
-		while pos >= 0:
-			result += text.substr(last_end, pos - last_end)
-			result += (
-				"[bgcolor=yellow][color=black]"
-				+ text.substr(pos, query.length())
-				+ "[/color][/bgcolor]"
-			)
-			last_end = pos + query.length()
-			pos = text.find(query, last_end)
-		result += text.substr(last_end)
-		return result
-
-	var lower_text := text.to_lower()
-	var lower_query := query.to_lower()
-	var result: String = ""
-	var last_end: int = 0
-	var pos: int = lower_text.find(lower_query, last_end)
-	while pos >= 0:
-		result += text.substr(last_end, pos - last_end)
-		result += (
-			"[bgcolor=yellow][color=black]"
-			+ text.substr(pos, query.length())
-			+ "[/color][/bgcolor]"
-		)
-		last_end = pos + query.length()
-		pos = lower_text.find(lower_query, last_end)
-	result += text.substr(last_end)
-	return result
 
 
 func _get_max_log_time() -> float:
@@ -949,28 +786,12 @@ func _should_display_log(log_data: Dictionary) -> bool:
 		return false
 
 	# Check search query
-	if not _search_query.is_empty():
-		var message: String = log_data.get("message", "")
-		var category: String = log_data.get("category", "")
-		var prefix: String = log_data.get("prefix", "")
-
-		if _search_regex:
-			if not (
-				_search_regex.search(message)
-				or _search_regex.search(category)
-				or _search_regex.search(prefix)
-			):
-				return false
-		else:
-			var query := _search_query
-			if not _search_case_sensitive:
-				query = query.to_lower()
-				message = message.to_lower()
-				category = category.to_lower()
-				prefix = prefix.to_lower()
-
-			if not (query in message or query in category or query in prefix):
-				return false
+	if not _search.matches(
+		log_data.get("message", ""),
+		log_data.get("category", ""),
+		log_data.get("prefix", "")
+	):
+		return false
 
 	return true
 
@@ -1094,9 +915,9 @@ func _on_word_wrap_toggled(button_pressed: bool) -> void:
 
 func _on_regex_toggled(button_pressed: bool) -> void:
 	if button_pressed:
-		_compile_search_regex()
+		_search.compile()
 	else:
-		_search_regex = null
+		_search.regex = null
 	_rebuild_log_display()
 
 
@@ -1104,38 +925,17 @@ func _on_relative_toggled(_button_pressed: bool) -> void:
 	_rebuild_log_display()
 
 
-func _compile_search_regex() -> void:
-	_search_regex = null
-	var pattern := _search_query
-	if pattern.is_empty():
-		return
-	if not _search_case_sensitive:
-		pattern = "(?i)" + pattern
-	var regex := RegEx.new()
-	var err := regex.compile(pattern)
-	if err == OK:
-		_search_regex = regex
-	else:
-		# The engine already logs the PCRE2 error detail for the failed
-		# compile; attribute it here so the fallback is not silent.
-		push_warning(
-			"Invalid regex pattern \"%s\" (error %d). "
-			% [_search_query, err]
-			+ "Falling back to plain text search."
-		)
-
-
 func _on_case_sensitive_toggled(button_pressed: bool) -> void:
-	_search_case_sensitive = button_pressed
+	_search.case_sensitive = button_pressed
 	if regex_checkbox.button_pressed:
-		_compile_search_regex()
+		_search.compile()
 	_rebuild_log_display()
 
 
 func _on_search_text_changed(new_text: String) -> void:
-	_search_query = new_text
+	_search.query = new_text
 	if regex_checkbox.button_pressed:
-		_compile_search_regex()
+		_search.compile()
 
 	# Debounce the display rebuild: rebuilding per keystroke clears and
 	# reformats up to 10k lines. Empty queries rebuild immediately so
@@ -1164,9 +964,7 @@ func clear_logs() -> void:
 	_active_filters.clear()
 
 	# Reset search
-	_search_query = ""
-	_search_case_sensitive = false
-	_search_regex = null
+	_search.reset()
 	search_line_edit.text = ""
 	case_sensitive_checkbox.button_pressed = false
 	regex_checkbox.button_pressed = false

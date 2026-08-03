@@ -247,7 +247,7 @@ func test_get_formatted_logs_respects_search_query() -> void:
 		panel._displayed_line_map.append(i)
 	panel._rebuild_log_display()
 
-	panel._search_query = "hello"
+	panel._search.query = "hello"
 	panel._rebuild_log_display()
 
 	var result: String = panel._get_formatted_logs()
@@ -266,7 +266,7 @@ func test_get_formatted_logs_with_selection_and_search() -> void:
 	for i in range(3):
 		panel._displayed_line_map.append(i)
 
-	panel._search_query = "hello"
+	panel._search.query = "hello"
 	panel._rebuild_log_display()
 
 	# Select only the first displayed line (log index 0)
@@ -326,7 +326,7 @@ func test_should_display_log_level_filter() -> void:
 
 func test_should_display_log_search_query() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "error"
+	panel._search.query = "error"
 
 	var match_msg: Dictionary = _make_log("something error occurred")
 	var no_match: Dictionary = _make_log("all good")
@@ -338,7 +338,7 @@ func test_should_display_log_search_query() -> void:
 
 func test_should_display_log_search_in_category() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "network"
+	panel._search.query = "network"
 
 	var match_cat: Dictionary = _make_log("msg", "INFO", "D-Logger", "Network")
 	var no_match: Dictionary = _make_log("msg", "INFO", "D-Logger", "Gameplay")
@@ -351,8 +351,8 @@ func test_should_display_log_search_in_category() -> void:
 # ------------- [Regex Search] -------------
 func test_should_display_log_regex_matches_message() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "err.*\\d+"
-	panel._compile_search_regex()
+	panel._search.query = "err.*\\d+"
+	panel._search.compile()
 
 	var match_msg: Dictionary = _make_log("error 404 occurred")
 	var no_match: Dictionary = _make_log("all good")
@@ -364,8 +364,8 @@ func test_should_display_log_regex_matches_message() -> void:
 
 func test_should_display_log_regex_matches_category() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "Net.*rk"
-	panel._compile_search_regex()
+	panel._search.query = "Net.*rk"
+	panel._search.compile()
 
 	var match_cat: Dictionary = _make_log("msg", "INFO", "D-Logger", "Network")
 	var no_match: Dictionary = _make_log("msg", "INFO", "D-Logger", "Gameplay")
@@ -377,8 +377,8 @@ func test_should_display_log_regex_matches_category() -> void:
 
 func test_should_display_log_regex_case_insensitive_by_default() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "ERROR"
-	panel._compile_search_regex()
+	panel._search.query = "ERROR"
+	panel._search.compile()
 
 	var match_msg: Dictionary = _make_log("error occurred")
 	assert_bool(panel._should_display_log(match_msg)).is_true()
@@ -387,9 +387,9 @@ func test_should_display_log_regex_case_insensitive_by_default() -> void:
 
 func test_should_display_log_regex_case_sensitive() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "ERROR"
-	panel._search_case_sensitive = true
-	panel._compile_search_regex()
+	panel._search.query = "ERROR"
+	panel._search.case_sensitive = true
+	panel._search.compile()
 
 	var no_match: Dictionary = _make_log("error occurred")
 	var match_exact: Dictionary = _make_log("ERROR occurred")
@@ -400,8 +400,8 @@ func test_should_display_log_regex_case_sensitive() -> void:
 
 func test_should_display_log_regex_empty_query_shows_all() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = ""
-	panel._compile_search_regex()
+	panel._search.query = ""
+	panel._search.compile()
 
 	var msg: Dictionary = _make_log("anything")
 	assert_bool(panel._should_display_log(msg)).is_true()
@@ -410,9 +410,9 @@ func test_should_display_log_regex_empty_query_shows_all() -> void:
 
 func test_should_display_log_regex_invalid_falls_back_to_plain_text() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "[invalid"
-	panel._compile_search_regex()
-	assert_bool(panel._search_regex == null).is_true()
+	panel._search.query = "[invalid"
+	panel._search.compile()
+	assert_bool(panel._search.regex == null).is_true()
 
 	# Fallback to plain-text substring search — "[invalid" not in "test"
 	var msg: Dictionary = _make_log("test")
@@ -422,28 +422,28 @@ func test_should_display_log_regex_invalid_falls_back_to_plain_text() -> void:
 
 func test_compile_search_regex_null_on_empty() -> void:
 	var panel := await _instantiate_panel()
-	panel._compile_search_regex()
-	assert_bool(panel._search_regex == null).is_true()
+	panel._search.compile()
+	assert_bool(panel._search.regex == null).is_true()
 	panel.free()
 
 
 func test_compile_search_regex_null_on_invalid_pattern() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "("
-	panel._compile_search_regex()
-	assert_bool(panel._search_regex == null).is_true()
+	panel._search.query = "("
+	panel._search.compile()
+	assert_bool(panel._search.regex == null).is_true()
 	panel.free()
 
 
 func test_clear_logs_resets_regex_state() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "test"
-	panel._compile_search_regex()
-	assert_bool(panel._search_regex != null).is_true()
+	panel._search.query = "test"
+	panel._search.compile()
+	assert_bool(panel._search.regex != null).is_true()
 
 	panel.clear_logs()
 
-	assert_bool(panel._search_regex == null).is_true()
+	assert_bool(panel._search.regex == null).is_true()
 	assert_bool(panel.regex_checkbox.button_pressed).is_false()
 	panel.free()
 
@@ -459,8 +459,8 @@ func test_rebuild_log_display_with_regex() -> void:
 	assert_int(all_count).is_equal(3)
 
 	# "^hello" = regex anchor (start-of-string) — not a substring match
-	panel._search_query = "^hello"
-	panel._compile_search_regex()
+	panel._search.query = "^hello"
+	panel._search.compile()
 	panel._rebuild_log_display()
 
 	assert_int(panel._displayed_line_map.size()).is_equal(1)
@@ -522,12 +522,12 @@ func test_clear_logs_resets_filters() -> void:
 	_populate_logs(panel, 3)
 
 	panel._active_filters["System"] = false
-	panel._search_query = "test"
+	panel._search.query = "test"
 
 	panel.clear_logs()
 
 	assert_bool(panel._active_filters.is_empty()).is_true()
-	assert_str(panel._search_query).is_equal("")
+	assert_str(panel._search.query).is_equal("")
 	panel.free()
 
 
@@ -579,7 +579,7 @@ func test_rebuild_log_display_with_search() -> void:
 
 	var all_count: int = panel.log_display.get_paragraph_count()
 
-	panel._search_query = "hello"
+	panel._search.query = "hello"
 	panel._rebuild_log_display()
 
 	var filtered_count: int = panel.log_display.get_paragraph_count()
@@ -1095,31 +1095,31 @@ func test_rebuild_preserve_scroll() -> void:
 # ------------- [_highlight_search_text] -------------
 func test_highlight_search_text_wraps_matches() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "abc"
-	var result: String = panel._highlight_search_text("xxabcyy")
+	panel._search.query = "abc"
+	var result: String = panel._search.highlight("xxabcyy")
 	assert_str(result).contains("[bgcolor=yellow][color=black]abc[/color][/bgcolor]")
 	panel.free()
 
 
 func test_highlight_search_text_empty_query_unchanged() -> void:
 	var panel := await _instantiate_panel()
-	var result: String = panel._highlight_search_text("hello")
+	var result: String = panel._search.highlight("hello")
 	assert_str(result).is_equal("hello")
 	panel.free()
 
 
 func test_highlight_search_text_multiple_matches() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "ab"
-	var result: String = panel._highlight_search_text("ab ab ab")
+	panel._search.query = "ab"
+	var result: String = panel._search.highlight("ab ab ab")
 	assert_int(result.count("[bgcolor=yellow]")).is_equal(3)
 	panel.free()
 
 
 func test_highlight_search_text_case_insensitive_by_default() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "ABC"
-	var result: String = panel._highlight_search_text("xxabcxx")
+	panel._search.query = "ABC"
+	var result: String = panel._search.highlight("xxabcxx")
 	assert_str(result).contains("[color=black]abc[/color]")
 	panel.free()
 
@@ -1136,7 +1136,7 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 
 func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "inject"
+	panel._search.query = "inject"
 	var log := _make_log("[b]inject[/b]")
 	var result: String = panel._format_log(log)
 	assert_str(result).contains(
@@ -1147,18 +1147,18 @@ func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 
 func test_highlight_search_text_case_sensitive() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "ABC"
-	panel._search_case_sensitive = true
-	var result: String = panel._highlight_search_text("xxabcxx")
+	panel._search.query = "ABC"
+	panel._search.case_sensitive = true
+	var result: String = panel._search.highlight("xxabcxx")
 	assert_str(result).is_equal("xxabcxx")
 	panel.free()
 
 
 func test_highlight_search_text_regex() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "a+b"
-	panel._compile_search_regex()
-	var result: String = panel._highlight_search_text("xaabz")
+	panel._search.query = "a+b"
+	panel._search.compile()
+	var result: String = panel._search.highlight("xaabz")
 	assert_str(result).contains("[color=black]aab[/color]")
 	panel.free()
 
@@ -1691,7 +1691,7 @@ func test_level_option_button_presets() -> void:
 func test_search_text_changed_sets_query() -> void:
 	var panel := await _instantiate_panel()
 	panel._on_search_text_changed("abc")
-	assert_str(panel._search_query).is_equal("abc")
+	assert_str(panel._search.query).is_equal("abc")
 	panel.free()
 
 
@@ -1713,7 +1713,7 @@ func test_search_text_changed_rapid_inputs_rebuild_once() -> void:
 	panel._on_search_text_changed("msg_2")
 	await get_tree().create_timer(0.3).timeout
 	# The final rebuild uses the latest query (earlier input is superseded).
-	assert_str(panel._search_query).is_equal("msg_2")
+	assert_str(panel._search.query).is_equal("msg_2")
 	assert_int(panel._displayed_line_map.size()).is_equal(1)
 	panel.free()
 
@@ -1730,26 +1730,26 @@ func test_search_text_changed_empty_rebuilds_immediately() -> void:
 
 func test_regex_toggle_on_compiles_regex() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "^hello"
+	panel._search.query = "^hello"
 	panel._on_regex_toggled(true)
-	assert_object(panel._search_regex).is_not_null()
+	assert_object(panel._search.regex).is_not_null()
 	panel.free()
 
 
 func test_regex_toggle_off_clears_regex() -> void:
 	var panel := await _instantiate_panel()
-	panel._search_query = "^hello"
-	panel._compile_search_regex()
-	assert_object(panel._search_regex).is_not_null()
+	panel._search.query = "^hello"
+	panel._search.compile()
+	assert_object(panel._search.regex).is_not_null()
 	panel._on_regex_toggled(false)
-	assert_object(panel._search_regex).is_null()
+	assert_object(panel._search.regex).is_null()
 	panel.free()
 
 
 func test_case_sensitive_toggle_updates_flag() -> void:
 	var panel := await _instantiate_panel()
 	panel._on_case_sensitive_toggled(true)
-	assert_bool(panel._search_case_sensitive).is_true()
+	assert_bool(panel._search.case_sensitive).is_true()
 	panel.free()
 
 
