@@ -10,6 +10,7 @@ const DEFAULT_FONT_SIZE := 14
 const FONT_SIZE_STEP := 2
 const EDITOR_SETTING_FONT_SIZE := "d_logger/panel_font_size"
 const EDITOR_SETTING_LEVEL_FILTER := "d_logger/panel_level_filter"
+const SEARCH_DEBOUNCE_SECONDS := 0.2
 
 # ------------- [Private Variable] -------------
 var _log_font_size: int = DEFAULT_FONT_SIZE
@@ -17,6 +18,9 @@ var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
 var _search_query: String = ""
+# Incremented on every search input; a pending debounced rebuild is superseded
+# when the token it captured no longer matches.
+var _search_rebuild_token := 0
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
 var _time_presets: Dictionary[String, float] = {
@@ -1132,6 +1136,20 @@ func _on_search_text_changed(new_text: String) -> void:
 	_search_query = new_text
 	if regex_checkbox.button_pressed:
 		_compile_search_regex()
+
+	# Debounce the display rebuild: rebuilding per keystroke clears and
+	# reformats up to 10k lines. Empty queries rebuild immediately so
+	# clearing feels instant; later keystrokes supersede any pending rebuild.
+	_search_rebuild_token += 1
+	if new_text.is_empty():
+		_rebuild_log_display()
+		return
+	var token := _search_rebuild_token
+	await get_tree().create_timer(SEARCH_DEBOUNCE_SECONDS).timeout
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if token != _search_rebuild_token:
+		return
 	_rebuild_log_display()
 
 

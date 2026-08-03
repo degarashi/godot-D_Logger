@@ -1695,6 +1695,39 @@ func test_search_text_changed_sets_query() -> void:
 	panel.free()
 
 
+func test_search_text_changed_debounces_rebuild() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._on_search_text_changed("msg_1")
+	# Query is applied immediately, but the display rebuild is deferred.
+	assert_int(panel._displayed_line_map.size()).is_equal(5)
+	await get_tree().create_timer(0.3).timeout
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+	panel.free()
+
+
+func test_search_text_changed_rapid_inputs_rebuild_once() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._on_search_text_changed("msg_1")
+	panel._on_search_text_changed("msg_2")
+	await get_tree().create_timer(0.3).timeout
+	# The final rebuild uses the latest query (earlier input is superseded).
+	assert_str(panel._search_query).is_equal("msg_2")
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+	panel.free()
+
+
+func test_search_text_changed_empty_rebuilds_immediately() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	panel._on_search_text_changed("msg_1")
+	# Clearing cancels the pending debounced rebuild and applies instantly.
+	panel._on_search_text_changed("")
+	assert_int(panel._displayed_line_map.size()).is_equal(5)
+	panel.free()
+
+
 func test_regex_toggle_on_compiles_regex() -> void:
 	var panel := await _instantiate_panel()
 	panel._search_query = "^hello"
