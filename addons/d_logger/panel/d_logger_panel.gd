@@ -1072,7 +1072,11 @@ func _update_auto_scroll_from_scrollbar() -> void:
 	var v_scroll := log_display.get_v_scroll_bar()
 	if not v_scroll:
 		return
-	_is_auto_scrolling = v_scroll.value >= v_scroll.max_value - 0.5
+	# Scrollbar value clamps to (max_value - page), so the true bottom is
+	# max_value - page, not max_value itself. Comparing against max_value
+	# would never re-engage auto-scroll once the viewport has any height.
+	var bottom: float = maxf(0.0, v_scroll.max_value - v_scroll.page)
+	_is_auto_scrolling = v_scroll.value >= bottom - 0.5
 	log_display.scroll_following = _is_auto_scrolling
 
 
