@@ -1117,6 +1117,27 @@ func test_highlight_search_text_case_insensitive_by_default() -> void:
 	panel.free()
 
 
+# ------------- [_format_log BBCode Escaping] -------------
+func test_format_log_escapes_bbcode_in_message() -> void:
+	var panel := await _instantiate_panel()
+	var log := _make_log("[b]inject[/b]")
+	var result: String = panel._format_log(log)
+	assert_str(result).contains("[lb]b[rb]inject[lb]/b[rb]")
+	assert_bool(result.contains("[b]inject[/b]")).is_false()
+	panel.free()
+
+
+func test_format_log_escapes_bbcode_with_search_highlight() -> void:
+	var panel := await _instantiate_panel()
+	panel._search_query = "inject"
+	var log := _make_log("[b]inject[/b]")
+	var result: String = panel._format_log(log)
+	assert_str(result).contains(
+		"[lb]b[rb][bgcolor=yellow][color=black]inject[/color][/bgcolor][lb]/b[rb]"
+	)
+	panel.free()
+
+
 func test_highlight_search_text_case_sensitive() -> void:
 	var panel := await _instantiate_panel()
 	panel._search_query = "ABC"

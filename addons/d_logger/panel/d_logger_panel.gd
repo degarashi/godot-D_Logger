@@ -779,6 +779,10 @@ func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
 	var caller_info = log_data.get("caller_info", {})
 	var message: String = log_data.get("message", "")
 
+	# Escape brackets before BBCode embedding/highlighting so user-provided
+	# message text cannot inject markup (e.g. [url=filter:...] link spoofing).
+	message = DLoggerFunc.escape_bbcode(message)
+
 	# Highlight search keyword in the message text
 	if not _search_query.is_empty():
 		message = _highlight_search_text(message)

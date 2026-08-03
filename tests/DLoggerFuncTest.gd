@@ -32,6 +32,17 @@ func test_has_logger_interface_with_null() -> void:
 	assert_object(_FUNC.get_logger(null)).is_null()
 
 
+# ------------- [escape_bbcode] -------------
+func test_escape_bbcode_escapes_brackets() -> void:
+	assert_str(_FUNC.escape_bbcode("[b]bold[/b]")).is_equal(
+		"[lb]b[rb]bold[lb]/b[rb]"
+	)
+
+
+func test_escape_bbcode_plain_text_unchanged() -> void:
+	assert_str(_FUNC.escape_bbcode("hello world 42")).is_equal("hello world 42")
+
+
 # ------------- [get_logger] -------------
 func test_get_logger_with_null() -> void:
 	assert_object(_FUNC.get_logger(null)).is_null()

@@ -120,6 +120,13 @@ static func get_caller_info(level: String) -> Dictionary:
 	return {}
 
 
+## Replaces BBCode brackets in arbitrary text with their escaped equivalents
+## ([lb] / [rb]) so user-provided content cannot inject BBCode markup
+## (e.g. [url=...] link spoofing or color/bold injection).
+static func escape_bbcode(text: String) -> String:
+	return text.replace("[", "[lb]").replace("]", "[rb]")
+
+
 static func get_source_string(prefix: String, category: String, use_bbcode: bool = false) -> String:
 	if category.is_empty() or category == prefix:
 		if use_bbcode:
