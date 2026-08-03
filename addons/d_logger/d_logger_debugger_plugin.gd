@@ -21,12 +21,19 @@ func _capture(message: String, data: Array, _session_id: int) -> bool:
 		return false
 
 	var log_data: Dictionary = data[0]
-
-	# Safely call the UI on the main thread
-	if _panel and _panel.has_method("add_log"):
-		_panel.call_deferred("add_log", log_data)
-
+	_forward_to_panel(_panel, log_data)
 	return true  # Tells the engine that the message was processed successfully
+
+
+## Forwards a log to the panel on the main thread (deferred). Static so the
+## forwarding logic is testable without an editor session (EditorDebuggerPlugin
+## instances cannot be created outside the editor). Returns true when a panel
+## accepted the log.
+static func _forward_to_panel(panel: Object, log_data: Dictionary) -> bool:
+	if panel and panel.has_method("add_log"):
+		panel.call_deferred("add_log", log_data)
+		return true
+	return false
 
 
 # ------------- [Private Method] -------------

@@ -2,6 +2,7 @@ class_name DLoggerFileTest
 extends GdUnitTestSuite
 
 const _FILE_LOGGER = preload("res://addons/d_logger/logger/d_logger_file.gd")
+const _CONST = preload("res://addons/d_logger/constants.gd")
 
 var _temp_dir: String = ""
 
@@ -11,8 +12,27 @@ func before() -> void:
 
 
 func after() -> void:
-	if not _temp_dir.is_empty():
-		DirAccess.remove_absolute(_temp_dir)
+	if _temp_dir.is_empty():
+		return
+	_remove_tree(_temp_dir)
+
+
+## Recursively removes a directory tree (DirAccess.remove_absolute only
+## removes empty directories).
+func _remove_tree(path: String) -> void:
+	var dir := DirAccess.open(path)
+	if not dir:
+		return
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while not entry.is_empty():
+		if dir.current_is_dir():
+			_remove_tree(path.path_join(entry))
+		else:
+			dir.remove(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	dir.remove_absolute(path)
 
 
 # ------------- [Constructor] -------------
@@ -216,3 +236,71 @@ func test_append_with_multiple_flushes() -> void:
 	assert_str(content).contains("error1")
 	assert_str(content).contains("info2")
 	assert_str(content).contains("debug1")
+
+
+# ------------- [Rotation] -------------
+func test_rotate_log_file_creates_backup() -> void:
+	var path := _temp_dir.path_join("rotate_test.log")
+	var logger := _FILE_LOGGER.new(path)
+	logger._write_line("first line")
+	logger._rotate_log_file()
+	assert_file(path).exists()
+	assert_file(path + _CONST.LOG_FILE_BACKUP_SUFFIX).exists()
+	# The fresh file starts with a rotation header and accepts new writes
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("Log Rotated")
+
+
+func test_rotate_log_file_keeps_single_backup_generation() -> void:
+	var path := _temp_dir.path_join("rotate_gen.log")
+	var logger := _FILE_LOGGER.new(path)
+	logger._write_line("first content")
+	logger._rotate_log_file()
+	logger._write_line("second content")
+	logger._rotate_log_file()
+
+	var backup_path := path + _CONST.LOG_FILE_BACKUP_SUFFIX
+	assert_file(backup_path).exists()
+	# No second generation is created (single backup, overwritten in place)
+	assert_bool(FileAccess.file_exists(backup_path + _CONST.LOG_FILE_BACKUP_SUFFIX)).is_false()
+
+	var backup := FileAccess.open(backup_path, FileAccess.READ)
+	var backup_content := backup.get_as_text()
+	backup.close()
+	assert_str(backup_content).contains("second content")
+	assert_bool(backup_content.contains("first content")).is_false()
+
+
+func test_write_line_triggers_rotation_at_size_limit() -> void:
+	var path := _temp_dir.path_join("rotate_limit.log")
+	var logger := _FILE_LOGGER.new(path)
+	var big := "x".repeat(_CONST.MAX_LOG_FILE_SIZE)
+	logger._write_line(big)
+	# The file now exceeds the limit; the next write triggers rotation.
+	# warn() is used so the new content is flushed to disk before reading.
+	logger.warn("after limit")
+	assert_file(path + _CONST.LOG_FILE_BACKUP_SUFFIX).exists()
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("after limit")
+
+
+func test_rotate_failure_falls_back_to_append() -> void:
+	var path := _temp_dir.path_join("rotate_fail.log")
+	var logger := _FILE_LOGGER.new(path)
+	logger._write_line("before rotate")
+	# Block the backup path with a directory so the rename fails
+	var backup_path := path + _CONST.LOG_FILE_BACKUP_SUFFIX
+	DirAccess.make_dir_recursive_absolute(backup_path)
+	logger._rotate_log_file()
+	# Fallback keeps appending to the original file (warn flushes to disk)
+	logger.warn("after failed rotate")
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("before rotate")
+	assert_str(content).contains("after failed rotate")
+	DirAccess.remove_absolute(backup_path)

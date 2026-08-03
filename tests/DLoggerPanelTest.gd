@@ -1651,6 +1651,63 @@ func test_add_log_stacking_schedules_rebuild() -> void:
 	panel.free()
 
 
+# ------------- [Log Trim] -------------
+func test_add_log_trims_oldest_batch_over_limit() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 9900)
+	panel._selected_log_indices[0] = true
+	for i in range(101):
+		panel.add_log(_make_log("extra_%d" % i))
+	# 9900 + 101 = 10001 > MAX_LOG_COUNT(10000) -> slice(100) drops the oldest 100
+	assert_int(panel._all_logs.size()).is_equal(9901)
+	# Selection indices are invalidated by the trim
+	assert_bool(panel._selected_log_indices.is_empty()).is_true()
+	panel.free()
+
+
+# ------------- [Time Filter] -------------
+func test_should_display_log_time_filter_hides_old_logs() -> void:
+	var panel := await _instantiate_panel()
+	var old_log := _make_log("old")
+	old_log["time"] = 1.0
+	var new_log := _make_log("new")
+	new_log["time"] = 100.0
+	var logs: Array[Dictionary] = [old_log, new_log]
+	panel._all_logs = logs
+	panel._active_time_filter = 30.0
+	# 99s difference > 30s -> hidden; newest log always shown
+	assert_bool(panel._should_display_log(old_log)).is_false()
+	assert_bool(panel._should_display_log(new_log)).is_true()
+	panel.free()
+
+
+func test_should_display_log_time_filter_boundary_exact() -> void:
+	var panel := await _instantiate_panel()
+	var old_log := _make_log("old")
+	old_log["time"] = 70.0
+	var new_log := _make_log("new")
+	new_log["time"] = 100.0
+	var logs: Array[Dictionary] = [old_log, new_log]
+	panel._all_logs = logs
+	panel._active_time_filter = 30.0
+	# Exactly 30s difference: the condition is strictly greater, so it is shown
+	assert_bool(panel._should_display_log(old_log)).is_true()
+	panel.free()
+
+
+func test_on_time_option_selected_all_disables_filter() -> void:
+	var panel := await _instantiate_panel()
+	panel._active_time_filter = 30.0
+	panel._on_time_option_selected(0)  # "All" -> filter disabled (id 0.0)
+	assert_bool(panel._active_time_filter <= 0.0).is_true()
+	var old_log := _make_log("old")
+	old_log["time"] = 1.0
+	var logs: Array[Dictionary] = [old_log]
+	panel._all_logs = logs
+	assert_bool(panel._should_display_log(old_log)).is_true()
+	panel.free()
+
+
 # ------------- [_append_formatted_log] -------------
 func test_append_formatted_log_appends_line() -> void:
 	var panel := await _instantiate_panel()

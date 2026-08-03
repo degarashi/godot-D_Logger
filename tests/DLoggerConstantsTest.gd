@@ -95,6 +95,15 @@ func test_default_file_path() -> void:
 	assert_str(_CONST.DEFAULT_FILE_PATH).is_equal("user://debug.log")
 
 
+# ------------- [File Logging] -------------
+func test_max_log_file_size() -> void:
+	assert_int(_CONST.MAX_LOG_FILE_SIZE).is_equal(10 * 1024 * 1024)
+
+
+func test_log_file_backup_suffix() -> void:
+	assert_str(_CONST.LOG_FILE_BACKUP_SUFFIX).is_equal(".1")
+
+
 # ------------- [Autoload Info] -------------
 func test_autoload_name() -> void:
 	assert_str(_CONST.AUTOLOAD_NAME).is_equal("DLogger")
