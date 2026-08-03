@@ -312,11 +312,9 @@ func _create_shortcut(
 	event.keycode = p_keycode
 
 	if p_require_ctrl:
-		# Require Cmd key on macOS, Ctrl key on other OS
-		if OS.get_name() == "macOS":
-			event.command = true
-		else:
-			event.ctrl_pressed = true
+		# command_or_control_autoremap matches Cmd on macOS, Ctrl on other
+		# platforms (InputEventKey has no "command" property in Godot 4.7).
+		event.command_or_control_autoremap = true
 
 	if p_require_shift:
 		event.shift_pressed = true
