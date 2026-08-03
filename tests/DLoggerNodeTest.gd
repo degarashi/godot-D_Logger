@@ -186,3 +186,66 @@ func test_on_settings_changed_idempotent() -> void:
 	assert_bool(node.get_logger().info("idempotent test")).is_true()
 
 	node.free()
+
+
+# ------------- [Settings Change Filtering] -------------
+class RebuildSpy:
+	extends _CLASS
+
+	var setup_calls := 0
+
+	func setup_logger() -> void:
+		setup_calls += 1
+
+
+func test_unrelated_setting_change_does_not_rebuild() -> void:
+	var node := _NODE.new()
+	add_child(node)
+	await get_tree().process_frame
+
+	var spy := RebuildSpy.new()
+	spy.setup_calls = 0
+	node._logger = spy
+
+	# ProjectSettings.settings_changed is emitted deferred and fires for ANY
+	# setting change; only d_logger keys may trigger a logger rebuild.
+	var prev: Variant = ProjectSettings.get_setting("application/config/name", "")
+	ProjectSettings.set_setting("application/config/name", "unrelated change")
+	await get_tree().process_frame
+	assert_int(spy.setup_calls).is_equal(0)
+	ProjectSettings.set_setting("application/config/name", prev)
+	node.free()
+
+
+func test_d_logger_setting_change_rebuilds_once() -> void:
+	var node := _NODE.new()
+	add_child(node)
+	await get_tree().process_frame
+
+	var spy := RebuildSpy.new()
+	spy.setup_calls = 0
+	node._logger = spy
+
+	var prev: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.DEBUG
+	)
+	var new_level: int = (
+		_CONST.LogLevel.ERROR if prev != _CONST.LogLevel.ERROR else _CONST.LogLevel.WARN
+	)
+
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, new_level)
+	# settings_changed is emitted deferred, on the next frame.
+	await get_tree().process_frame
+	assert_int(spy.setup_calls).is_equal(1)
+
+	# The snapshot is updated after the rebuild, so a subsequent unrelated
+	# change must not rebuild again.
+	ProjectSettings.set_setting("application/config/name", "unrelated after rebuild")
+	await get_tree().process_frame
+	assert_int(spy.setup_calls).is_equal(1)
+
+	# Restore previous state (ProjectSettings has no remove_setting in 4.7,
+	# so restore by value).
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, prev)
+	ProjectSettings.set_setting("application/config/name", "")
+	node.free()
