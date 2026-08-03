@@ -1,4 +1,4 @@
-# D-Logger for Godot 4.3+
+# D-Logger for Godot 4.7+
 
 **日本語** | [English](README.md)
 
@@ -11,6 +11,7 @@ Godot向けの軽量かつ強力で拡張性の高いロギングシステム。
 ## ✨ 特徴
 
 - 📢 **マルチキャストロギング**: コンソール、ファイル、および専用のエディタパネルへ同時にログを出力。
+- 📁 **ファイル出力とローテーション**: ログファイルは 10MB で自動ローテーションされ、バックアップ (`.1`) を1世代だけ保持する。
 - 🔍 **インタラクティブな底部パネル**: リアルタイムでログを調査できるカスタムパネル。
   - **カテゴリフィルタリング**: 特定のカテゴリの表示/非表示を切り替え。`Alt + Click` でそのカテゴリのみを表示（Solo モード）。
   - **時間フィルタリング**: 直近 30秒、1分、5分のログを絞り込み。
@@ -26,6 +27,7 @@ Godot向けの軽量かつ強力で拡張性の高いロギングシステム。
 - 🧬 **ノードベースロガー**: `DLoggerNode` や `DLoggerFinder` ノードを使ってシーンツリーにロギングを統合。
 - 🎨 **リッチテキスト出力**: エディタパネル上で BBCode をサポートし、クリック可能なファイル:行リンクやカテゴリフィルターを提供。
 - ⚡ **パフォーマンス重視**: ログレベルが無効な場合、複雑な文字列フォーマット処理を自動的にスキップ。時刻/フレーム値はディスパッチごとに1回だけ計算され、全ロガーで共有される。
+- ⏱️ **パフォーマンス計測**: `benchmark()` で任意の処理を計測。通常は INFO（カテゴリ `PERF`）で記録され、スパイクしきい値（デフォルト 16ms）以上になると自動的に WARN へ格上げされる。
 - 🛠️ **デバッグ専用設計**: コンソールおよびファイル出力はリリースビルドで自動的に無効化される。WARN/ERROR は `push_warning()`/`push_error()` を通じて伝達される。
 
 ---
@@ -110,7 +112,7 @@ func _ready():
 
 ### DLoggerNode（シーンベースロガー）
 
-Autoload の `DLogger` は `DLoggerNode` であり、`ProjectSettings.settings_changed` を監視して自動再構成を行う。シーン内に `DLoggerNode` を配置し、`DLoggerInitParam` リソースのエクスポートで設定することも可能：
+Autoload の `DLogger` は `DLoggerNode` であり、`ProjectSettings.settings_changed` を監視し、d_logger 関連の設定が変更されたときに自動再構成を行う。シーン内に `DLoggerNode` を配置し、`DLoggerInitParam` リソースのエクスポートで設定することも可能：
 
 ```
 DLoggerNode (シーンツリー内)
@@ -148,7 +150,7 @@ warn(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: Stri
 error(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
 ```
 
-これらのシグネチャは `DLoggerNode`, `DLoggerNodeBase`（転送メソッド）、およびすべての `DLoggerBase` サブクラスでも利用可能。
+これらのシグネチャは `DLoggerNode`, `DLoggerNodeBase`（転送メソッド）、およびすべての `DLoggerBase` サブクラスでも利用可能。（実装側にはディスパッチチェーンが使う内部引数 `p_caller_info: Variant = null` が追加で存在する。通常の呼び出しでは省略する。）
 
 ### レベルチェック
 重い計算を伴うログ出力の前に使用すると効果的だ。
@@ -157,6 +159,22 @@ error(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: Str
 - `is_info_enabled() -> bool`
 - `is_warn_enabled() -> bool`
 - `is_error_enabled() -> bool`
+
+### ベンチマーク
+
+任意の callable の実行時間を計測する。通常の結果は INFO（カテゴリ `PERF`）で記録され、スパイクしきい値以上になると代わりに WARN で記録される。callable の戻り値はそのまま返される。
+
+```gdscript
+# 基本的な使い方
+var result: Variant = DLogger.benchmark("collision_update", func():
+    return _update_collisions()
+)
+
+# スパイクしきい値のカスタマイズ（デフォルト: 16ms）
+DLogger.benchmark("level_load", func(): _load_level(), 100.0)
+```
+
+`benchmark()` は同期実行のみを計測する — callable が yield すると即座に戻るため、`await` 区間は計測対象外。`DLoggerNode` と `DLoggerNodeBase`（フォワーディング）でも利用可能。
 
 ### DLoggerClass コンストラクタ
 
@@ -238,6 +256,15 @@ if DLogger.is_debug_enabled():
 
 ```gdscript
 assert(DLogger.debug("このログはデバッグビルドでのみ出力される"))
+```
+
+### パフォーマンスのボトルネック調査
+`DLogger.benchmark()` で任意の関数を手軽に計測し、スパイクを自動通知できる：
+
+```gdscript
+var result := DLogger.benchmark("physics_step", func() -> float:
+    return _run_physics()
+)
 ```
 
 ### パイプ区切りカテゴリ

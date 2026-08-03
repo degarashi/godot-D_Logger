@@ -1,4 +1,4 @@
-# D-Logger for Godot 4.3+
+# D-Logger for Godot 4.7+
 
 [日本語版 (Japanese)](README.ja.md) | **English**
 
@@ -11,6 +11,7 @@ A lightweight, powerful, and extensible logging system for Godot Engine. D-Logge
 ## ✨ Features
 
 - 📢 **Multicast Logging**: Simultaneously output logs to the console, a file, and the dedicated editor panel.
+- 📁 **File Output with Rotation**: Log files auto-rotate at 10 MB, keeping a single `.1` backup generation.
 - 🔍 **Interactive Bottom Panel**: A custom editor panel for real-time log inspection.
   - **Category Filtering**: Toggle display for specific categories. `Alt + Click` to "Solo" a category.
   - **Time Filtering**: View logs from the last 30s, 1m, or 5m.
@@ -26,6 +27,7 @@ A lightweight, powerful, and extensible logging system for Godot Engine. D-Logge
 - 🧬 **Node-based Loggers**: Use `DLoggerNode` or `DLoggerFinder` nodes to integrate logging into scene trees.
 - 🎨 **Rich Text Output**: BBCode-supported log display in the editor panel with clickable file:line links and category filters.
 - ⚡ **Performance Optimized**: Automatically skips complex string formatting when the log level is disabled. Time/frame values are cached once per dispatch for all downstream loggers.
+- ⏱️ **Performance Benchmarking**: Measure any callable with `benchmark()`; results log at INFO (category `PERF`) and automatically escalate to WARN when they exceed the spike threshold (16 ms by default).
 - 🛠️ **Debug-Only by Design**: Console and file outputs are automatically disabled in release builds; warning and error logs still propagate via `push_warning()`/`push_error()`.
 
 ---
@@ -110,7 +112,7 @@ func _ready():
 
 ### DLoggerNode (Scene-based Logger)
 
-The autoload `DLogger` is a `DLoggerNode` which listens to `ProjectSettings.settings_changed` and reconfigures automatically. You can also drop `DLoggerNode` in a scene and configure it via `DLoggerInitParam` resource exports:
+The autoload `DLogger` is a `DLoggerNode` which listens to `ProjectSettings.settings_changed` and reconfigures automatically when d_logger-related settings change. You can also drop `DLoggerNode` in a scene and configure it via `DLoggerInitParam` resource exports:
 
 ```
 DLoggerNode (in scene tree)
@@ -148,7 +150,7 @@ warn(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: Stri
 error(msg: String, v: Variant = [], cat: String = "", ctx: Object = null, p: String = "") -> bool
 ```
 
-These same signatures are available on `DLoggerNode`, `DLoggerNodeBase` (as forwarding methods), and all `DLoggerBase` subclasses.
+These same signatures are available on `DLoggerNode`, `DLoggerNodeBase` (as forwarding methods), and all `DLoggerBase` subclasses. (The underlying implementations additionally accept an internal `p_caller_info: Variant = null` parameter used by the dispatch chain; callers normally omit it.)
 
 ### Level Checks
 Useful for skipping heavy calculations when logging is disabled.
@@ -157,6 +159,22 @@ Useful for skipping heavy calculations when logging is disabled.
 - `is_info_enabled() -> bool`
 - `is_warn_enabled() -> bool`
 - `is_error_enabled() -> bool`
+
+### Benchmarking
+
+Measure the execution time of any callable. Normal results are logged at INFO (category `PERF`); results at or above the spike threshold are logged at WARN instead. The callable's return value is passed through unchanged.
+
+```gdscript
+# Basic usage
+var result: Variant = DLogger.benchmark("collision_update", func():
+    return _update_collisions()
+)
+
+# Custom spike threshold (default: 16 ms)
+DLogger.benchmark("level_load", func(): _load_level(), 100.0)
+```
+
+`benchmark()` measures synchronous execution only — it returns as soon as the callable yields, so it does not cover `await` spans. Also available on `DLoggerNode` and `DLoggerNodeBase` (forwarding).
 
 ### DLoggerClass Constructor
 
@@ -238,6 +256,15 @@ Since logging methods return `true`, you can use them in `assert` to ensure they
 
 ```gdscript
 assert(DLogger.debug("This only runs in debug builds"))
+```
+
+### Benchmarking Hot Spots
+Quickly measure any function and get automatic spike warnings:
+
+```gdscript
+var result := DLogger.benchmark("physics_step", func() -> float:
+    return _run_physics()
+)
 ```
 
 ### Pipe-Separated Categories
