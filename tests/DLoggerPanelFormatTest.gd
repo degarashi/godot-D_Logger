@@ -66,7 +66,17 @@ func test_format_log_plain_has_no_bbcode() -> void:
 	var result: String = DLoggerPanelFormat.format_log_plain(_make_log("hello world"))
 	assert_bool(result.contains("[b]")).is_false()
 	assert_bool(result.contains("[/b]")).is_false()
+	assert_bool(result.contains("[url=")).is_false()
+	assert_bool(result.contains("[/url]")).is_false()
 	assert_str(result).contains("[INFO] hello world")
+
+
+func test_format_log_plain_with_custom_prefix_has_no_url() -> void:
+	var result: String = DLoggerPanelFormat.format_log_plain(
+		_make_log("hi", "INFO", "MyModule")
+	)
+	assert_str(result).contains("[MyModule] - [INFO] hi")
+	assert_bool(result.contains("[url=")).is_false()
 
 
 func test_format_log_plain_with_count() -> void:

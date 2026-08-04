@@ -38,7 +38,7 @@ static func format_log_plain(log_data: Dictionary) -> String:
 	var caller_info = log_data.get("caller_info", {})
 	var message: String = log_data.get("message", "")
 
-	var source_str := DLoggerFunc.get_source_string(prefix, category, true)
+	var source_str := DLoggerFunc.get_source_string(prefix, category, false)
 	var formatted_msg := DLoggerFunc.get_formatted_line(
 		time, frame, source_str, caller_info, context_str, level, message, false
 	)

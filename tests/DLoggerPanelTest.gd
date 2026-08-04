@@ -1183,6 +1183,7 @@ func test_format_log_plain_has_no_bbcode() -> void:
 	assert_str(result).contains("hello world")
 	assert_bool(result.contains("[color=")).is_false()
 	assert_bool(result.contains("[b]")).is_false()
+	assert_bool(result.contains("[url=")).is_false()
 	panel.free()
 
 
