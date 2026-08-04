@@ -1024,27 +1024,8 @@ func _get_formatted_logs() -> String:
 		if has_selection and not _selected_log_indices.has(i):
 			continue
 		if _should_display_log(log_data):
-			var time: float = log_data.get("time", 0.0)
-			var frame: int = log_data.get("frame", 0)
-			var level: String = log_data.get("level", "DEBUG")
-			var prefix: String = log_data.get("prefix", "")
-			var category: String = log_data.get("category", "")
-			var context_str: String = log_data.get("context_str", "")
-			var caller_info = log_data.get("caller_info", {})
-
-			var source_str := DLoggerFunc.get_source_string(prefix, category)
-
-			var raw_msg := DLoggerFunc.get_formatted_line(
-				time,
-				frame,
-				source_str,
-				caller_info,
-				context_str,
-				level,
-				log_data.get("message", ""),
-				false  # use_bbcode
-			)
-			output_text += raw_msg + "\n"
+			# format_log_plain appends the stacked count (xN) when present
+			output_text += DLoggerPanelFormat.format_log_plain(log_data) + "\n"
 	return output_text
 
 

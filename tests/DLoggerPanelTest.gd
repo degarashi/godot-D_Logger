@@ -280,6 +280,19 @@ func test_get_formatted_logs_with_selection_and_search() -> void:
 	panel.free()
 
 
+func test_get_formatted_logs_includes_stack_count() -> void:
+	var panel := await _instantiate_panel()
+	var log := _make_log("dup")
+	log["count"] = 3
+	panel._all_logs.append(log)
+	panel._rebuild_log_display()
+
+	var result: String = panel._get_formatted_logs()
+
+	assert_str(result).contains("(x3)")
+	panel.free()
+
+
 # ------------- [Should Display Log] -------------
 func test_should_display_log_category_active() -> void:
 	var panel := await _instantiate_panel()
