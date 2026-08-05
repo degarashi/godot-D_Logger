@@ -151,7 +151,11 @@ func _dispatch(
 	DLoggerFunc.clear_time_cache()
 
 	# --- Process of sending to the editor debugger ---
-	if OS.is_debug_build():
+	# Debug builds always reach the panel (direct call or via debugger).
+	# Release builds also send when a debugger is attached (e.g., remote
+	# debugging an exported game) — console/file output stays disabled there.
+	# When nothing is listening the dictionary is not built at all.
+	if EngineDebugger.is_active() or _editor_panel:
 		# Pack the message to be sent to the editor side into a dictionary
 		var debug_data: Dictionary = {
 			"message": final_msg,
