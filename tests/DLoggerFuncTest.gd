@@ -306,6 +306,30 @@ func test_get_source_string_empty_prefix() -> void:
 	assert_str(result_cat).is_equal("[:Test]")
 
 
+func test_get_source_string_bbcode_escapes_brackets_in_prefix() -> void:
+	# A bracket in the prefix must be escaped so the RichTextLabel parser
+	# does not see a premature [/url] or [url=...] injection. Both the
+	# URL target and the display label are protected. The input "Net[work"
+	# has only an opening bracket, so [lb] should appear twice (URL and
+	# display) and [rb] should not appear at all.
+	var result := _FUNC.get_source_string("Net[work", "", true)
+	assert_bool(result.contains("Net[work")).is_false()
+	assert_str(result).contains("Net[lb]work")
+	assert_int(result.count("[lb]")).is_equal(2)
+	assert_int(result.count("[rb]")).is_equal(0)
+
+
+func test_get_source_string_bbcode_escapes_brackets_in_category_tag() -> void:
+	# A category tag containing "][" must not survive unescaped into the
+	# [url=...] markup — that would close the tag and re-open it as a
+	# different URL the user could click as if it were the intended
+	# filter target. Same protection applies to each tag in a "|"-split
+	# category.
+	var result := _FUNC.get_source_string("D-Logger", "AI][injected", true)
+	assert_bool(result.contains("AI][injected")).is_false()
+	assert_str(result).contains("AI[rb][lb]injected")
+
+
 # ------------- [get_object_string edge cases] -------------
 func test_get_object_string_with_long_name() -> void:
 	var long_name := \
