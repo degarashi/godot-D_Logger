@@ -249,3 +249,16 @@ static func format_log(
 
 	# By default, use plain text for internal formatting (e.g. for console/file)
 	return get_formatted_line(seconds, frames, source_str, caller_info, ctx_str, level, msg, false)
+
+
+## Returns true when a ProjectSettings autoload entry (its raw string value)
+## still points at the given expected path. Godot 4.4+ persists autoload
+## paths as `*uid://...` references, so both the uid form and the res://
+## path are accepted, with or without the leading `*` enabled marker. An
+## entry the user repointed to another script is never considered ours.
+static func is_autoload_ours(setting_value: String, expected_path: String) -> bool:
+	var current := setting_value.trim_prefix("*")
+	if current == expected_path:
+		return true
+	var uid := ResourceLoader.get_resource_uid(expected_path)
+	return uid != -1 and current == ResourceUID.id_to_text(uid)

@@ -315,3 +315,39 @@ func test_get_object_string_with_long_name() -> void:
 	var result := _FUNC.get_object_string(node)
 	assert_str(result).contains(long_name)
 	node.free()
+
+
+# ------------- [Autoload Ownership] -------------
+const _AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.tscn"
+const _AUTOLOAD_UID := "uid://dk8w65jl35vbd"
+
+func test_is_autoload_ours_matching_res_path() -> void:
+	assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_PATH, _AUTOLOAD_PATH)).is_true()
+
+
+func test_is_autoload_ours_star_prefixed_res_path() -> void:
+	assert_bool(_FUNC.is_autoload_ours("*" + _AUTOLOAD_PATH, _AUTOLOAD_PATH)).is_true()
+
+
+func test_is_autoload_ours_matching_uid() -> void:
+	assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_UID, _AUTOLOAD_PATH)).is_true()
+
+
+func test_is_autoload_ours_star_prefixed_uid() -> void:
+	assert_bool(_FUNC.is_autoload_ours("*" + _AUTOLOAD_UID, _AUTOLOAD_PATH)).is_true()
+
+
+func test_is_autoload_ours_empty_value() -> void:
+	assert_bool(_FUNC.is_autoload_ours("", _AUTOLOAD_PATH)).is_false()
+
+
+func test_is_autoload_ours_other_res_path() -> void:
+	assert_bool(_FUNC.is_autoload_ours("res://other/logger.tscn", _AUTOLOAD_PATH)).is_false()
+
+
+func test_is_autoload_ours_other_uid() -> void:
+	assert_bool(_FUNC.is_autoload_ours("uid://0123456789abc", _AUTOLOAD_PATH)).is_false()
+
+
+func test_is_autoload_ours_trailing_whitespace_not_trimmed() -> void:
+	assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_PATH + " ", _AUTOLOAD_PATH)).is_false()

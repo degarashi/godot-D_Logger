@@ -1861,3 +1861,116 @@ func test_on_save_pressed_empty_returns_early() -> void:
 	panel._on_save_pressed()
 	assert_str(panel.save_button.text).is_not_equal("Saved!")
 	panel.free()
+
+
+# ------------- [line-at-mouse binary search] -------------
+## Forces a scrollable panel size so the RichTextLabel lays out paragraphs.
+## Without a size, headless layout can collapse every paragraph offset to
+## the same value, which would make the boundary expectations meaningless.
+## Same pattern as the preserve-scroll tests (commit 91b0ff1).
+func _prepare_line_at_mouse(panel: Control, count: int) -> void:
+	panel.size = Vector2(800, 300)
+	_populate_logs(panel, count)
+	await get_tree().process_frame
+	var v_scroll: ScrollBar = panel.log_display.get_v_scroll_bar()
+	if v_scroll:
+		v_scroll.value = 0.0
+
+
+func _collect_paragraph_offsets(panel: Control) -> PackedFloat64Array:
+	var offsets := PackedFloat64Array()
+	for i in range(panel.log_display.get_paragraph_count()):
+		offsets.append(panel.log_display.get_paragraph_offset(i))
+	return offsets
+
+
+## Precondition: the binary search relies on monotonically non-decreasing
+## paragraph offsets. Fail loudly here instead of producing mysterious
+## boundary failures if headless layout did not happen.
+func _assert_offsets_strictly_increasing(offsets: PackedFloat64Array) -> void:
+	assert_int(offsets.size()).is_greater(1)
+	for i in range(1, offsets.size()):
+		assert_float(offsets[i]).is_greater(offsets[i - 1])
+
+
+func _line_at_mouse_top_padding(panel: Control) -> float:
+	var style: StyleBox = panel.log_display.get_theme_stylebox(&"normal")
+	return style.content_margin_top if style else 0.0
+
+
+func test_line_at_mouse_above_first_paragraph_returns_minus_one() -> void:
+	var panel := await _instantiate_panel()
+	await _prepare_line_at_mouse(panel, 10)
+	var offsets := _collect_paragraph_offsets(panel)
+	_assert_offsets_strictly_increasing(offsets)
+	var top := _line_at_mouse_top_padding(panel)
+	# content_y = offset(0) - 1: one pixel above the first paragraph
+	var mouse_y: float = offsets[0] - 1.0 + top
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, mouse_y))).is_equal(-1)
+	panel.free()
+
+
+func test_line_at_mouse_exactly_at_first_paragraph_start() -> void:
+	var panel := await _instantiate_panel()
+	await _prepare_line_at_mouse(panel, 10)
+	var offsets := _collect_paragraph_offsets(panel)
+	_assert_offsets_strictly_increasing(offsets)
+	var top := _line_at_mouse_top_padding(panel)
+	# content_y = offset(0): exactly the first paragraph's start
+	var mouse_y: float = offsets[0] + top
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, mouse_y))).is_equal(0)
+	panel.free()
+
+
+func test_line_at_mouse_between_first_and_second_paragraph() -> void:
+	var panel := await _instantiate_panel()
+	await _prepare_line_at_mouse(panel, 10)
+	var offsets := _collect_paragraph_offsets(panel)
+	_assert_offsets_strictly_increasing(offsets)
+	# Precondition: paragraph 1 must start at least 1px below paragraph 0,
+	# otherwise content_y = offset(1) - 1 would not be inside paragraph 0.
+	assert_float(offsets[1] - offsets[0]).is_greater_equal(1.0)
+	var top := _line_at_mouse_top_padding(panel)
+	# content_y = offset(1) - 1: the last pixel before paragraph 1 starts
+	var mouse_y: float = offsets[1] - 1.0 + top
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, mouse_y))).is_equal(0)
+	panel.free()
+
+
+func test_line_at_mouse_exactly_at_last_paragraph_start() -> void:
+	var panel := await _instantiate_panel()
+	await _prepare_line_at_mouse(panel, 10)
+	var offsets := _collect_paragraph_offsets(panel)
+	_assert_offsets_strictly_increasing(offsets)
+	var top := _line_at_mouse_top_padding(panel)
+	# content_y = offset(N-1): exactly the last paragraph's start
+	var mouse_y: float = offsets[offsets.size() - 1] + top
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, mouse_y))).is_equal(
+		offsets.size() - 1
+	)
+	panel.free()
+
+
+func test_line_at_mouse_far_below_last_paragraph() -> void:
+	var panel := await _instantiate_panel()
+	await _prepare_line_at_mouse(panel, 10)
+	var offsets := _collect_paragraph_offsets(panel)
+	_assert_offsets_strictly_increasing(offsets)
+	var top := _line_at_mouse_top_padding(panel)
+	# content_y = offset(N-1) + 500: far below the last paragraph
+	var mouse_y: float = offsets[offsets.size() - 1] + 500.0 + top
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, mouse_y))).is_equal(
+		offsets.size() - 1
+	)
+	panel.free()
+
+
+func test_line_at_mouse_empty_panel_returns_minus_one() -> void:
+	var panel := await _instantiate_panel()
+	# No logs populated: RichTextLabel still holds one empty paragraph at
+	# offset 0, so only a y above the content start (content_y < 0) hits
+	# the -1 sentinel. A positive y would legitimately land on that empty
+	# paragraph and return 0 — that is inherent RichTextLabel behavior,
+	# not something the binary search can change.
+	assert_int(panel._get_line_at_mouse_pos(Vector2(0, -1000.0))).is_equal(-1)
+	panel.free()

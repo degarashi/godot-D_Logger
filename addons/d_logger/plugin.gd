@@ -53,20 +53,17 @@ func _disable_plugin() -> void:
 
 
 # ------------- [Private Method] -------------
-## Returns true when the autoload/DLogger entry currently points at this
-## plugin's own node scene. Godot 4.4+ persists autoload paths as
-## `*uid://...` references, so both the uid form and the res:// path are
-## accepted, with or without the leading `*` enabled marker. An entry the
-## user repointed to their own script is never considered ours.
+## Returns true when the autoload/DLogger entry still points at this
+## plugin's own node scene. The path/uid comparison is delegated to
+## DLoggerFunc.is_autoload_ours().
 func _autoload_is_ours() -> bool:
 	var setting := "autoload/" + DLoggerConstants.AUTOLOAD_NAME
 	if not ProjectSettings.has_setting(setting):
 		return false
-	var current := str(ProjectSettings.get_setting(setting)).trim_prefix("*")
-	if current == DLoggerConstants.AUTOLOAD_PATH:
-		return true
-	var uid := ResourceLoader.get_resource_uid(DLoggerConstants.AUTOLOAD_PATH)
-	return uid != -1 and current == ResourceUID.id_to_text(uid)
+	return DLoggerFunc.is_autoload_ours(
+		str(ProjectSettings.get_setting(setting)),
+		DLoggerConstants.AUTOLOAD_PATH
+	)
 
 
 func _on_debugger_session_started() -> void:
