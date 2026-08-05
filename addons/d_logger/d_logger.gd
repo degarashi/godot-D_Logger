@@ -104,18 +104,33 @@ func _dispatch(
 
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
 	var final_msg := msg
+	var formatted := false
 
 	match typeof(values):
 		TYPE_DICTIONARY:
 			if not (values as Dictionary).is_empty():
 				final_msg = msg.format(values)
+				formatted = true
 		TYPE_ARRAY:
 			if not (values as Array).is_empty():
 				final_msg = msg.format(values)
+				formatted = true
 		_:
 			# If not null and a primitive value is passed
 			if values != null:
 				final_msg = msg.format([values])
+				formatted = true
+
+	# Warn when placeholders survived formatting: the caller passed a
+	# value type that does not match the placeholder style (e.g. a
+	# Dictionary for positional {0}, or an Array for named {name}).
+	# String.format() silently leaves such placeholders untouched, which
+	# would otherwise log a broken message with no visible error.
+	if formatted and DLoggerFunc.has_unresolved_placeholder(final_msg):
+		push_warning(
+			"DLogger: Unresolved format placeholder in message: %s"
+			% final_msg
+		)
 
 	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(level, "DEBUG")
 

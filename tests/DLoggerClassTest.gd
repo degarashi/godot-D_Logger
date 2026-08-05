@@ -172,6 +172,21 @@ func test_format_with_empty_values() -> void:
 	assert_bool(logger.info("No values")).is_true()
 
 
+func test_format_with_mismatched_type_still_dispatches() -> void:
+	# A Dictionary passed for a positional {0} placeholder leaves the
+	# placeholder unresolved. This must not crash; the raw message is
+	# logged and a warning is emitted (detection covered by
+	# DLoggerFuncTest.has_unresolved_placeholder).
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("Value: {0}", {"hp": 100})).is_true()
+
+
+func test_format_with_mismatched_type_array_for_named() -> void:
+	# An Array passed for a named {name} placeholder must not crash.
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("HP={hp}", [100])).is_true()
+
+
 # ------------- [Category & Context] -------------
 func test_with_category() -> void:
 	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)

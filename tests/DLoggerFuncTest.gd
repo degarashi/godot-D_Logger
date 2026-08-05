@@ -41,6 +41,37 @@ func test_escape_bbcode_plain_text_unchanged() -> void:
 	assert_str(_FUNC.escape_bbcode("hello world 42")).is_equal("hello world 42")
 
 
+# ------------- [has_unresolved_placeholder] -------------
+func test_has_unresolved_placeholder_positional_leftover() -> void:
+	# A {0} placeholder that survived formatting (e.g. Dictionary was
+	# passed for a positional placeholder) must be detected.
+	assert_bool(_FUNC.has_unresolved_placeholder("attack failed {0}")).is_true()
+
+
+func test_has_unresolved_placeholder_named_leftover() -> void:
+	# A {name} placeholder that survived formatting (e.g. Array was passed
+	# for a named placeholder) must be detected.
+	assert_bool(_FUNC.has_unresolved_placeholder("player {name} joined")).is_true()
+
+
+func test_has_unresolved_placeholder_resolved_text_is_clean() -> void:
+	assert_bool(_FUNC.has_unresolved_placeholder("attack failed 3")).is_false()
+
+
+func test_has_unresolved_placeholder_plain_text_with_braces() -> void:
+	# Braces not forming a placeholder key (e.g. code/JSON snippets) are
+	# not flagged.
+	assert_bool(_FUNC.has_unresolved_placeholder('{"key": "value"}')).is_false()
+
+
+func test_has_unresolved_placeholder_empty_braces_not_flagged() -> void:
+	assert_bool(_FUNC.has_unresolved_placeholder("empty {} braces")).is_false()
+
+
+func test_has_unresolved_placeholder_no_text_returns_false() -> void:
+	assert_bool(_FUNC.has_unresolved_placeholder("")).is_false()
+
+
 # ------------- [get_logger] -------------
 func test_get_logger_with_null() -> void:
 	assert_object(_FUNC.get_logger(null)).is_null()

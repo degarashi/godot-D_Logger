@@ -138,6 +138,33 @@ static func escape_bbcode(text: String) -> String:
 	return "".join(parts)
 
 
+## Returns true if the given text still contains an unresolved format
+## placeholder ({0} or {name} style). String.format() silently leaves
+## placeholders untouched when the provided values do not match the
+## placeholder key type (e.g. a Dictionary for {0} positional placeholders,
+## or an Array for {name} named ones). Detecting leftovers lets the caller
+## warn instead of logging a broken message silently.
+static func has_unresolved_placeholder(text: String) -> bool:
+	var start := text.find("{")
+	while start >= 0:
+		var end := text.find("}", start)
+		if end <= start + 1:
+			# No closing brace or empty braces: not a placeholder
+			return false
+		# A placeholder body is a bare key (word chars / digits / _)
+		var body := text.substr(start + 1, end - start - 1)
+		var is_key := true
+		for i in body.length():
+			var c := body[i]
+			if not (c == "_" or c.is_valid_int() or (c >= "a" and c <= "z") or (c >= "A" and c <= "Z")):
+				is_key = false
+				break
+		if is_key:
+			return true
+		start = text.find("{", end)
+	return false
+
+
 static func get_source_string(prefix: String, category: String, use_bbcode: bool = false) -> String:
 	if category.is_empty() or category == prefix:
 		if use_bbcode:
