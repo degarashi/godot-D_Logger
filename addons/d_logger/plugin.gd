@@ -9,7 +9,6 @@ const DEBUGGER_PLUGIN = preload("uid://1wnkr07kpq7c")
 var _settings_manager: DLoggerSettingsManager = DLoggerSettingsManager.new()
 var _panel_instance: Control
 var _debugger_instance: EditorDebuggerPlugin
-var _autoload_added: bool = false
 
 
 # ------------- [Callbacks] -------------
@@ -18,7 +17,6 @@ func _enter_tree() -> void:
 
 	if not ProjectSettings.has_setting("autoload/" + DLoggerConstants.AUTOLOAD_NAME):
 		add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
-		_autoload_added = true
 
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
@@ -34,11 +32,6 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	_settings_manager.shutdown()
 
-	# --- Remove autoload singleton if we added it ---
-	if _autoload_added:
-		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
-		_autoload_added = false
-
 	# --- Delete debugger plugin ---
 	if _debugger_instance:
 		remove_debugger_plugin(_debugger_instance)
@@ -48,6 +41,32 @@ func _exit_tree() -> void:
 		remove_control_from_bottom_panel(_panel_instance)
 		_panel_instance.queue_free()
 		DLoggerClass._editor_panel = null
+
+
+## Removes the autoload singleton when the plugin is disabled. Runs only on
+## explicit plugin disable (not on editor shutdown, where the autoload must
+## stay for the enabled plugin), so no session flag bookkeeping is needed:
+## entries added in previous editor sessions are cleaned up here too.
+func _disable_plugin() -> void:
+	if _autoload_is_ours():
+		remove_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME)
+
+
+# ------------- [Private Method] -------------
+## Returns true when the autoload/DLogger entry currently points at this
+## plugin's own node scene. Godot 4.4+ persists autoload paths as
+## `*uid://...` references, so both the uid form and the res:// path are
+## accepted, with or without the leading `*` enabled marker. An entry the
+## user repointed to their own script is never considered ours.
+func _autoload_is_ours() -> bool:
+	var setting := "autoload/" + DLoggerConstants.AUTOLOAD_NAME
+	if not ProjectSettings.has_setting(setting):
+		return false
+	var current := str(ProjectSettings.get_setting(setting)).trim_prefix("*")
+	if current == DLoggerConstants.AUTOLOAD_PATH:
+		return true
+	var uid := ResourceLoader.get_resource_uid(DLoggerConstants.AUTOLOAD_PATH)
+	return uid != -1 and current == ResourceUID.id_to_text(uid)
 
 
 func _on_debugger_session_started() -> void:
