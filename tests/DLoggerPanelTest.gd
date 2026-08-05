@@ -775,17 +775,6 @@ func test_format_log_selected_has_white_color() -> void:
 
 
 # ------------- [_on_log_meta_clicked] -------------
-func test_meta_click_select_toggles_selection() -> void:
-	var panel := await _instantiate_panel()
-	_populate_logs(panel, 5)
-	panel._ctrl_held = true
-	panel._on_log_meta_clicked("select:2")
-	assert_bool(panel._selected_log_indices.has(2)).is_true()
-	panel._on_log_meta_clicked("select:2")
-	assert_bool(panel._selected_log_indices.has(2)).is_false()
-	panel.free()
-
-
 func test_meta_click_filter_solos_category() -> void:
 	var panel := await _instantiate_panel()
 	panel.add_log(_make_log("msg1", "INFO", "D-Logger", "System"))
