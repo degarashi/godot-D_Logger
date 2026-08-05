@@ -143,12 +143,16 @@ func _dispatch(
 				final_msg = msg.format([values])
 				formatted = true
 
-	# Warn when placeholders survived formatting: the caller passed a
-	# value type that does not match the placeholder style (e.g. a
-	# Dictionary for positional {0}, or an Array for named {name}).
-	# String.format() silently leaves such placeholders untouched, which
-	# would otherwise log a broken message with no visible error.
-	if formatted and DLoggerFunc.has_unresolved_placeholder(final_msg):
+	# Warn when placeholders survived — either because the caller passed
+	# a value type that does not match the placeholder style (e.g. a
+	# Dictionary for positional {0}, or an Array for named {name}), or
+	# because no values were provided at all (empty Array/Dict, or
+	# null). String.format() silently leaves placeholders untouched
+	# either way, which would otherwise log a broken message with no
+	# visible error. The formatted flag is intentionally not checked
+	# here: when values is empty/null, the format step is skipped and
+	# the broken message would go through silently.
+	if DLoggerFunc.has_unresolved_placeholder(final_msg):
 		push_warning(
 			"DLogger: Unresolved format placeholder in message: %s"
 			% final_msg
