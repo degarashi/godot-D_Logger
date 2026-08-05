@@ -3,6 +3,12 @@ extends DLoggerBase
 
 # ------------- [Private Variable] -------------
 var _file_path: String
+# Latched to true after the first failed open. Without this, a
+# misconfigured path (e.g. a res:// file in an exported PCK where
+# DirAccess.make_dir_recursive_absolute silently no-ops) would emit
+# one push_error per attempted log line — flooding the editor
+# Output at the exact moment the user is trying to capture errors.
+var _init_failed: bool = false
 
 
 # ------------- [Callbacks] -------------
@@ -37,8 +43,13 @@ func _open_for_append() -> FileAccess:
 		if file:
 			file.seek_end()
 	if file == null:
-		var error_msg := "DLoggerFile: Failed to open file for appending: {0}"
-		push_error(error_msg.format([_file_path]))
+		# Only push once. The latch avoids per-line push_error spam
+		# when the path is permanently bad (e.g. a res:// target in
+		# an exported PCK, where the parent dir cannot be created).
+		if not _init_failed:
+			var error_msg := "DLoggerFile: Failed to open file for appending: {0}"
+			push_error(error_msg.format([_file_path]))
+			_init_failed = true
 	return file
 
 
