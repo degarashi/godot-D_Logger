@@ -647,8 +647,12 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			for dl in range(range_start, range_end + 1):
 				_selected_log_indices[_displayed_line_map[dl]] = true
 
+			# Selection state updates immediately (cheap), but the full
+			# display rebuild is frame-coalesced: a single mouse drag can
+			# emit many motion events per frame, and rebuilding the whole
+			# RichTextLabel on each one is O(n) at the 10,000 line limit.
 			_update_selection_info()
-			_rebuild_log_display_preserve_scroll()
+			_schedule_display_rebuild()
 			accept_event()
 
 
@@ -666,12 +670,22 @@ func _get_line_at_mouse_pos(mouse_pos: Vector2) -> int:
 	var top_padding := style.content_margin_top if style else 0.0
 	var content_y := mouse_pos.y + scroll_y - top_padding
 
-	# Iterate paragraphs to find which one contains content_y
+	# Binary search for the last paragraph whose offset is <= content_y.
+	# Paragraph offsets are monotonically non-decreasing, so this matches
+	# the previous linear scan from the end but is O(log n) per mouse move
+	# instead of O(n) (matters at the 10,000 log line limit).
 	var count := log_display.get_paragraph_count()
-	for i in range(count - 1, -1, -1):
-		if content_y >= log_display.get_paragraph_offset(i):
-			return i
-	return -1
+	var lo := 0
+	var hi := count - 1
+	var result := -1
+	while lo <= hi:
+		var mid := (lo + hi) / 2
+		if content_y >= log_display.get_paragraph_offset(mid):
+			result = mid
+			lo = mid + 1
+		else:
+			hi = mid - 1
+	return result
 
 
 func _on_log_meta_clicked(meta: Variant) -> void:
