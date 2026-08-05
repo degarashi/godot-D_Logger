@@ -692,13 +692,6 @@ func _on_log_meta_clicked(meta: Variant) -> void:
 	if meta is String:
 		var meta_str: String = meta
 
-		# Handle selection toggle
-		if meta_str.begins_with("select:"):
-			if _ctrl_held:
-				var log_index := meta_str.trim_prefix("select:").to_int()
-				_toggle_log_selection(log_index)
-			return
-
 		if meta_str.begins_with("filter:"):
 			_solo_category(meta_str.trim_prefix("filter:"))
 			return
