@@ -227,6 +227,7 @@ func add_log(log_data: Dictionary) -> void:
 			and last_log.get("prefix") == log_data.get("prefix")
 			and last_log.get("category") == log_data.get("category")
 			and last_log.get("caller_info") == log_data.get("caller_info")
+			and last_log.get("context_str") == log_data.get("context_str")
 		):
 			last_log["count"] = last_log.get("count", 1) + 1
 			# Update time/frame to the latest one

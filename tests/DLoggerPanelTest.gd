@@ -639,6 +639,21 @@ func test_add_log_no_stacking_different_level() -> void:
 	panel.free()
 
 
+func test_add_log_no_stacking_different_context() -> void:
+	var panel := await _instantiate_panel()
+	var log_a := _make_log("same")
+	log_a["context_str"] = "Player"
+	panel.add_log(log_a)
+	var log_b := _make_log("same")
+	log_b["context_str"] = "Enemy"
+	panel.add_log(log_b)
+
+	# Same message from different contexts must not stack, otherwise the
+	# displayed context of the merged line would be misleading.
+	assert_int(panel._all_logs.size()).is_equal(2)
+	panel.free()
+
+
 func test_add_log_creates_filter_button() -> void:
 	var panel := await _instantiate_panel()
 	panel.add_log(_make_log("test", "INFO", "D-Logger", "Network"))
