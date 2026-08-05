@@ -115,6 +115,11 @@ func initialize(es: Object) -> void:
 		if entry.is_editor_setting:
 			if not es.has_setting(entry.sys_name):
 				es.set_setting(entry.sys_name, entry.default_val)
+				# Revert baseline is set only when the setting is first
+				# created. Re-running it every startup would reset the
+				# editor's "Reset to default" point on each launch,
+				# discarding the user's previous value as the baseline.
+				es.set_initial_value(entry.sys_name, entry.default_val, false)
 
 			# metadata for editor UI
 			es.add_property_info(
@@ -125,11 +130,14 @@ func initialize(es: Object) -> void:
 					"hint_string": entry.prop_hint_str
 				}
 			)
-			es.set_initial_value(entry.sys_name, entry.default_val, false)
 		else:
 			# Project Setting
 			if not ProjectSettings.has_setting(entry.sys_name):
 				ProjectSettings.set_setting(entry.sys_name, entry.default_val)
+				# set_initial_value can mark the project as dirty in some
+				# cases, so it is only called on first registration — not
+				# on every editor startup.
+				ProjectSettings.set_initial_value(entry.sys_name, entry.default_val)
 
 			# metadata for editor UI
 			ProjectSettings.add_property_info(
@@ -140,9 +148,6 @@ func initialize(es: Object) -> void:
 					"hint_string": entry.prop_hint_str
 				}
 			)
-			# set_initial_value can mark project as dirty in some cases,
-			# so we only set it if not already present or if we really need it.
-			ProjectSettings.set_initial_value(entry.sys_name, entry.default_val)
 
 	# Connect to settings changed to keep runtime in sync
 	if not es.settings_changed.is_connected(_on_settings_changed):

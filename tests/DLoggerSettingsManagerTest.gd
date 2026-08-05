@@ -40,6 +40,7 @@ class FakeEditorSettings:
 
 	var values: Dictionary = {}
 	var property_infos: Array = []
+	var initial_value_calls: Array[String] = []
 	signal settings_changed
 
 	func has_setting(name: String) -> bool:
@@ -54,8 +55,8 @@ class FakeEditorSettings:
 	func add_property_info(_info: Dictionary) -> void:
 		pass
 
-	func set_initial_value(_name: String, _value: Variant, _current: bool = false) -> void:
-		pass
+	func set_initial_value(name: String, _value: Variant, _current: bool = false) -> void:
+		initial_value_calls.append(name)
 
 
 # ------------- [SettingsEntry] -------------
@@ -231,6 +232,43 @@ func test_initialize_does_not_overwrite_existing_editor_settings() -> void:
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
 	assert_bool(fake.get_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE)).is_true()
+
+
+func test_initialize_sets_initial_value_only_for_missing_settings() -> void:
+	# Re-running set_initial_value on every startup would reset the
+	# editor's "Reset to default" baseline, so it must only happen when
+	# the setting is first created.
+	var fake := FakeEditorSettings.new()
+	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, true)
+	var manager := _MANAGER.new()
+	manager.initialize(fake)
+
+	# Existing setting: no initial value call
+	assert_bool(
+		fake.initial_value_calls.has(_CONST.EDITOR_SETTING_ENABLE_CONSOLE)
+	).is_false()
+	# Missing settings: initial value called once
+	assert_bool(
+		fake.initial_value_calls.has(_CONST.EDITOR_SETTING_MIN_LEVEL)
+	).is_true()
+	assert_int(
+		fake.initial_value_calls.count(_CONST.EDITOR_SETTING_MIN_LEVEL)
+	).is_equal(1)
+
+
+func test_initialize_re_initialization_does_not_reset_initial_values() -> void:
+	# A second initialize() (e.g. plugin re-enter) must not re-register
+	# initial values for already-existing settings.
+	var fake := FakeEditorSettings.new()
+	var manager := _MANAGER.new()
+	manager.initialize(fake)
+	manager.initialize(fake)
+
+	for entry in manager._settings_entries:
+		if entry.is_editor_setting:
+			assert_int(
+				fake.initial_value_calls.count(entry.sys_name)
+			).is_equal(1)
 
 
 func test_initialize_registers_project_settings() -> void:
