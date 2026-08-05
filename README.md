@@ -123,9 +123,9 @@ DLoggerNode (in scene tree)
        └─ file_path_override
 ```
 
-### DLoggerFinder (Ancestor Search)
+### DLoggerFinder (Ancestor + Sibling Search)
 
-`DLoggerFinder` searches ancestor nodes for a logger via `DLoggerFunc.find_logger_from_ancestor()` and emits `on_log_found(logger)` when found. Useful for inheriting a parent's logger configuration.
+`DLoggerFinder` searches for a logger via `DLoggerFunc.find_logger_from_ancestor()` and emits `on_log_found(logger)` when found. The search walks up the ancestor chain and, at each level, also inspects the ancestor's other children — so a sibling of any ancestor (an uncle of the finder) is visible. This is convenient for shared-container layouts where a sibling hosts the logger, but note that a closer sibling will bind before a further ancestor. Useful for inheriting a parent or sibling logger configuration.
 
 ---
 

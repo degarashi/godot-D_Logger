@@ -65,9 +65,16 @@ static func is_logger(logger: Object) -> bool:
 	return get_logger(logger) != null
 
 
-## Searches for a specific interface in the parent direction from the specified node
+## Searches for a logger by walking up the ancestor chain. At each
+## ancestor, the node's other children (i.e. siblings of the requester
+## at that level, also reachable as uncles of start_node) are also
+## inspected. Closer ancestors are checked before their siblings,
+## which are checked before the next ancestor up. The sibling scan
+## supports shared-container layouts where a sibling hosts the
+## logger; callers that need strict ancestor-only search must walk
+## the parent chain themselves.
 ## @param start_node The node to start the search from
-## @return The child object implementing the logger interface if found, null otherwise
+## @return The first logger found, or null if none.
 static func find_logger_from_ancestor(start_node: Node) -> Object:
 	if not start_node:
 		return null

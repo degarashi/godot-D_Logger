@@ -123,9 +123,9 @@ DLoggerNode (シーンツリー内)
        └─ file_path_override
 ```
 
-### DLoggerFinder（祖先ノード検索）
+### DLoggerFinder（祖先＋兄弟ノード検索）
 
-`DLoggerFinder` は `DLoggerFunc.find_logger_from_ancestor()` を使用して祖先ノードからロガーを検索し、見つかったら `on_log_found(logger)` シグナルを発火する。親のロガー設定を継承したい場合に有用。
+`DLoggerFinder` は `DLoggerFunc.find_logger_from_ancestor()` を使用してロガーを検索し、見つかったら `on_log_found(logger)` シグナルを発火する。検索は祖先チェーンを遡上しつつ、各レベルでその祖先の他の子（finder から見て uncle にあたる兄弟ロガー）も検査する。共有コンテナレイアウトで兄弟ノードにロガーがある場合に便利だが、より近い兄弟が遠い祖先より優先される点に注意。親や兄弟のロガー設定を継承したい場合に有用。
 
 ---
 
