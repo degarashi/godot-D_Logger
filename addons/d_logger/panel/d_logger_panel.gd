@@ -639,13 +639,42 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 			):
 				return
 
+			# Capture the previous range BEFORE overwriting _drag_last_range
+			# so the diff below can be computed against what was actually
+			# in the selection dict on the previous motion event.
+			var prev_start := _drag_last_range.x
+			var prev_end := _drag_last_range.y
 			_drag_last_range = Vector2i(range_start, range_end)
 
-			if not _drag_is_additive:
-				_selected_log_indices.clear()
-
-			for dl in range(range_start, range_end + 1):
-				_selected_log_indices[_displayed_line_map[dl]] = true
+			# Diff against the previous drag range so per-motion dict work
+			# scales with how much the range moved, not the full range.
+			# A long drag at 60Hz on the 10,000-line cap was hitting
+			# ~600k dict ops/sec; the previous range was reinserted
+			# verbatim on every motion event.
+			if prev_start < 0 or prev_end < 0:
+				# First motion of this drag: insert the full range.
+				# (clear() is the only correct setup for non-additive.)
+				if not _drag_is_additive:
+					_selected_log_indices.clear()
+				for dl in range(range_start, range_end + 1):
+					_selected_log_indices[_displayed_line_map[dl]] = true
+			else:
+				# Subsequent motion: erase what left the range (non-additive
+				# only — additive drags accumulate and never shrink the
+				# selection), then insert only the new slice(s).
+				if not _drag_is_additive:
+					if prev_start < range_start:
+						for dl in range(prev_start, min(prev_end + 1, range_start)):
+							_selected_log_indices.erase(_displayed_line_map[dl])
+					if prev_end > range_end:
+						for dl in range(max(prev_start, range_end + 1), prev_end + 1):
+							_selected_log_indices.erase(_displayed_line_map[dl])
+				if range_start < prev_start:
+					for dl in range(range_start, min(prev_start, range_end + 1)):
+						_selected_log_indices[_displayed_line_map[dl]] = true
+				if range_end > prev_end:
+					for dl in range(max(range_start, prev_end + 1), range_end + 1):
+						_selected_log_indices[_displayed_line_map[dl]] = true
 
 			# Selection state updates immediately (cheap), but the full
 			# display rebuild is frame-coalesced: a single mouse drag can
