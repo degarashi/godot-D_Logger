@@ -176,9 +176,13 @@ func _dispatch(
 		DLoggerConstants.LogLevel.ERROR:
 			_dispatcher.error(final_msg, [], category, context, pref, caller_info)
 
-			# Pause the tree if enabled
+			# Pause the tree if enabled. Skipped in editor because a
+			# @tool script that fires an error would otherwise pause
+			# the editor's own main loop (EditorSceneTree is a
+			# SceneTree), freezing the whole editor.
 			if (
 				OS.is_debug_build()
+				and not Engine.is_editor_hint()
 				and ProjectSettings.get_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, false)
 			):
 				var tree := Engine.get_main_loop() as SceneTree
