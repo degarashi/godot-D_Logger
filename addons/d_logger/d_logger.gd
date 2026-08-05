@@ -10,6 +10,7 @@ const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 
 # ------------- [Private Variable] -------------
 static var _editor_panel: Object = null
+static var _export_warning_shown: bool = false
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
 
@@ -88,6 +89,27 @@ func setup_logger() -> void:
 	_prefix = get_prefix()
 	_min_level = get_min_level()
 	_initialized = true
+
+	# --- Export-build log-sink detection ---
+	# In an exported runtime, EditorSettings (d_logger/...) are not available
+	# and the in-memory mirror from DLoggerSettingsManager never persists
+	# to project.godot (see AGENTS.md anti-pattern: never call
+	# ProjectSettings.save() in plugin code). If the user only set the
+	# file/console toggles in the editor and never wrote the corresponding
+	# `debug/d_logger/...` keys to project.godot, this exported build
+	# silently ends up with DLoggerQuiet only. Surface this once per
+	# session in debug exports so the user has a chance to notice.
+	if not _export_warning_shown and not Engine.is_editor_hint() and is_debug:
+		if not console_enabled and not file_enabled:
+			push_warning(
+				(
+					"DLogger: No log output configured for this exported debug build. "
+					+ "Editor settings are not auto-persisted to project.godot. "
+					+ "Add `debug/d_logger/enable_console_log = true` and/or "
+					+ "`debug/d_logger/enable_file_log = true` to project.godot to enable."
+				)
+			)
+		_export_warning_shown = true
 
 
 func _dispatch(
