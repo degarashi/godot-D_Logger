@@ -17,20 +17,18 @@ func _output(
 	# text cannot inject markup. Renders identically: unknown tags and
 	# escaped brackets both display as literal text.
 	var safe_line := DLoggerFunc.escape_bbcode(formatted)
-	var bbcode: String
 
+	# WARN/ERROR are surfaced via push_warning/push_error only. Both already
+	# write to the editor's Output panel (with stack trace + Errors tab entry),
+	# so we deliberately skip print_rich for these levels to avoid double output.
 	match level:
 		"DEBUG":
-			bbcode = "[color=gray]%s[/color]" % safe_line
+			print_rich("[color=gray]%s[/color]" % safe_line)
 		"INFO":
-			bbcode = "[b][color=cyan]%s[/color][/b]" % safe_line
+			print_rich("[b][color=cyan]%s[/color][/b]" % safe_line)
 		"WARN":
-			bbcode = "[b][color=yellow]%s[/color][/b]" % safe_line
 			push_warning(formatted)
 		"ERROR":
-			bbcode = "[b][color=red]%s[/color][/b]" % safe_line
 			push_error(formatted)
 		_:
-			bbcode = safe_line
-
-	print_rich(bbcode)
+			print_rich(safe_line)
