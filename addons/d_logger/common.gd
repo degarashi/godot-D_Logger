@@ -168,7 +168,13 @@ static func has_unresolved_placeholder(text: String) -> bool:
 static func get_source_string(prefix: String, category: String, use_bbcode: bool = false) -> String:
 	if category.is_empty() or category == prefix:
 		if use_bbcode:
-			return "[[url=filter:%s]%s[/url]]" % [prefix, prefix]
+			# Escape both the URL target and the display label so a
+			# bracket in prefix/category cannot break out of the [url=...]
+			# tag and inject arbitrary BBCode (e.g. a category like
+			# "][url=foo]bar" would otherwise produce broken markup
+			# that the RichTextLabel parser would re-interpret).
+			var safe_prefix := escape_bbcode(prefix)
+			return "[[url=filter:%s]%s[/url]]" % [safe_prefix, safe_prefix]
 		return "[%s]" % prefix
 
 	var tags := category.split("|")
@@ -177,7 +183,10 @@ static func get_source_string(prefix: String, category: String, use_bbcode: bool
 		for t in tags:
 			var tag := t.strip_edges()
 			if not tag.is_empty():
-				linked.append("[url=filter:%s]%s[/url]" % [tag, tag])
+				# Same escaping rationale as above: protect both the
+				# URL meta value and the display text per category tag.
+				var safe_tag := escape_bbcode(tag)
+				linked.append("[url=filter:%s]%s[/url]" % [safe_tag, safe_tag])
 		var body := "|".join(linked)
 		if prefix == DLoggerConstants.DEFAULT_PREFIX:
 			return "[" + body + "]"

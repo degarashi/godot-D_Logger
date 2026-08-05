@@ -91,7 +91,12 @@ static func format_log(
 		source_str = DLoggerFunc.get_source_string(prefix, category, true)
 	elif category.is_empty() and prefix == DLoggerConstants.DEFAULT_PREFIX:
 		# Show [D-Logger] but URL target = "Default" (the actual filter tag).
-		source_str = "[[url=filter:{0}]{1}[/url]]".format([log_tags[0], prefix])
+		# Escape both segments so a bracket in the tag/prefix cannot break
+		# out of the [url=...] tag and inject arbitrary BBCode.
+		source_str = "[[url=filter:{0}]{1}[/url]]".format([
+			DLoggerFunc.escape_bbcode(log_tags[0]),
+			DLoggerFunc.escape_bbcode(prefix),
+		])
 	else:
 		source_str = DLoggerFunc.get_source_string(prefix, category, true)
 
