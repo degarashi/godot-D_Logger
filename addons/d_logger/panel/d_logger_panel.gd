@@ -29,7 +29,6 @@ var _time_presets: Dictionary[String, float] = {
 var _active_time_filter: float = -1.0
 
 # Log level filtering
-var _log_levels: Array[String] = ["DEBUG", "INFO", "WARN", "ERROR"]
 var _log_level_values: Dictionary[String, int] = {
 	"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3
 }

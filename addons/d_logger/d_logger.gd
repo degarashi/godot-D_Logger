@@ -287,6 +287,12 @@ func benchmark(
 	callable: Callable,
 	spike_threshold_ms: float = 16.0
 ) -> Variant:
+	if not callable.is_valid():
+		# Bound callables can outlive their object; bail out with an error
+		# instead of crashing on call().
+		push_error("DLogger: benchmark '{0}' received an invalid callable".format([name]))
+		return null
+
 	var start_usec := Time.get_ticks_usec()
 	var result: Variant = callable.call()
 	var elapsed_ms := (Time.get_ticks_usec() - start_usec) / 1000.0

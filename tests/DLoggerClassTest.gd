@@ -375,3 +375,19 @@ func test_benchmark_respects_level_checks() -> void:
 	logger.benchmark("spike_call", func() -> void: pass, 0.0)
 	assert_int(spy.levels.size()).is_equal(1)
 	assert_str(spy.levels[0]).is_equal("WARN")
+
+
+func test_benchmark_invalid_callable_returns_null() -> void:
+	# Regression: a callable bound to a freed object must not crash
+	# benchmark(); it returns null without executing or logging.
+	var logger := _CLASS.new()
+	var spy := LevelSpy.new()
+	logger._dispatcher.add(spy)
+
+	var obj := Node.new()
+	var bound: Callable = Callable(obj, "to_string")
+	obj.free()
+	# After free, the bound callable is invalid
+	var result: Variant = logger.benchmark("freed_call", bound)
+	assert_object(result).is_null()
+	assert_int(spy.levels.size()).is_equal(0)

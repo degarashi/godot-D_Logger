@@ -58,9 +58,21 @@ func _on_debugger_session_started() -> void:
 		if auto_clear:
 			_panel_instance.clear_logs()
 		else:
-			_panel_instance.call_deferred("_reset_auto_scroll")
+			# Guard the deferred call: the panel may have been freed by the
+			# time the call runs (editor shutdown racing session start).
+			var panel := _panel_instance
+			call_deferred(
+				func() -> void:
+					if is_instance_valid(panel):
+						panel._reset_auto_scroll()
+			)
 
 	# Show the panel when debug session starts
 	var auto_activate: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL)
 	if _panel_instance and auto_activate:
-		call_deferred("make_bottom_panel_item_visible", _panel_instance)
+		var panel: Control = _panel_instance
+		call_deferred(
+			func() -> void:
+				if is_instance_valid(panel):
+					make_bottom_panel_item_visible(panel)
+		)
