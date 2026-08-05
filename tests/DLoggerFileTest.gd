@@ -124,6 +124,25 @@ func test_append_existing_file() -> void:
 	assert_str(content).contains("Second warning")
 
 
+func test_two_instances_same_path_do_not_overwrite() -> void:
+	var path := _temp_dir.path_join("multi_instance.log")
+	# Both loggers stay alive with interleaved writes; each write must seek
+	# to the current end of file instead of relying on a stale handle.
+	var logger1 := _FILE_LOGGER.new(path)
+	var logger2 := _FILE_LOGGER.new(path)
+	logger1.warn("from logger1")
+	logger2.warn("from logger2")
+	logger1.warn("again logger1")
+	logger2.warn("again logger2")
+	var file := FileAccess.open(path, FileAccess.READ)
+	var content := file.get_as_text()
+	file.close()
+	assert_str(content).contains("from logger1")
+	assert_str(content).contains("from logger2")
+	assert_str(content).contains("again logger1")
+	assert_str(content).contains("again logger2")
+
+
 # ------------- [Level Checks] -------------
 func test_file_logger_level_checks() -> void:
 	var path := _temp_dir.path_join("levels.log")
