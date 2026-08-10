@@ -787,6 +787,54 @@ func test_meta_click_filter_solos_category() -> void:
 	panel.free()
 
 
+func test_parse_caller_meta_res_path() -> void:
+	var panel := await _instantiate_panel()
+	# res:// paths carry two colons ("res:" + the line separator) and must
+	# reconstruct the original path including the scheme
+	var parsed: Dictionary = panel.parse_caller_meta("res://game.gd:12")
+	assert_dict(parsed).contains_key_value("path", "res://game.gd")
+	assert_dict(parsed).contains_key_value("line", 12)
+	panel.free()
+
+
+func test_parse_caller_meta_windows_drive_path() -> void:
+	var panel := await _instantiate_panel()
+	var parsed: Dictionary = panel.parse_caller_meta(
+		"C:/Users/foo/project/script.gd:42"
+	)
+	assert_dict(parsed).contains_key_value(
+		"path", "C:/Users/foo/project/script.gd"
+	)
+	assert_dict(parsed).contains_key_value("line", 42)
+	panel.free()
+
+
+func test_parse_caller_meta_absolute_unix_path_ignored() -> void:
+	var panel := await _instantiate_panel()
+	# Colon-less absolute paths split into two parts; they never occur in
+	# editor stack traces (always res://) and are intentionally not handled
+	(
+		assert_dict(panel.parse_caller_meta("/home/user/project/script.gd:7"))
+		. is_empty()
+	)
+	panel.free()
+
+
+func test_parse_caller_meta_garbage_ignored() -> void:
+	var panel := await _instantiate_panel()
+	assert_dict(panel.parse_caller_meta("not-a-url")).is_empty()
+	assert_dict(panel.parse_caller_meta("")).is_empty()
+	panel.free()
+
+
+func test_meta_click_caller_link_resolves_real_script() -> void:
+	var panel := await _instantiate_panel()
+	# A real plugin script must pass the file_exists/load gate and reach
+	# EditorInterface.edit_script without errors (no-op in headless runs)
+	panel._on_log_meta_clicked("res://addons/d_logger/d_logger.gd:5")
+	panel.free()
+
+
 # ------------- [_solo_category] -------------
 func test_solo_category_disables_others() -> void:
 	var panel := await _instantiate_panel()
@@ -1114,7 +1162,9 @@ func test_highlight_search_text_wraps_matches() -> void:
 	var panel := await _instantiate_panel()
 	panel._search.query = "abc"
 	var result: String = panel._search.highlight("xxabcyy")
-	assert_str(result).contains("[bgcolor=yellow][color=black]abc[/color][/bgcolor]")
+	assert_str(result).contains(
+		"[bgcolor=yellow][color=black]abc[/color][/bgcolor]"
+	)
 	panel.free()
 
 
@@ -1156,8 +1206,11 @@ func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 	panel._search.query = "inject"
 	var log := _make_log("[b]inject[/b]")
 	var result: String = panel._format_log(log)
-	assert_str(result).contains(
-		"[lb]b[rb][bgcolor=yellow][color=black]inject[/color][/bgcolor][lb]/b[rb]"
+	(
+		assert_str(result)
+		. contains(
+			"[lb]b[rb][bgcolor=yellow][color=black]inject[/color][/bgcolor][lb]/b[rb]"
+		)
 	)
 	panel.free()
 
@@ -1263,7 +1316,9 @@ func test_apply_level_filter_selects_matching_item() -> void:
 	panel._apply_level_filter(2)
 	assert_int(panel._active_level_filter).is_equal(2)
 	var selected_index: int = panel.level_option_button.selected
-	assert_int(panel.level_option_button.get_item_id(selected_index)).is_equal(2)
+	assert_int(panel.level_option_button.get_item_id(selected_index)).is_equal(
+		2
+	)
 	panel.free()
 
 
@@ -1280,7 +1335,10 @@ func test_change_font_size_increases() -> void:
 	var panel := await _instantiate_panel()
 	panel._change_font_size(2)
 	assert_int(panel._log_font_size).is_equal(16)
-	assert_int(panel.log_display.get_theme_font_size("normal_font_size")).is_equal(16)
+	(
+		assert_int(panel.log_display.get_theme_font_size("normal_font_size"))
+		. is_equal(16)
+	)
 	panel.free()
 
 
@@ -1556,14 +1614,18 @@ func test_update_auto_scroll_from_scrollbar_above_bottom() -> void:
 func test_word_wrap_on() -> void:
 	var panel := await _instantiate_panel()
 	panel._on_word_wrap_toggled(true)
-	assert_int(panel.log_display.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
+	assert_int(panel.log_display.autowrap_mode).is_equal(
+		TextServer.AUTOWRAP_WORD_SMART
+	)
 	panel.free()
 
 
 func test_word_wrap_off() -> void:
 	var panel := await _instantiate_panel()
 	panel._on_word_wrap_toggled(false)
-	assert_int(panel.log_display.autowrap_mode).is_equal(TextServer.AUTOWRAP_OFF)
+	assert_int(panel.log_display.autowrap_mode).is_equal(
+		TextServer.AUTOWRAP_OFF
+	)
 	panel.free()
 
 
@@ -1604,7 +1666,9 @@ func test_show_toast_creates_panel_and_positions_it() -> void:
 	assert_float(toast.position.x).is_equal(expected_pos.x)
 	# The slide-up tween has already started by the time the deferred
 	# _animate_toast runs, so y animates between its start and start - 20.
-	assert_float(toast.position.y).is_between(expected_pos.y - 20.0, expected_pos.y)
+	assert_float(toast.position.y).is_between(
+		expected_pos.y - 20.0, expected_pos.y
+	)
 	panel.free()
 
 
@@ -1627,7 +1691,9 @@ func test_get_line_at_mouse_pos_matches_paragraph() -> void:
 	var style: StyleBox = panel.log_display.get_theme_stylebox(&"normal")
 	var top_padding: float = style.content_margin_top if style else 0.0
 	for i in range(panel.log_display.get_paragraph_count()):
-		var y: float = panel.log_display.get_paragraph_offset(i) + top_padding + 1
+		var y: float = (
+			panel.log_display.get_paragraph_offset(i) + top_padding + 1
+		)
 		assert_int(panel._get_line_at_mouse_pos(Vector2(0, y))).is_equal(i)
 	panel.free()
 
@@ -1832,8 +1898,12 @@ func test_case_sensitive_toggle_updates_flag() -> void:
 func test_update_pause_on_error_button_style_active() -> void:
 	var panel := await _instantiate_panel()
 	panel._update_pause_on_error_button_style(true)
-	assert_float(panel.pause_on_error_button.modulate.r).is_equal_approx(1.0, 0.001)
-	assert_float(panel.pause_on_error_button.modulate.g).is_equal_approx(0.4, 0.001)
+	assert_float(panel.pause_on_error_button.modulate.r).is_equal_approx(
+		1.0, 0.001
+	)
+	assert_float(panel.pause_on_error_button.modulate.g).is_equal_approx(
+		0.4, 0.001
+	)
 	panel.free()
 
 

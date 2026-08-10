@@ -664,16 +664,24 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 				# selection), then insert only the new slice(s).
 				if not _drag_is_additive:
 					if prev_start < range_start:
-						for dl in range(prev_start, min(prev_end + 1, range_start)):
+						for dl in range(
+							prev_start, min(prev_end + 1, range_start)
+						):
 							_selected_log_indices.erase(_displayed_line_map[dl])
 					if prev_end > range_end:
-						for dl in range(max(prev_start, range_end + 1), prev_end + 1):
+						for dl in range(
+							max(prev_start, range_end + 1), prev_end + 1
+						):
 							_selected_log_indices.erase(_displayed_line_map[dl])
 				if range_start < prev_start:
-					for dl in range(range_start, min(prev_start, range_end + 1)):
+					for dl in range(
+						range_start, min(prev_start, range_end + 1)
+					):
 						_selected_log_indices[_displayed_line_map[dl]] = true
 				if range_end > prev_end:
-					for dl in range(max(range_start, prev_end + 1), range_end + 1):
+					for dl in range(
+						max(range_start, prev_end + 1), range_end + 1
+					):
 						_selected_log_indices[_displayed_line_map[dl]] = true
 
 			# Selection state updates immediately (cheap), but the full
@@ -717,6 +725,20 @@ func _get_line_at_mouse_pos(mouse_pos: Vector2) -> int:
 	return result
 
 
+## Parses a caller meta URL ("<path>:<line>") into {"path", "line"}.
+## Splitting on ":" also breaks res:// and drive-letter paths (e.g. "C:/...")
+## into three pieces, so joining everything but the last element restores the
+## original path in both cases. Returns an empty Dictionary when unparseable.
+static func parse_caller_meta(meta_str: String) -> Dictionary:
+	var parts := meta_str.split(":")
+	if parts.size() >= 3:
+		return {
+			"path": ":".join(parts.slice(0, -1)),
+			"line": parts[-1].to_int(),
+		}
+	return {}
+
+
 func _on_log_meta_clicked(meta: Variant) -> void:
 	if meta is String:
 		var meta_str: String = meta
@@ -725,17 +747,18 @@ func _on_log_meta_clicked(meta: Variant) -> void:
 			_solo_category(meta_str.trim_prefix("filter:"))
 			return
 
-		var parts := meta_str.split(":")
-		if parts.size() >= 3:
-			# コロンで分割された要素のうち、最後（行番号）を除いた全てを結合してパスを復元
-			var path_parts := parts.slice(0, -1)
-			var file_path := ":".join(path_parts)
-			var line_num := parts[-1].to_int()
+		var parsed := parse_caller_meta(meta_str)
+		if not parsed.is_empty():
+			var file_path: String = parsed["path"]
+			var line_num: int = parsed["line"]
 
 			if FileAccess.file_exists(file_path):
 				var res := load(file_path)
 				if res is Script:
-					EditorInterface.edit_script(res, line_num)
+					# EditorInterface has no functional edit_script outside the
+					# editor; the guard keeps the click path testable headless
+					if Engine.is_editor_hint():
+						EditorInterface.edit_script(res, line_num)
 
 
 func _toggle_log_selection(log_index: int) -> void:
