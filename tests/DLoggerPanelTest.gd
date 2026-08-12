@@ -809,14 +809,12 @@ func test_parse_caller_meta_windows_drive_path() -> void:
 	panel.free()
 
 
-func test_parse_caller_meta_absolute_unix_path_ignored() -> void:
+func test_parse_caller_meta_relative_or_unix_path() -> void:
 	var panel := await _instantiate_panel()
-	# Colon-less absolute paths split into two parts; they never occur in
-	# editor stack traces (always res://) and are intentionally not handled
-	(
-		assert_dict(panel.parse_caller_meta("/home/user/project/script.gd:7"))
-		. is_empty()
-	)
+	# 2-part paths (e.g. relative or Unix paths with a single colon) are also parsed
+	var parsed: Dictionary = panel.parse_caller_meta("/home/user/project/script.gd:7")
+	assert_dict(parsed).contains_key_value("path", "/home/user/project/script.gd")
+	assert_dict(parsed).contains_key_value("line", 7)
 	panel.free()
 
 

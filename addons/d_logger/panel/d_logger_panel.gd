@@ -726,12 +726,11 @@ func _get_line_at_mouse_pos(mouse_pos: Vector2) -> int:
 
 
 ## Parses a caller meta URL ("<path>:<line>") into {"path", "line"}.
-## Splitting on ":" also breaks res:// and drive-letter paths (e.g. "C:/...")
-## into three pieces, so joining everything but the last element restores the
-## original path in both cases. Returns an empty Dictionary when unparseable.
+## Supports res://, Windows drive paths (C:/...), and relative/Unix paths.
+## Returns an empty Dictionary when unparseable.
 static func parse_caller_meta(meta_str: String) -> Dictionary:
 	var parts := meta_str.split(":")
-	if parts.size() >= 3:
+	if parts.size() >= 2 and parts[-1].is_valid_int():
 		return {
 			"path": ":".join(parts.slice(0, -1)),
 			"line": parts[-1].to_int(),
