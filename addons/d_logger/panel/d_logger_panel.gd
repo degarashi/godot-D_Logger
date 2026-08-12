@@ -749,8 +749,8 @@ func _on_log_meta_clicked(meta: Variant) -> void:
 
 		var parsed := parse_caller_meta(meta_str)
 		if not parsed.is_empty():
-			var file_path: String = parsed["path"]
-			var line_num: int = parsed["line"]
+			var file_path: String = parsed.get("path", "")
+			var line_num: int = parsed.get("line", 0)
 
 			if FileAccess.file_exists(file_path):
 				var res := load(file_path)
