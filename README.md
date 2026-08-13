@@ -258,6 +258,15 @@ Since logging methods return `true`, you can use them in `assert` to ensure they
 assert(DLogger.debug("This only runs in debug builds"))
 ```
 
+This is also the strongest optimization for release builds: Godot strips `assert()` statements entirely from release exports, so the call — including evaluation of its arguments — costs absolutely nothing:
+
+```gdscript
+# The heavy calculation never runs in release builds
+assert(DLogger.debug("Complex result: {0}", [do_heavy_calc()]))
+```
+
+In debug builds the message formats and logs normally; in release builds the whole statement disappears.
+
 ### Benchmarking Hot Spots
 Quickly measure any function and get automatic spike warnings:
 
