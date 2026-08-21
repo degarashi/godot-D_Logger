@@ -25,7 +25,7 @@ A lightweight, powerful, and extensible logging system for Godot Engine. D-Logge
 - ⚙️ **Project & Editor Settings**: Configure prefixes, log levels, and file paths directly from Godot's settings menus.
 - 🧩 **Instance-based Configuration**: Create dedicated logger instances for specific subsystems (e.g., Network, AI) with unique prefixes, levels, and file paths.
 - 🧬 **Node-based Loggers**: Use `DLoggerNode` or `DLoggerFinder` nodes to integrate logging into scene trees.
-- 🎨 **Rich Text Output**: BBCode-supported log display in the editor panel with clickable file:line links and category filters.
+- 🎨 **Rich Text Output**: BBCode-supported log display in the editor panel with clickable file:line links, category filters, and rainbow-colored message brackets by nesting depth.
 - ⚡ **Performance Optimized**: Automatically skips complex string formatting when the log level is disabled. Time/frame values are cached once per dispatch for all downstream loggers.
 - ⏱️ **Performance Benchmarking**: Measure any callable with `benchmark()`; results log at INFO (category `PERF`) and automatically escalate to WARN when they exceed the spike threshold (16 ms by default).
 - 🛠️ **Debug-Only by Design**: Console and file outputs are automatically disabled in release builds; warning and error logs still propagate via `push_warning()`/`push_error()`.
