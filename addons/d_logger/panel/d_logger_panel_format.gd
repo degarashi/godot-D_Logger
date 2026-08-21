@@ -5,6 +5,13 @@ extends Object
 ## state (search, relative-time and selection are passed in as arguments) so
 ## the logic is unit-testable without a panel instance.
 
+# Depth-based bracket colors (vim rainbow-brackets style). Dracula-inspired
+# hues chosen to stay distinguishable from the level colors
+# (gray/cyan/yellow/red) used for the rest of the line.
+const RAINBOW_PALETTE: PackedStringArray = [
+	"#ff5555", "#ffb86c", "#f1fa8c", "#50fa7b", "#8be9fd", "#bd93f9", "#ff79c6"
+]
+
 
 ## Computes the filter tag list for a log: category segments when present,
 ## otherwise the prefix (unless it is the default "D-Logger"), otherwise
@@ -50,6 +57,36 @@ static func format_log_plain(log_data: Dictionary) -> String:
 	return formatted_msg
 
 
+## Colorizes (), [], {} in the message by nesting depth (vim rainbow-brackets
+## style). Single pass: an opening bracket takes the color at the current
+## depth then increments; a closing bracket decrements first (clamped at 0 so
+## mismatched input cannot go negative) and takes the resulting depth's color.
+## Brackets are emitted as escaped [lb]/[rb] wrapped in a [color] tag, so
+## user-provided text still cannot inject BBCode markup — same guarantee as
+## DLoggerFunc.escape_bbcode(). All other characters pass through unchanged.
+static func rainbow_brackets(text: String) -> String:
+	var parts := PackedStringArray()
+	var depth := 0
+	for i in text.length():
+		var c := text[i]
+		match c:
+			"(", "[", "{":
+				parts.append(
+					"[color=%s][lb][/color]"
+					% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+				)
+				depth += 1
+			")", "]", "}":
+				depth = maxi(depth - 1, 0)
+				parts.append(
+					"[color=%s][rb][/color]"
+					% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+				)
+			_:
+				parts.append(c)
+	return "".join(parts)
+
+
 ## Formats a log for the RichTextLabel display with BBCode: clickable source
 ## links, level colors, selection color, optional search highlighting and
 ## optional relative timestamps.
@@ -69,9 +106,11 @@ static func format_log(
 	var caller_info = log_data.get("caller_info", {})
 	var message: String = log_data.get("message", "")
 
-	# Escape brackets before BBCode embedding/highlighting so user-provided
-	# message text cannot inject markup (e.g. [url=filter:...] link spoofing).
-	message = DLoggerFunc.escape_bbcode(message)
+	# Rainbow-color message brackets instead of plain escaping: the output is
+	# still escaped ([lb]/[rb]) so user-provided text cannot inject markup
+	# (e.g. [url=filter:...] link spoofing), but bracket nesting additionally
+	# gets depth-based colors for readability.
+	message = rainbow_brackets(message)
 
 	# Highlight search keyword in the message text
 	if not search.is_empty():

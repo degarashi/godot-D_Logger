@@ -1194,7 +1194,10 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 	var panel := await _instantiate_panel()
 	var log := _make_log("[b]inject[/b]")
 	var result: String = panel._format_log(log)
-	assert_str(result).contains("[lb]b[rb]inject[lb]/b[rb]")
+	assert_str(result).contains(
+		"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
+		+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+	)
 	assert_bool(result.contains("[b]inject[/b]")).is_false()
 	panel.free()
 
@@ -1207,7 +1210,9 @@ func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 	(
 		assert_str(result)
 		. contains(
-			"[lb]b[rb][bgcolor=yellow][color=black]inject[/color][/bgcolor][lb]/b[rb]"
+			"[lb][/color]b[color=#ff5555][rb][/color][bgcolor=yellow]"
+			+ "[color=black]inject[/color][/bgcolor]"
+			+ "[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
 		)
 	)
 	panel.free()

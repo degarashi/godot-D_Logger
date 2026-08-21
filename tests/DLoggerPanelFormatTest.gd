@@ -125,8 +125,57 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 	var result: String = DLoggerPanelFormat.format_log(
 		_make_log("[b]inject[/b]"), search, false, 0.0
 	)
-	assert_str(result).contains("[lb]b[rb]inject[lb]/b[rb]")
+	assert_str(result).contains(
+		"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
+		+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+	)
 	assert_bool(result.contains("[b]inject[/b]")).is_false()
+
+
+# ------------- [rainbow_brackets] -------------
+func test_rainbow_nested_brackets_use_depth_colors() -> void:
+	var result: String = DLoggerPanelFormat.rainbow_brackets("(a [b {c} d] e)")
+	assert_str(result).contains("[color=#ff5555][lb][/color]")
+	assert_str(result).contains("[color=#ffb86c][lb][/color]")
+	assert_str(result).contains("[color=#f1fa8c][lb][/color]")
+	assert_str(result).contains("[color=#f1fa8c][rb][/color]")
+	assert_str(result).contains("[color=#ffb86c][rb][/color]")
+	assert_str(result).contains("[color=#ff5555][rb][/color]")
+
+
+func test_rainbow_palette_wraps_around() -> void:
+	# 8 opening brackets: depths 0..7, index 7 wraps back to palette[0]
+	var result: String = DLoggerPanelFormat.rainbow_brackets("((((((((")
+	assert_int(result.count("[color=#ff5555][lb][/color]")).is_equal(2)
+	assert_int(result.count("[color=#ff79c6][lb][/color]")).is_equal(1)
+
+
+func test_rainbow_mismatched_brackets_clamp_at_zero() -> void:
+	var result: String = DLoggerPanelFormat.rainbow_brackets("no open ] here")
+	assert_str(result).contains("[color=#ff5555][rb][/color]")
+
+
+func test_rainbow_escapes_bbcode_injection() -> void:
+	var result: String = DLoggerPanelFormat.rainbow_brackets(
+		"[url=evil]x[/url]"
+	)
+	assert_bool(result.contains("[url=evil]")).is_false()
+	assert_str(result).contains("[lb][/color]url=evil[color=#ff5555][rb]")
+
+
+func test_rainbow_plain_text_passthrough() -> void:
+	var result: String = DLoggerPanelFormat.rainbow_brackets("hello world")
+	assert_str(result).is_equal("hello world")
+
+
+func test_rainbow_with_search_highlight_coexists() -> void:
+	var search := DLoggerSearch.new()
+	search.query = "inject"
+	var log := _make_log("[b]inject[/b]")
+	var result: String = DLoggerPanelFormat.format_log(log, search, false, 0.0)
+	assert_str(result).contains(
+		"[bgcolor=yellow][color=black]inject[/color][/bgcolor]"
+	)
 
 
 func test_format_log_relative_time() -> void:
