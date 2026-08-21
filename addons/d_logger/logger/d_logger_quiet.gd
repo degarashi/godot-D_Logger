@@ -21,7 +21,9 @@ func _output(
 	p_caller_info: Variant,
 	level: String
 ) -> void:
-	var formatted := DLoggerFunc.format_log(msg, category, level, context, prefix, p_caller_info)
+	var formatted := DLoggerFunc.format_log(
+		msg, category, level, context, prefix, p_caller_info
+	)
 	match level:
 		"WARN":
 			push_warning(formatted)

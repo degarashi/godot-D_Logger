@@ -38,52 +38,76 @@ func test_setting_prefix() -> void:
 
 
 func test_setting_enable_console() -> void:
-	assert_str(_CONST.SETTING_ENABLE_CONSOLE).is_equal("debug/d_logger/enable_console_log")
+	assert_str(_CONST.SETTING_ENABLE_CONSOLE).is_equal(
+		"debug/d_logger/enable_console_log"
+	)
 
 
 func test_setting_min_level() -> void:
-	assert_str(_CONST.SETTING_MIN_LEVEL).is_equal("debug/d_logger/min_log_level")
+	assert_str(_CONST.SETTING_MIN_LEVEL).is_equal(
+		"debug/d_logger/min_log_level"
+	)
 
 
 func test_setting_enable_file() -> void:
-	assert_str(_CONST.SETTING_ENABLE_FILE).is_equal("debug/d_logger/enable_file_log")
+	assert_str(_CONST.SETTING_ENABLE_FILE).is_equal(
+		"debug/d_logger/enable_file_log"
+	)
 
 
 func test_setting_file_path() -> void:
-	assert_str(_CONST.SETTING_FILE_PATH).is_equal("debug/d_logger/log_file_path")
+	assert_str(_CONST.SETTING_FILE_PATH).is_equal(
+		"debug/d_logger/log_file_path"
+	)
 
 
 func test_setting_pause_on_error() -> void:
-	assert_str(_CONST.SETTING_PAUSE_ON_ERROR).is_equal("debug/d_logger/pause_on_error")
+	assert_str(_CONST.SETTING_PAUSE_ON_ERROR).is_equal(
+		"debug/d_logger/pause_on_error"
+	)
 
 
 # ------------- [Editor Settings Paths] -------------
 func test_editor_setting_enable_console() -> void:
-	assert_str(_CONST.EDITOR_SETTING_ENABLE_CONSOLE).is_equal("d_logger/enable_console_log")
+	assert_str(_CONST.EDITOR_SETTING_ENABLE_CONSOLE).is_equal(
+		"d_logger/enable_console_log"
+	)
 
 
 func test_editor_setting_min_level() -> void:
-	assert_str(_CONST.EDITOR_SETTING_MIN_LEVEL).is_equal("d_logger/min_log_level")
+	assert_str(_CONST.EDITOR_SETTING_MIN_LEVEL).is_equal(
+		"d_logger/min_log_level"
+	)
 
 
 func test_editor_setting_enable_file() -> void:
-	assert_str(_CONST.EDITOR_SETTING_ENABLE_FILE).is_equal("d_logger/enable_file_log")
+	assert_str(_CONST.EDITOR_SETTING_ENABLE_FILE).is_equal(
+		"d_logger/enable_file_log"
+	)
 
 
 func test_editor_setting_file_path() -> void:
-	assert_str(_CONST.EDITOR_SETTING_FILE_PATH).is_equal("d_logger/log_file_path")
+	assert_str(_CONST.EDITOR_SETTING_FILE_PATH).is_equal(
+		"d_logger/log_file_path"
+	)
 
 
 func test_editor_setting_auto_activate_panel() -> void:
-	assert_str(_CONST.EDITOR_SETTING_AUTO_ACTIVATE_PANEL).is_equal("d_logger/auto_activate_panel")
+	assert_str(_CONST.EDITOR_SETTING_AUTO_ACTIVATE_PANEL).is_equal(
+		"d_logger/auto_activate_panel"
+	)
 
 
 func test_editor_setting_auto_clear_on_start() -> void:
-	assert_str(_CONST.EDITOR_SETTING_AUTO_CLEAR_ON_START).is_equal("d_logger/auto_clear_on_start")
+	assert_str(_CONST.EDITOR_SETTING_AUTO_CLEAR_ON_START).is_equal(
+		"d_logger/auto_clear_on_start"
+	)
 
 
 func test_editor_setting_pause_on_error() -> void:
-	assert_str(_CONST.EDITOR_SETTING_PAUSE_ON_ERROR).is_equal("d_logger/pause_on_error")
+	assert_str(_CONST.EDITOR_SETTING_PAUSE_ON_ERROR).is_equal(
+		"d_logger/pause_on_error"
+	)
 
 
 # ------------- [Default Values] -------------
@@ -110,12 +134,16 @@ func test_autoload_name() -> void:
 
 
 func test_autoload_path() -> void:
-	assert_str(_CONST.AUTOLOAD_PATH).is_equal("res://addons/d_logger/d_logger_node.tscn")
+	assert_str(_CONST.AUTOLOAD_PATH).is_equal(
+		"res://addons/d_logger/d_logger_node.tscn"
+	)
 
 
 # ------------- [Log Level Labels] -------------
 func test_min_level_hint_string() -> void:
-	assert_str(_CONST.MIN_LEVEL_HINT_STRING).is_equal("DEBUG:0,INFO:1,WARN:2,ERROR:3")
+	assert_str(_CONST.MIN_LEVEL_HINT_STRING).is_equal(
+		"DEBUG:0,INFO:1,WARN:2,ERROR:3"
+	)
 
 
 func test_log_level_labels_debug() -> void:

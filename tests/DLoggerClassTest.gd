@@ -29,7 +29,9 @@ func test_init_console_override() -> void:
 
 
 func test_init_file_path() -> void:
-	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, null, "user://test.log")
+	var logger := _CLASS.new(
+		"TEST", _CONST.LogLevel.DEBUG, null, "user://test.log"
+	)
 	assert_str(logger._override_file_path).is_equal("user://test.log")
 
 
@@ -277,7 +279,9 @@ func test_format_with_special_chars() -> void:
 
 
 func test_dispatch_pause_on_error_disabled() -> void:
-	var prev_pause = ProjectSettings.get_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	var prev_pause = ProjectSettings.get_setting(
+		_CONST.SETTING_PAUSE_ON_ERROR, false
+	)
 	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
 	var logger := _CLASS.new("PAUSE", _CONST.LogLevel.DEBUG)
 	# Should not pause when setting is disabled
@@ -343,7 +347,9 @@ func test_benchmark_returns_callable_result() -> void:
 	var spy := LevelSpy.new()
 	logger._dispatcher.add(spy)
 
-	var result: Variant = logger.benchmark("test_call", func() -> int: return 42)
+	var result: Variant = logger.benchmark(
+		"test_call", func() -> int: return 42
+	)
 
 	assert_int(result).is_equal(42)
 	assert_int(spy.levels.size()).is_equal(1)

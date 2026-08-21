@@ -2,6 +2,7 @@
 class_name DLoggerSettingsManager
 extends RefCounted
 
+
 # ------------- [Settings Entry] -------------
 class SettingsEntry:
 	var sys_name: String
@@ -137,7 +138,9 @@ func initialize(es: Object) -> void:
 				# set_initial_value can mark the project as dirty in some
 				# cases, so it is only called on first registration — not
 				# on every editor startup.
-				ProjectSettings.set_initial_value(entry.sys_name, entry.default_val)
+				ProjectSettings.set_initial_value(
+					entry.sys_name, entry.default_val
+				)
 
 			# metadata for editor UI
 			ProjectSettings.add_property_info(

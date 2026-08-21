@@ -39,7 +39,10 @@ class FakePanel:
 
 func test_forward_to_panel_forwards_log() -> void:
 	var panel := FakePanel.new()
-	assert_bool(_DEBUGGER._forward_to_panel(panel, {"message": "hello"})).is_true()
+	(
+		assert_bool(_DEBUGGER._forward_to_panel(panel, {"message": "hello"}))
+		. is_true()
+	)
 	# Forwarded via call_deferred, so it lands on the next frame
 	assert_int(panel.received.size()).is_equal(0)
 	await get_tree().process_frame
@@ -50,9 +53,15 @@ func test_forward_to_panel_forwards_log() -> void:
 
 func test_forward_to_panel_rejects_panel_without_add_log() -> void:
 	var panel := Control.new()
-	assert_bool(_DEBUGGER._forward_to_panel(panel, {"message": "hello"})).is_false()
+	(
+		assert_bool(_DEBUGGER._forward_to_panel(panel, {"message": "hello"}))
+		. is_false()
+	)
 	panel.free()
 
 
 func test_forward_to_panel_without_panel_returns_false() -> void:
-	assert_bool(_DEBUGGER._forward_to_panel(null, {"message": "hello"})).is_false()
+	(
+		assert_bool(_DEBUGGER._forward_to_panel(null, {"message": "hello"}))
+		. is_false()
+	)

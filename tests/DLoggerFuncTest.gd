@@ -51,7 +51,10 @@ func test_has_unresolved_placeholder_positional_leftover() -> void:
 func test_has_unresolved_placeholder_named_leftover() -> void:
 	# A {name} placeholder that survived formatting (e.g. Array was passed
 	# for a named placeholder) must be detected.
-	assert_bool(_FUNC.has_unresolved_placeholder("player {name} joined")).is_true()
+	(
+		assert_bool(_FUNC.has_unresolved_placeholder("player {name} joined"))
+		. is_true()
+	)
 
 
 func test_has_unresolved_placeholder_resolved_text_is_clean() -> void:
@@ -181,7 +184,9 @@ func test_format_log_basic() -> void:
 
 func test_format_log_with_category() -> void:
 	_FUNC.set_time_cache(2.0, 200)
-	var result := _FUNC.format_log("Test msg", "Network", "WARN", null, "D-Logger")
+	var result := _FUNC.format_log(
+		"Test msg", "Network", "WARN", null, "D-Logger"
+	)
 	assert_str(result).contains("Test msg")
 	assert_str(result).contains("Network")
 	assert_str(result).contains("WARN")
@@ -202,7 +207,9 @@ func test_format_log_with_context() -> void:
 func test_format_log_with_caller_info() -> void:
 	_FUNC.set_time_cache(4.0, 400)
 	var caller := {"file": "test.gd", "line": 42, "display": "[test.gd:42]"}
-	var result := _FUNC.format_log("Caller test", "", "WARN", null, "D-Logger", caller)
+	var result := _FUNC.format_log(
+		"Caller test", "", "WARN", null, "D-Logger", caller
+	)
 	assert_str(result).contains("Caller test")
 	assert_str(result).contains("test.gd")
 	_FUNC.clear_time_cache()
@@ -332,8 +339,7 @@ func test_get_source_string_bbcode_escapes_brackets_in_category_tag() -> void:
 
 # ------------- [get_object_string edge cases] -------------
 func test_get_object_string_with_long_name() -> void:
-	var long_name := \
-	"ThisIsAVeryLongNodeNameThatExceedsTypicalLengthLimits_1234567890"
+	var long_name := "ThisIsAVeryLongNodeNameThatExceedsTypicalLengthLimits_1234567890"
 	var node := Node.new()
 	node.name = long_name
 	var result := _FUNC.get_object_string(node)
@@ -345,12 +351,21 @@ func test_get_object_string_with_long_name() -> void:
 const _AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.tscn"
 const _AUTOLOAD_UID := "uid://dk8w65jl35vbd"
 
+
 func test_is_autoload_ours_matching_res_path() -> void:
-	assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_PATH, _AUTOLOAD_PATH)).is_true()
+	(
+		assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_PATH, _AUTOLOAD_PATH))
+		. is_true()
+	)
 
 
 func test_is_autoload_ours_star_prefixed_res_path() -> void:
-	assert_bool(_FUNC.is_autoload_ours("*" + _AUTOLOAD_PATH, _AUTOLOAD_PATH)).is_true()
+	(
+		assert_bool(
+			_FUNC.is_autoload_ours("*" + _AUTOLOAD_PATH, _AUTOLOAD_PATH)
+		)
+		. is_true()
+	)
 
 
 func test_is_autoload_ours_matching_uid() -> void:
@@ -358,7 +373,10 @@ func test_is_autoload_ours_matching_uid() -> void:
 
 
 func test_is_autoload_ours_star_prefixed_uid() -> void:
-	assert_bool(_FUNC.is_autoload_ours("*" + _AUTOLOAD_UID, _AUTOLOAD_PATH)).is_true()
+	(
+		assert_bool(_FUNC.is_autoload_ours("*" + _AUTOLOAD_UID, _AUTOLOAD_PATH))
+		. is_true()
+	)
 
 
 func test_is_autoload_ours_empty_value() -> void:
@@ -366,12 +384,27 @@ func test_is_autoload_ours_empty_value() -> void:
 
 
 func test_is_autoload_ours_other_res_path() -> void:
-	assert_bool(_FUNC.is_autoload_ours("res://other/logger.tscn", _AUTOLOAD_PATH)).is_false()
+	(
+		assert_bool(
+			_FUNC.is_autoload_ours("res://other/logger.tscn", _AUTOLOAD_PATH)
+		)
+		. is_false()
+	)
 
 
 func test_is_autoload_ours_other_uid() -> void:
-	assert_bool(_FUNC.is_autoload_ours("uid://0123456789abc", _AUTOLOAD_PATH)).is_false()
+	(
+		assert_bool(
+			_FUNC.is_autoload_ours("uid://0123456789abc", _AUTOLOAD_PATH)
+		)
+		. is_false()
+	)
 
 
 func test_is_autoload_ours_trailing_whitespace_not_trimmed() -> void:
-	assert_bool(_FUNC.is_autoload_ours(_AUTOLOAD_PATH + " ", _AUTOLOAD_PATH)).is_false()
+	(
+		assert_bool(
+			_FUNC.is_autoload_ours(_AUTOLOAD_PATH + " ", _AUTOLOAD_PATH)
+		)
+		. is_false()
+	)

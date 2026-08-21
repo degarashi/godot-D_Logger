@@ -20,7 +20,9 @@ func _ready() -> void:
 func _find_logger() -> void:
 	var logger := DLoggerFunc.find_logger_from_ancestor(self)
 	if logger:
-		_logger = logger.get_logger() if logger.has_method(&"get_logger") else logger
+		_logger = (
+			logger.get_logger() if logger.has_method(&"get_logger") else logger
+		)
 
 	if _logger:
 		on_log_found.emit(_logger)

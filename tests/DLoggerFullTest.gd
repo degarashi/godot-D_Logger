@@ -213,6 +213,3 @@ func test_bbcode_with_category_context() -> void:
 	node.free()
 	assert_bool(true).is_true()
 	_FUNC.clear_time_cache()
-
-
-

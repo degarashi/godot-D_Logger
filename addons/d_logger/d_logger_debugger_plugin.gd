@@ -49,4 +49,6 @@ func _setup_session(session_id: int) -> void:
 ## Decides whether this plugin handles the given debugger message.
 ## Static so the decision logic is testable without an editor session.
 static func _is_log_capture(message: String, data: Array) -> bool:
-	return message == "d_logger:log" and data.size() > 0 and data[0] is Dictionary
+	return (
+		message == "d_logger:log" and data.size() > 0 and data[0] is Dictionary
+	)

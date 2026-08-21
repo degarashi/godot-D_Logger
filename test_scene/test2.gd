@@ -41,10 +41,14 @@ func _on_d_logger_finder_detected() -> void:
 		DLogger.info("Valid logger instance obtained from DLoggerFinder")
 
 	DLogger.info("--- Pause on Error Test Scene ---")
-	DLogger.info("Press [SPACE] to trigger an error and test pause functionality.")
+	DLogger.info(
+		"Press [SPACE] to trigger an error and test pause functionality."
+	)
 	DLogger.info(
 		"Current pause_on_error setting: ",
-		ProjectSettings.get_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, false)
+		ProjectSettings.get_setting(
+			DLoggerConstants.SETTING_PAUSE_ON_ERROR, false
+		)
 	)
 
 
@@ -70,6 +74,11 @@ func _run_pause_test() -> void:
 	if get_tree().paused:
 		DLogger.info("SUCCESS: Game tree is PAUSED.")
 	else:
-		DLogger.info("FAILURE: Game tree is NOT paused. (Check if OS.is_debug_build() is true)")
+		(
+			DLogger
+			. info(
+				"FAILURE: Game tree is NOT paused. (Check if OS.is_debug_build() is true)"
+			)
+		)
 
 	is_test_running = false

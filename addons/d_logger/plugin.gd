@@ -4,7 +4,6 @@ extends EditorPlugin
 const PANEL_SCENE = preload("uid://c4ge4lhdk2crn")
 const DEBUGGER_PLUGIN = preload("uid://1wnkr07kpq7c")
 
-
 # ------------- [Private Variable] -------------
 var _settings_manager: DLoggerSettingsManager = DLoggerSettingsManager.new()
 var _panel_instance: Control
@@ -15,8 +14,12 @@ var _debugger_instance: EditorDebuggerPlugin
 func _enter_tree() -> void:
 	_settings_manager.initialize(get_editor_interface().get_editor_settings())
 
-	if not ProjectSettings.has_setting("autoload/" + DLoggerConstants.AUTOLOAD_NAME):
-		add_autoload_singleton(DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH)
+	if not ProjectSettings.has_setting(
+		"autoload/" + DLoggerConstants.AUTOLOAD_NAME
+	):
+		add_autoload_singleton(
+			DLoggerConstants.AUTOLOAD_NAME, DLoggerConstants.AUTOLOAD_PATH
+		)
 
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
@@ -69,7 +72,9 @@ func _autoload_is_ours() -> bool:
 func _on_debugger_session_started() -> void:
 	var es := get_editor_interface().get_editor_settings()
 
-	var auto_clear: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_CLEAR_ON_START)
+	var auto_clear: bool = es.get_setting(
+		DLoggerConstants.EDITOR_SETTING_AUTO_CLEAR_ON_START
+	)
 	if _panel_instance:
 		if auto_clear:
 			_panel_instance.clear_logs()
@@ -83,7 +88,9 @@ func _on_debugger_session_started() -> void:
 			reset_auto_scroll.call_deferred()
 
 	# Show the panel when debug session starts
-	var auto_activate: bool = es.get_setting(DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL)
+	var auto_activate: bool = es.get_setting(
+		DLoggerConstants.EDITOR_SETTING_AUTO_ACTIVATE_PANEL
+	)
 	if _panel_instance and auto_activate:
 		var panel: Control = _panel_instance
 		var show_panel := func() -> void:

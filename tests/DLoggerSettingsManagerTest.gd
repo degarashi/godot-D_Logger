@@ -55,14 +55,22 @@ class FakeEditorSettings:
 	func add_property_info(_info: Dictionary) -> void:
 		pass
 
-	func set_initial_value(name: String, _value: Variant, _current: bool = false) -> void:
+	func set_initial_value(
+		name: String, _value: Variant, _current: bool = false
+	) -> void:
 		initial_value_calls.append(name)
 
 
 # ------------- [SettingsEntry] -------------
 func test_settings_entry_stores_fields() -> void:
 	var entry := _MANAGER.SettingsEntry.new(
-		"sys_name", "runtime_name", TYPE_INT, 5, PROPERTY_HINT_ENUM, "A:0,B:1", false
+		"sys_name",
+		"runtime_name",
+		TYPE_INT,
+		5,
+		PROPERTY_HINT_ENUM,
+		"A:0,B:1",
+		false
 	)
 	assert_str(entry.sys_name).is_equal("sys_name")
 	assert_str(entry.runtime_name).is_equal("runtime_name")
@@ -176,7 +184,9 @@ func test_min_level_entry_has_enum_hint() -> void:
 	for entry in manager._settings_entries:
 		if entry.sys_name == _CONST.EDITOR_SETTING_MIN_LEVEL:
 			assert_int(entry.prop_hint).is_equal(PROPERTY_HINT_ENUM)
-			assert_str(entry.prop_hint_str).is_equal(_CONST.MIN_LEVEL_HINT_STRING)
+			assert_str(entry.prop_hint_str).is_equal(
+				_CONST.MIN_LEVEL_HINT_STRING
+			)
 			return
 	fail("EDITOR_SETTING_MIN_LEVEL entry not found")
 
@@ -221,7 +231,10 @@ func test_initialize_registers_defaults_for_missing_settings() -> void:
 
 	var wrong: Array[String] = []
 	for entry in manager._settings_entries:
-		if entry.is_editor_setting and fake.get_setting(entry.sys_name) != entry.default_val:
+		if (
+			entry.is_editor_setting
+			and fake.get_setting(entry.sys_name) != entry.default_val
+		):
 			wrong.append(entry.sys_name)
 	assert_array(wrong).is_empty()
 
@@ -231,7 +244,10 @@ func test_initialize_does_not_overwrite_existing_editor_settings() -> void:
 	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, true)
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
-	assert_bool(fake.get_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE)).is_true()
+	(
+		assert_bool(fake.get_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE))
+		. is_true()
+	)
 
 
 func test_initialize_sets_initial_value_only_for_missing_settings() -> void:
@@ -244,16 +260,25 @@ func test_initialize_sets_initial_value_only_for_missing_settings() -> void:
 	manager.initialize(fake)
 
 	# Existing setting: no initial value call
-	assert_bool(
-		fake.initial_value_calls.has(_CONST.EDITOR_SETTING_ENABLE_CONSOLE)
-	).is_false()
+	(
+		assert_bool(
+			fake.initial_value_calls.has(_CONST.EDITOR_SETTING_ENABLE_CONSOLE)
+		)
+		. is_false()
+	)
 	# Missing settings: initial value called once
-	assert_bool(
-		fake.initial_value_calls.has(_CONST.EDITOR_SETTING_MIN_LEVEL)
-	).is_true()
-	assert_int(
-		fake.initial_value_calls.count(_CONST.EDITOR_SETTING_MIN_LEVEL)
-	).is_equal(1)
+	(
+		assert_bool(
+			fake.initial_value_calls.has(_CONST.EDITOR_SETTING_MIN_LEVEL)
+		)
+		. is_true()
+	)
+	(
+		assert_int(
+			fake.initial_value_calls.count(_CONST.EDITOR_SETTING_MIN_LEVEL)
+		)
+		. is_equal(1)
+	)
 
 
 func test_initialize_re_initialization_does_not_reset_initial_values() -> void:
@@ -266,9 +291,9 @@ func test_initialize_re_initialization_does_not_reset_initial_values() -> void:
 
 	for entry in manager._settings_entries:
 		if entry.is_editor_setting:
-			assert_int(
-				fake.initial_value_calls.count(entry.sys_name)
-			).is_equal(1)
+			assert_int(fake.initial_value_calls.count(entry.sys_name)).is_equal(
+				1
+			)
 
 
 func test_initialize_registers_project_settings() -> void:
@@ -284,7 +309,12 @@ func test_initialize_connects_settings_changed() -> void:
 	var fake := FakeEditorSettings.new()
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
-	assert_bool(fake.settings_changed.is_connected(manager._on_settings_changed)).is_true()
+	(
+		assert_bool(
+			fake.settings_changed.is_connected(manager._on_settings_changed)
+		)
+		. is_true()
+	)
 
 
 func test_initialize_does_not_connect_twice() -> void:
@@ -305,15 +335,24 @@ func test_initialize_syncs_editor_settings_to_runtime() -> void:
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
 
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE)).is_true()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE))
+		. is_true()
+	)
 	assert_int(ProjectSettings.get_setting(_CONST.SETTING_MIN_LEVEL)).is_equal(
 		_CONST.LogLevel.WARN
 	)
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_FILE)).is_true()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_FILE))
+		. is_true()
+	)
 	assert_str(ProjectSettings.get_setting(_CONST.SETTING_FILE_PATH)).is_equal(
 		"user://custom.log"
 	)
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_PAUSE_ON_ERROR)).is_true()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_PAUSE_ON_ERROR))
+		. is_true()
+	)
 
 
 func test_initialize_does_not_sync_entries_without_runtime_name() -> void:
@@ -321,8 +360,18 @@ func test_initialize_does_not_sync_entries_without_runtime_name() -> void:
 	# no ProjectSettings counterpart.
 	var manager := _MANAGER.new()
 	manager.initialize(FakeEditorSettings.new())
-	assert_bool(ProjectSettings.has_setting("debug/d_logger/auto_activate_panel")).is_false()
-	assert_bool(ProjectSettings.has_setting("debug/d_logger/auto_clear_on_start")).is_false()
+	(
+		assert_bool(
+			ProjectSettings.has_setting("debug/d_logger/auto_activate_panel")
+		)
+		. is_false()
+	)
+	(
+		assert_bool(
+			ProjectSettings.has_setting("debug/d_logger/auto_clear_on_start")
+		)
+		. is_false()
+	)
 
 
 func test_sync_to_runtime_does_not_touch_project_prefix_setting() -> void:
@@ -331,7 +380,9 @@ func test_sync_to_runtime_does_not_touch_project_prefix_setting() -> void:
 	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, false)
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
-	assert_str(ProjectSettings.get_setting(_CONST.SETTING_PREFIX)).is_equal("KEEP_ME")
+	assert_str(ProjectSettings.get_setting(_CONST.SETTING_PREFIX)).is_equal(
+		"KEEP_ME"
+	)
 
 
 # ------------- [Sync to Runtime] -------------
@@ -343,13 +394,19 @@ func test_sync_to_runtime_updates_changed_values() -> void:
 
 	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, false)
 	manager.sync_to_runtime()
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE)).is_false()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE))
+		. is_false()
+	)
 
 
 func test_sync_to_runtime_before_initialize_is_noop() -> void:
 	var manager := _MANAGER.new()
 	manager.sync_to_runtime()
-	assert_bool(ProjectSettings.has_setting(_CONST.SETTING_ENABLE_CONSOLE)).is_false()
+	(
+		assert_bool(ProjectSettings.has_setting(_CONST.SETTING_ENABLE_CONSOLE))
+		. is_false()
+	)
 
 
 func test_settings_changed_signal_triggers_sync() -> void:
@@ -371,7 +428,12 @@ func test_shutdown_disconnects_settings_changed() -> void:
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
 	manager.shutdown()
-	assert_bool(fake.settings_changed.is_connected(manager._on_settings_changed)).is_false()
+	(
+		assert_bool(
+			fake.settings_changed.is_connected(manager._on_settings_changed)
+		)
+		. is_false()
+	)
 
 
 func test_shutdown_is_idempotent() -> void:
@@ -388,9 +450,15 @@ func test_shutdown_stops_sync_on_signal() -> void:
 	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, true)
 	var manager := _MANAGER.new()
 	manager.initialize(fake)
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE)).is_true()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE))
+		. is_true()
+	)
 
 	manager.shutdown()
 	fake.set_setting(_CONST.EDITOR_SETTING_ENABLE_CONSOLE, false)
 	fake.settings_changed.emit()
-	assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE)).is_true()
+	(
+		assert_bool(ProjectSettings.get_setting(_CONST.SETTING_ENABLE_CONSOLE))
+		. is_true()
+	)

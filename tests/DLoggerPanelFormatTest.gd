@@ -55,15 +55,15 @@ func test_get_log_tags_no_category_uses_prefix() -> void:
 
 
 func test_get_log_tags_no_category_default_prefix() -> void:
-	var tags: Array = DLoggerPanelFormat.get_log_tags(
-		_make_log("x")
-	)
+	var tags: Array = DLoggerPanelFormat.get_log_tags(_make_log("x"))
 	assert_array(tags).contains_exactly(["Default"])
 
 
 # ------------- [format_log_plain] -------------
 func test_format_log_plain_has_no_bbcode() -> void:
-	var result: String = DLoggerPanelFormat.format_log_plain(_make_log("hello world"))
+	var result: String = DLoggerPanelFormat.format_log_plain(
+		_make_log("hello world")
+	)
 	assert_bool(result.contains("[b]")).is_false()
 	assert_bool(result.contains("[/b]")).is_false()
 	assert_bool(result.contains("[url=")).is_false()
@@ -126,8 +126,10 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 		_make_log("[b]inject[/b]"), search, false, 0.0
 	)
 	assert_str(result).contains(
-		"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
-		+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+		(
+			"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
+			+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+		)
 	)
 	assert_bool(result.contains("[b]inject[/b]")).is_false()
 

@@ -100,7 +100,9 @@ static func find_logger_from_ancestor(start_node: Node) -> Object:
 static func get_object_string(obj: Object) -> String:
 	if obj is Node:
 		return "[{0}]".format([obj.name])
-	return "[{0}:{1}]".format([obj.get_class(), String.num_uint64(obj.get_instance_id())])
+	return "[{0}:{1}]".format(
+		[obj.get_class(), String.num_uint64(obj.get_instance_id())]
+	)
 
 
 static func get_caller_info(level: String) -> Dictionary:
@@ -121,7 +123,9 @@ static func get_caller_info(level: String) -> Dictionary:
 				"file": source,
 				"line": entry.get("line", 0),
 				"display":
-				"[{file}:{line}]".format({"file": source.get_file(), "line": entry.get("line", 0)})
+				"[{file}:{line}]".format(
+					{"file": source.get_file(), "line": entry.get("line", 0)}
+				)
 			}
 
 	return {}
@@ -163,7 +167,12 @@ static func has_unresolved_placeholder(text: String) -> bool:
 		var is_key := true
 		for i in body.length():
 			var c := body[i]
-			if not (c == "_" or c.is_valid_int() or (c >= "a" and c <= "z") or (c >= "A" and c <= "Z")):
+			if not (
+				c == "_"
+				or c.is_valid_int()
+				or (c >= "a" and c <= "z")
+				or (c >= "A" and c <= "Z")
+			):
 				is_key = false
 				break
 		if is_key:
@@ -172,7 +181,9 @@ static func has_unresolved_placeholder(text: String) -> bool:
 	return false
 
 
-static func get_source_string(prefix: String, category: String, use_bbcode: bool = false) -> String:
+static func get_source_string(
+	prefix: String, category: String, use_bbcode: bool = false
+) -> String:
 	if category.is_empty() or category == prefix:
 		if use_bbcode:
 			# Escape both the URL target and the display label so a
@@ -219,7 +230,9 @@ static func get_formatted_line(
 
 	if caller_info is Dictionary and not caller_info.is_empty():
 		caller_display = caller_info.get("display", "")
-		caller_url = "%s:%d" % [caller_info.get("file", ""), caller_info.get("line", 0)]
+		caller_url = (
+			"%s:%d" % [caller_info.get("file", ""), caller_info.get("line", 0)]
+		)
 	elif caller_info is String and not caller_info.is_empty():
 		caller_display = caller_info
 
@@ -256,15 +269,25 @@ static func format_log(
 	p_caller_info: Variant = null
 ) -> String:
 	# Use cached time/frame if available, otherwise compute
-	var seconds := _cached_seconds if _cached_seconds >= 0.0 else Time.get_ticks_msec() / 1000.0
-	var frames := _cached_frames if _cached_frames >= 0 else Engine.get_frames_drawn()
+	var seconds := (
+		_cached_seconds
+		if _cached_seconds >= 0.0
+		else Time.get_ticks_msec() / 1000.0
+	)
+	var frames := (
+		_cached_frames if _cached_frames >= 0 else Engine.get_frames_drawn()
+	)
 
 	var ctx_str := get_object_string(context) if context else ""
-	var caller_info: Variant = p_caller_info if p_caller_info != null else get_caller_info(level)
+	var caller_info: Variant = (
+		p_caller_info if p_caller_info != null else get_caller_info(level)
+	)
 	var source_str := get_source_string(prefix, category)
 
 	# By default, use plain text for internal formatting (e.g. for console/file)
-	return get_formatted_line(seconds, frames, source_str, caller_info, ctx_str, level, msg, false)
+	return get_formatted_line(
+		seconds, frames, source_str, caller_info, ctx_str, level, msg, false
+	)
 
 
 ## Returns true when a ProjectSettings autoload entry (its raw string value)
@@ -272,7 +295,9 @@ static func format_log(
 ## paths as `*uid://...` references, so both the uid form and the res://
 ## path are accepted, with or without the leading `*` enabled marker. An
 ## entry the user repointed to another script is never considered ours.
-static func is_autoload_ours(setting_value: String, expected_path: String) -> bool:
+static func is_autoload_ours(
+	setting_value: String, expected_path: String
+) -> bool:
 	var current := setting_value.trim_prefix("*")
 	if current == expected_path:
 		return true

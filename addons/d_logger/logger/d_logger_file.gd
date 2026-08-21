@@ -86,12 +86,16 @@ func _rotate_log_file() -> void:
 	var file := FileAccess.open(_file_path, FileAccess.WRITE)
 	if file:
 		var rotation_msg := "=== Log Rotated: {0} ==="
-		file.store_line(rotation_msg.format([Time.get_datetime_string_from_system()]))
+		file.store_line(
+			rotation_msg.format([Time.get_datetime_string_from_system()])
+		)
 		file.close()
 	else:
 		push_error(
-			"DLoggerFile: Failed to reopen log file after rotation: %s"
-			% _file_path
+			(
+				"DLoggerFile: Failed to reopen log file after rotation: %s"
+				% _file_path
+			)
 		)
 
 

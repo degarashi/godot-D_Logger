@@ -12,7 +12,9 @@ func _output(
 	p_caller_info: Variant,
 	level: String
 ) -> void:
-	var formatted := DLoggerFunc.format_log(msg, category, level, context, prefix, p_caller_info)
+	var formatted := DLoggerFunc.format_log(
+		msg, category, level, context, prefix, p_caller_info
+	)
 	# Escape brackets before embedding into BBCode so user-provided message
 	# text cannot inject markup. Renders identically: unknown tags and
 	# escaped brackets both display as literal text.

@@ -36,16 +36,15 @@ func test_init_with_console_disabled() -> void:
 
 
 func test_init_with_file_path() -> void:
-	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, null, "user://custom.log")
+	var param := _PARAM.new(
+		"", _CONST.LogLevel.DEBUG, null, "user://custom.log"
+	)
 	assert_str(param.file_path_override).is_equal("user://custom.log")
 
 
 func test_init_with_all_params() -> void:
 	var param := _PARAM.new(
-		"NETWORK",
-		_CONST.LogLevel.INFO,
-		true,
-		"user://network.log"
+		"NETWORK", _CONST.LogLevel.INFO, true, "user://network.log"
 	)
 	assert_str(param.prefix_override).is_equal("NETWORK")
 	assert_int(param.min_level_override).is_equal(_CONST.LogLevel.INFO)
@@ -85,7 +84,9 @@ func test_is_resource() -> void:
 
 
 func test_can_duplicate() -> void:
-	var param := _PARAM.new("TEST", _CONST.LogLevel.WARN, true, "user://test.log")
+	var param := _PARAM.new(
+		"TEST", _CONST.LogLevel.WARN, true, "user://test.log"
+	)
 	var duplicate := param.duplicate()
 	assert_str(duplicate.prefix_override).is_equal("TEST")
 	assert_int(duplicate.min_level_override).is_equal(_CONST.LogLevel.WARN)

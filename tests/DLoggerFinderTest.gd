@@ -81,7 +81,9 @@ func test_finder_child_of_logger_node_finds_logger_after_ready() -> void:
 	var node := _NODE.new()
 	var finder := _FINDER.new()
 	var emitted: Array = []
-	finder.on_log_found.connect(func(logger: Variant) -> void: emitted.append(logger))
+	finder.on_log_found.connect(
+		func(logger: Variant) -> void: emitted.append(logger)
+	)
 	node.add_child(finder)
 	add_child(node)
 	await get_tree().process_frame

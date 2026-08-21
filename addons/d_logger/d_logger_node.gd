@@ -27,11 +27,15 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	# DLoggerClass._init() calls setup_logger() already; no need to call again.
-	_logger = _create_logger_from_settings(_init_param if _init_param else DLoggerInitParam.new())
+	_logger = _create_logger_from_settings(
+		_init_param if _init_param else DLoggerInitParam.new()
+	)
 
 
 # ------------- [Private Static Method] -------------
-static func _create_logger_from_settings(param: DLoggerInitParam) -> DLoggerClass:
+static func _create_logger_from_settings(
+	param: DLoggerInitParam
+) -> DLoggerClass:
 	return DLoggerClass.new(
 		param.prefix_override if not param.prefix_override.is_empty() else null,
 		param.min_level_override,

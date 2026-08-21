@@ -5,7 +5,6 @@ extends RefCounted
 ## and the compiled regex (when regex mode is active). Pure logic without UI
 ## dependencies so it can be unit-tested independently of the panel.
 
-
 # ------------- [State] -------------
 var query: String = ""
 var case_sensitive: bool = false
@@ -41,8 +40,10 @@ func compile() -> void:
 		# The engine already logs the PCRE2 error detail for the failed
 		# compile; attribute it here so the fallback is not silent.
 		push_warning(
-			"Invalid regex pattern \"{0}\" (error {1}). ".format([query, err])
-			+ "Falling back to plain text search."
+			(
+				'Invalid regex pattern "{0}" (error {1}). '.format([query, err])
+				+ "Falling back to plain text search."
+			)
 		)
 
 

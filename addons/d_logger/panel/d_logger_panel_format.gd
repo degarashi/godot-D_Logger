@@ -72,15 +72,19 @@ static func rainbow_brackets(text: String) -> String:
 		match c:
 			"(", "[", "{":
 				parts.append(
-					"[color=%s][lb][/color]"
-					% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+					(
+						"[color=%s][lb][/color]"
+						% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+					)
 				)
 				depth += 1
 			")", "]", "}":
 				depth = maxi(depth - 1, 0)
 				parts.append(
-					"[color=%s][rb][/color]"
-					% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+					(
+						"[color=%s][rb][/color]"
+						% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+					)
 				)
 			_:
 				parts.append(c)
@@ -132,10 +136,15 @@ static func format_log(
 		# Show [D-Logger] but URL target = "Default" (the actual filter tag).
 		# Escape both segments so a bracket in the tag/prefix cannot break
 		# out of the [url=...] tag and inject arbitrary BBCode.
-		source_str = "[[url=filter:{0}]{1}[/url]]".format([
-			DLoggerFunc.escape_bbcode(log_tags[0]),
-			DLoggerFunc.escape_bbcode(prefix),
-		])
+		source_str = (
+			"[[url=filter:{0}]{1}[/url]]"
+			. format(
+				[
+					DLoggerFunc.escape_bbcode(log_tags[0]),
+					DLoggerFunc.escape_bbcode(prefix),
+				]
+			)
+		)
 	else:
 		source_str = DLoggerFunc.get_source_string(prefix, category, true)
 

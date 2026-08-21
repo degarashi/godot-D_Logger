@@ -812,8 +812,12 @@ func test_parse_caller_meta_windows_drive_path() -> void:
 func test_parse_caller_meta_relative_or_unix_path() -> void:
 	var panel := await _instantiate_panel()
 	# 2-part paths (e.g. relative or Unix paths with a single colon) are also parsed
-	var parsed: Dictionary = panel.parse_caller_meta("/home/user/project/script.gd:7")
-	assert_dict(parsed).contains_key_value("path", "/home/user/project/script.gd")
+	var parsed: Dictionary = panel.parse_caller_meta(
+		"/home/user/project/script.gd:7"
+	)
+	assert_dict(parsed).contains_key_value(
+		"path", "/home/user/project/script.gd"
+	)
 	assert_dict(parsed).contains_key_value("line", 7)
 	panel.free()
 
@@ -1195,8 +1199,10 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 	var log := _make_log("[b]inject[/b]")
 	var result: String = panel._format_log(log)
 	assert_str(result).contains(
-		"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
-		+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+		(
+			"[color=#ff5555][lb][/color]b[color=#ff5555][rb][/color]"
+			+ "inject[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"
+		)
 	)
 	assert_bool(result.contains("[b]inject[/b]")).is_false()
 	panel.free()
@@ -1207,9 +1213,8 @@ func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 	panel._search.query = "inject"
 	var log := _make_log("[b]inject[/b]")
 	var result: String = panel._format_log(log)
-	(
-		assert_str(result)
-		. contains(
+	assert_str(result).contains(
+		(
 			"[lb][/color]b[color=#ff5555][rb][/color][bgcolor=yellow]"
 			+ "[color=black]inject[/color][/bgcolor]"
 			+ "[color=#ff5555][lb][/color]/b[color=#ff5555][rb][/color]"

@@ -90,7 +90,9 @@ func test_create_logger_from_settings_default() -> void:
 
 
 func test_autoload_default_param_uses_project_settings_for_console() -> void:
-	var scene := preload("res://addons/d_logger/d_logger_node.tscn").instantiate()
+	var scene := (
+		preload("res://addons/d_logger/d_logger_node.tscn").instantiate()
+	)
 	var logger := _NODE._create_logger_from_settings(scene._init_param)
 	assert_object(scene._init_param.console_enabled_override).is_null()
 	assert_bool(logger._has_console_override).is_false()
@@ -154,7 +156,9 @@ func test_on_settings_changed_with_init_param_rebuilds_settings() -> void:
 
 	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.ERROR)
 	node._on_settings_changed()
-	assert_int(node.get_logger().get_min_level()).is_equal(_CONST.LogLevel.ERROR)
+	assert_int(node.get_logger().get_min_level()).is_equal(
+		_CONST.LogLevel.ERROR
+	)
 	assert_str(node.get_logger().get_prefix()).is_equal("PARAM_PREFIX")
 	assert_bool(node.get_logger().info("test")).is_true()
 
@@ -209,7 +213,9 @@ func test_unrelated_setting_change_does_not_rebuild() -> void:
 
 	# ProjectSettings.settings_changed is emitted deferred and fires for ANY
 	# setting change; only d_logger keys may trigger a logger rebuild.
-	var prev: Variant = ProjectSettings.get_setting("application/config/name", "")
+	var prev: Variant = ProjectSettings.get_setting(
+		"application/config/name", ""
+	)
 	ProjectSettings.set_setting("application/config/name", "unrelated change")
 	await get_tree().process_frame
 	assert_int(spy.setup_calls).is_equal(0)
@@ -230,7 +236,9 @@ func test_d_logger_setting_change_rebuilds_once() -> void:
 		_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.DEBUG
 	)
 	var new_level: int = (
-		_CONST.LogLevel.ERROR if prev != _CONST.LogLevel.ERROR else _CONST.LogLevel.WARN
+		_CONST.LogLevel.ERROR
+		if prev != _CONST.LogLevel.ERROR
+		else _CONST.LogLevel.WARN
 	)
 
 	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, new_level)
@@ -240,7 +248,9 @@ func test_d_logger_setting_change_rebuilds_once() -> void:
 
 	# The snapshot is updated after the rebuild, so a subsequent unrelated
 	# change must not rebuild again.
-	ProjectSettings.set_setting("application/config/name", "unrelated after rebuild")
+	ProjectSettings.set_setting(
+		"application/config/name", "unrelated after rebuild"
+	)
 	await get_tree().process_frame
 	assert_int(spy.setup_calls).is_equal(1)
 

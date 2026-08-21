@@ -84,10 +84,10 @@ func error(
 
 
 func benchmark(
-	name: String,
-	callable: Callable,
-	spike_threshold_ms: float = 16.0
+	name: String, callable: Callable, spike_threshold_ms: float = 16.0
 ) -> Variant:
 	return (
-		_logger.benchmark(name, callable, spike_threshold_ms) if _logger else null
+		_logger.benchmark(name, callable, spike_threshold_ms)
+		if _logger
+		else null
 	)

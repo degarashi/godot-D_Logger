@@ -59,7 +59,9 @@ func setup_logger() -> void:
 	var console_enabled: bool = (
 		_override_console_enabled
 		if _has_console_override
-		else ProjectSettings.get_setting(DLoggerConstants.SETTING_ENABLE_CONSOLE, false)
+		else ProjectSettings.get_setting(
+			DLoggerConstants.SETTING_ENABLE_CONSOLE, false
+		)
 	)
 
 	var file_enabled: bool = ProjectSettings.get_setting(
@@ -77,7 +79,8 @@ func setup_logger() -> void:
 			_override_file_path
 			if not _override_file_path.is_empty()
 			else ProjectSettings.get_setting(
-				DLoggerConstants.SETTING_FILE_PATH, DLoggerConstants.DEFAULT_FILE_PATH
+				DLoggerConstants.SETTING_FILE_PATH,
+				DLoggerConstants.DEFAULT_FILE_PATH
 			)
 		)
 		_dispatcher.add(_DLOGGER_FILE.new(file_path))
@@ -154,15 +157,18 @@ func _dispatch(
 	# the broken message would go through silently.
 	if DLoggerFunc.has_unresolved_placeholder(final_msg):
 		push_warning(
-			"DLogger: Unresolved format placeholder in message: %s"
-			% final_msg
+			"DLogger: Unresolved format placeholder in message: %s" % final_msg
 		)
 
-	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(level, "DEBUG")
+	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(
+		level, "DEBUG"
+	)
 
 	# Pre-calculate caller info for performance (one time per log)
 	var caller_info: Variant = (
-		p_caller_info if p_caller_info != null else DLoggerFunc.get_caller_info(level_str)
+		p_caller_info
+		if p_caller_info != null
+		else DLoggerFunc.get_caller_info(level_str)
 	)
 
 	# Pre-compute time/frame once for all downstream loggers and debug_data
@@ -172,13 +178,21 @@ func _dispatch(
 
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
-			_dispatcher.debug(final_msg, [], category, context, pref, caller_info)
+			_dispatcher.debug(
+				final_msg, [], category, context, pref, caller_info
+			)
 		DLoggerConstants.LogLevel.INFO:
-			_dispatcher.info(final_msg, [], category, context, pref, caller_info)
+			_dispatcher.info(
+				final_msg, [], category, context, pref, caller_info
+			)
 		DLoggerConstants.LogLevel.WARN:
-			_dispatcher.warn(final_msg, [], category, context, pref, caller_info)
+			_dispatcher.warn(
+				final_msg, [], category, context, pref, caller_info
+			)
 		DLoggerConstants.LogLevel.ERROR:
-			_dispatcher.error(final_msg, [], category, context, pref, caller_info)
+			_dispatcher.error(
+				final_msg, [], category, context, pref, caller_info
+			)
 
 			# Pause the tree if enabled. Skipped in editor because a
 			# @tool script that fires an error would otherwise pause
@@ -187,7 +201,9 @@ func _dispatch(
 			if (
 				OS.is_debug_build()
 				and not Engine.is_editor_hint()
-				and ProjectSettings.get_setting(DLoggerConstants.SETTING_PAUSE_ON_ERROR, false)
+				and ProjectSettings.get_setting(
+					DLoggerConstants.SETTING_PAUSE_ON_ERROR, false
+				)
 			):
 				var tree := Engine.get_main_loop() as SceneTree
 				if tree:
@@ -206,7 +222,8 @@ func _dispatch(
 			"message": final_msg,
 			"category": category,
 			"level": level_str,
-			"context_str": DLoggerFunc.get_object_string(context) if context else "",
+			"context_str":
+			DLoggerFunc.get_object_string(context) if context else "",
 			"caller_info": caller_info,
 			"prefix": pref,
 			"time": seconds,
@@ -264,7 +281,9 @@ func debug(
 	p_caller_info: Variant = null
 ) -> bool:
 	if is_debug_enabled():
-		_dispatch(DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info)
+		_dispatch(
+			DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info
+		)
 	return true
 
 
@@ -277,7 +296,9 @@ func info(
 	p_caller_info: Variant = null
 ) -> bool:
 	if is_info_enabled():
-		_dispatch(DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info)
+		_dispatch(
+			DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info
+		)
 	return true
 
 
@@ -290,7 +311,9 @@ func warn(
 	p_caller_info: Variant = null
 ) -> bool:
 	if is_warn_enabled():
-		_dispatch(DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info)
+		_dispatch(
+			DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info
+		)
 	return true
 
 
@@ -303,7 +326,9 @@ func error(
 	p_caller_info: Variant = null
 ) -> bool:
 	if is_error_enabled():
-		_dispatch(DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info)
+		_dispatch(
+			DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info
+		)
 	return true
 
 
@@ -313,14 +338,16 @@ func error(
 ## exceeds `spike_threshold_ms` (default 16ms, one frame budget) the result
 ## is logged at WARN instead. Returns the callable's return value unchanged.
 func benchmark(
-	name: String,
-	callable: Callable,
-	spike_threshold_ms: float = 16.0
+	name: String, callable: Callable, spike_threshold_ms: float = 16.0
 ) -> Variant:
 	if not callable.is_valid():
 		# Bound callables can outlive their object; bail out with an error
 		# instead of crashing on call().
-		push_error("DLogger: benchmark '{0}' received an invalid callable".format([name]))
+		push_error(
+			"DLogger: benchmark '{0}' received an invalid callable".format(
+				[name]
+			)
+		)
 		return null
 
 	var start_usec := Time.get_ticks_usec()

@@ -62,7 +62,9 @@ func test_highlight_wraps_matches() -> void:
 	var search := DLoggerSearch.new()
 	search.query = "abc"
 	var result: String = search.highlight("xxabcyy")
-	assert_str(result).contains("[bgcolor=yellow][color=black]abc[/color][/bgcolor]")
+	assert_str(result).contains(
+		"[bgcolor=yellow][color=black]abc[/color][/bgcolor]"
+	)
 
 
 func test_highlight_empty_query_unchanged() -> void:

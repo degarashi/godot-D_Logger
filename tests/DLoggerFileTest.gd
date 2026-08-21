@@ -283,7 +283,12 @@ func test_rotate_log_file_keeps_single_backup_generation() -> void:
 	var backup_path := path + _CONST.LOG_FILE_BACKUP_SUFFIX
 	assert_file(backup_path).exists()
 	# No second generation is created (single backup, overwritten in place)
-	assert_bool(FileAccess.file_exists(backup_path + _CONST.LOG_FILE_BACKUP_SUFFIX)).is_false()
+	(
+		assert_bool(
+			FileAccess.file_exists(backup_path + _CONST.LOG_FILE_BACKUP_SUFFIX)
+		)
+		. is_false()
+	)
 
 	var backup := FileAccess.open(backup_path, FileAccess.READ)
 	var backup_content := backup.get_as_text()

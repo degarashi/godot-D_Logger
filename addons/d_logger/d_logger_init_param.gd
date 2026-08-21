@@ -11,7 +11,9 @@ extends Resource
 # ------------- [Callbacks] -------------
 func _init(
 	p_prefix: String = "",
-	p_min_level: DLoggerConstants.LogLevel = DLoggerConstants.LogLevel.NOT_SPECIFIED,
+	p_min_level: DLoggerConstants.LogLevel = (
+		DLoggerConstants.LogLevel.NOT_SPECIFIED
+	),
 	p_console_enabled: Variant = null,
 	p_file_path: String = ""
 ) -> void:
