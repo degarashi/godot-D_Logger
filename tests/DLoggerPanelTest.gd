@@ -1223,6 +1223,21 @@ func test_format_log_escapes_bbcode_with_search_highlight() -> void:
 	panel.free()
 
 
+func test_format_log_renders_brackets_through_rich_text_parser() -> void:
+	var panel := await _instantiate_panel()
+	panel._all_logs.append(_make_log("(a [b {c} d] e)"))
+	panel._append_formatted_log(panel._all_logs[0], 0)
+	var parsed: String = panel.log_display.get_parsed_text()
+	# Brackets survive as literal characters after BBCode parsing...
+	assert_str(parsed).contains("(a [b {c} d] e)")
+	# ...and no markup leaks through as visible text.
+	assert_bool(parsed.contains("[color=")).is_false()
+	assert_bool(parsed.contains("[lb]")).is_false()
+	assert_bool(parsed.contains("[rb]")).is_false()
+	assert_bool(parsed.contains("[url=")).is_false()
+	panel.free()
+
+
 func test_highlight_search_text_case_sensitive() -> void:
 	var panel := await _instantiate_panel()
 	panel._search.query = "ABC"

@@ -137,19 +137,20 @@ func test_format_log_escapes_bbcode_in_message() -> void:
 # ------------- [rainbow_brackets] -------------
 func test_rainbow_nested_brackets_use_depth_colors() -> void:
 	var result: String = DLoggerPanelFormat.rainbow_brackets("(a [b {c} d] e)")
-	assert_str(result).contains("[color=#ff5555][lb][/color]")
+	# () and {} keep their own glyph; [] is escaped as [lb]/[rb]
+	assert_str(result).contains("[color=#ff5555]([/color]")
 	assert_str(result).contains("[color=#ffb86c][lb][/color]")
-	assert_str(result).contains("[color=#f1fa8c][lb][/color]")
-	assert_str(result).contains("[color=#f1fa8c][rb][/color]")
+	assert_str(result).contains("[color=#f1fa8c]{[/color]")
+	assert_str(result).contains("[color=#f1fa8c]}[/color]")
 	assert_str(result).contains("[color=#ffb86c][rb][/color]")
-	assert_str(result).contains("[color=#ff5555][rb][/color]")
+	assert_str(result).contains("[color=#ff5555])[/color]")
 
 
 func test_rainbow_palette_wraps_around() -> void:
 	# 8 opening brackets: depths 0..7, index 7 wraps back to palette[0]
 	var result: String = DLoggerPanelFormat.rainbow_brackets("((((((((")
-	assert_int(result.count("[color=#ff5555][lb][/color]")).is_equal(2)
-	assert_int(result.count("[color=#ff79c6][lb][/color]")).is_equal(1)
+	assert_int(result.count("[color=#ff5555]([/color]")).is_equal(2)
+	assert_int(result.count("[color=#ff79c6]([/color]")).is_equal(1)
 
 
 func test_rainbow_mismatched_brackets_clamp_at_zero() -> void:

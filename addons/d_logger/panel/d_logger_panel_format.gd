@@ -61,9 +61,11 @@ static func format_log_plain(log_data: Dictionary) -> String:
 ## style). Single pass: an opening bracket takes the color at the current
 ## depth then increments; a closing bracket decrements first (clamped at 0 so
 ## mismatched input cannot go negative) and takes the resulting depth's color.
-## Brackets are emitted as escaped [lb]/[rb] wrapped in a [color] tag, so
-## user-provided text still cannot inject BBCode markup — same guarantee as
-## DLoggerFunc.escape_bbcode(). All other characters pass through unchanged.
+## [] must be escaped as [lb]/[rb] (they would otherwise inject BBCode);
+## () and {} are BBCode-safe literals and keep their own glyph — emitting
+## them through [lb]/[rb] would visually turn them into square brackets.
+## Same injection guarantee as DLoggerFunc.escape_bbcode(). All other
+## characters pass through unchanged.
 static func rainbow_brackets(text: String) -> String:
 	var parts := PackedStringArray()
 	var depth := 0
@@ -71,19 +73,31 @@ static func rainbow_brackets(text: String) -> String:
 		var c := text[i]
 		match c:
 			"(", "[", "{":
-				parts.append(
-					(
-						"[color=%s][lb][/color]"
-						% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+				(
+					parts
+					. append(
+						(
+							"[color=%s]%s[/color]"
+							% [
+								RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()],
+								"[lb]" if c == "[" else c,
+							]
+						)
 					)
 				)
 				depth += 1
 			")", "]", "}":
 				depth = maxi(depth - 1, 0)
-				parts.append(
-					(
-						"[color=%s][rb][/color]"
-						% RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()]
+				(
+					parts
+					. append(
+						(
+							"[color=%s]%s[/color]"
+							% [
+								RAINBOW_PALETTE[depth % RAINBOW_PALETTE.size()],
+								"[rb]" if c == "]" else c,
+							]
+						)
 					)
 				)
 			_:
