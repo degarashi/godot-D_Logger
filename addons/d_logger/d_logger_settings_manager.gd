@@ -99,6 +99,17 @@ var _settings_entries: Array[SettingsEntry] = [
 		false,
 		PROPERTY_HINT_NONE,
 		"Automatically pause the game tree when an error is logged."
+	),
+	(
+		SettingsEntry
+		. new(
+			DLoggerConstants.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT,
+			"",
+			TYPE_INT,
+			DLoggerConstants.DEFAULT_BRACKET_HIGHLIGHT,
+			PROPERTY_HINT_RANGE,
+			"0,100",
+		)
 	)
 ]
 

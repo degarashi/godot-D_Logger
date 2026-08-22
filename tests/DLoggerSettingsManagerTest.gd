@@ -98,8 +98,8 @@ func test_entries_count_and_kinds() -> void:
 			editor_count += 1
 		else:
 			project_count += 1
-	assert_int(manager._settings_entries.size()).is_equal(8)
-	assert_int(editor_count).is_equal(7)
+	assert_int(manager._settings_entries.size()).is_equal(9)
+	assert_int(editor_count).is_equal(8)
 	assert_int(project_count).is_equal(1)
 
 
@@ -113,6 +113,7 @@ func test_entries_editor_sys_names_match_constants() -> void:
 		_CONST.EDITOR_SETTING_AUTO_ACTIVATE_PANEL,
 		_CONST.EDITOR_SETTING_AUTO_CLEAR_ON_START,
 		_CONST.EDITOR_SETTING_PAUSE_ON_ERROR,
+		_CONST.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT,
 	]
 	var mismatches: Array[String] = []
 	for entry in manager._settings_entries:
@@ -152,6 +153,8 @@ func test_entries_defaults_match_constants() -> void:
 		_CONST.EDITOR_SETTING_AUTO_ACTIVATE_PANEL: true,
 		_CONST.EDITOR_SETTING_AUTO_CLEAR_ON_START: true,
 		_CONST.EDITOR_SETTING_PAUSE_ON_ERROR: false,
+		_CONST.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT:
+		_CONST.DEFAULT_BRACKET_HIGHLIGHT,
 	}
 	var mismatches: Array[String] = []
 	for entry in manager._settings_entries:
@@ -171,6 +174,7 @@ func test_entries_types_match_declared_types() -> void:
 		_CONST.EDITOR_SETTING_AUTO_ACTIVATE_PANEL: TYPE_BOOL,
 		_CONST.EDITOR_SETTING_AUTO_CLEAR_ON_START: TYPE_BOOL,
 		_CONST.EDITOR_SETTING_PAUSE_ON_ERROR: TYPE_BOOL,
+		_CONST.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT: TYPE_INT,
 	}
 	var mismatches: Array[String] = []
 	for entry in manager._settings_entries:
@@ -199,6 +203,18 @@ func test_file_path_entry_has_file_hint() -> void:
 			assert_str(entry.prop_hint_str).is_equal("*.log, *.txt;Log Files")
 			return
 	fail("EDITOR_SETTING_FILE_PATH entry not found")
+
+
+func test_bracket_highlight_entry_has_range_hint() -> void:
+	var manager := _MANAGER.new()
+	for entry in manager._settings_entries:
+		if entry.sys_name == _CONST.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT:
+			assert_int(entry.prop_hint).is_equal(PROPERTY_HINT_RANGE)
+			assert_str(entry.prop_hint_str).is_equal("0,100")
+			# Panel display preference: editor-only, no runtime mirror
+			assert_str(entry.runtime_name).is_empty()
+			return
+	fail("EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT entry not found")
 
 
 func test_prefix_entry_is_project_setting_without_runtime_name() -> void:

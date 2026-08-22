@@ -56,6 +56,17 @@ var _drag_moved: bool = false
 # Hover tooltip state
 var _hovered_line_idx: int = -1
 
+# Bracket-pair hover state: {"meta": String, "log": int, "pair": Array} or
+# empty while nothing is highlighted. "meta" stores the exact [url] meta of
+# the hovered bracket so a late/stale meta_hover_ended can never clear a
+# newer highlight that started before it fired.
+var _bracket_hover: Dictionary = {}
+
+# Opacity (%) of that highlight, mirrored from the EditorSettings entry
+# d_logger/panel_bracket_highlight_opacity and resolved to a #rrggbbaa
+# background string through DLoggerPanelFormat.bracket_hover_bg().
+var _bracket_highlight_opacity: int = DLoggerConstants.DEFAULT_BRACKET_HIGHLIGHT
+
 @onready var clear_button: Button = %ClearButton
 @onready var copy_button: Button = %CopyButton
 @onready var save_button: Button = %SaveButton
@@ -98,6 +109,8 @@ func _ready() -> void:
 	)
 	word_wrap_checkbox.toggled.connect(_on_word_wrap_toggled)
 	log_display.meta_clicked.connect(_on_log_meta_clicked)
+	log_display.meta_hover_started.connect(_on_bracket_hover_started)
+	log_display.meta_hover_ended.connect(_on_bracket_hover_ended)
 	log_display.gui_input.connect(_on_log_display_gui_input)
 
 	# Load and apply saved font size (EditorSettings persists between sessions).
@@ -123,6 +136,8 @@ func _ready() -> void:
 		_update_pause_on_error_button()
 		var es := EditorInterface.get_editor_settings()
 		es.settings_changed.connect(_update_pause_on_error_button)
+		es.settings_changed.connect(_on_bracket_highlight_setting_changed)
+		_refresh_bracket_highlight_setting()
 
 
 func _input(event: InputEvent) -> void:
@@ -203,6 +218,11 @@ func _on_visibility_changed() -> void:
 		_is_right_dragging = false
 		if log_display:
 			log_display.mouse_default_cursor_shape = Control.CURSOR_ARROW
+		# Drop any bracket-pair highlight: while hidden no meta_hover_ended
+		# fires, so re-showing could otherwise keep a stale pair lit.
+		if not _bracket_hover.is_empty():
+			_bracket_hover.clear()
+			_schedule_display_rebuild()
 
 
 # ------------- [Public Method called by Debugger Plugin] -------------
@@ -244,6 +264,8 @@ func add_log(log_data: Dictionary) -> void:
 		_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
 		# Selection indices are invalidated by trimming
 		_selected_log_indices.clear()
+		# Bracket-hover state references a log index too
+		_bracket_hover.clear()
 		_update_selection_info()
 		_rebuild_log_display()
 		return  # Display already rebuilt, no need to append
@@ -615,10 +637,12 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 					_hovered_line_idx = line_idx
 					var full_text := _format_log_plain(_all_logs[log_idx])
 					log_display.tooltip_text = full_text
+				_maybe_clear_bracket_hover_for_line(log_idx)
 		else:
 			if _hovered_line_idx != -1:
 				_hovered_line_idx = -1
 				log_display.tooltip_text = ""
+			_maybe_clear_bracket_hover_for_line(-1)
 
 	# Drag-to-select: update range while left mouse is held.
 	if (
@@ -741,12 +765,33 @@ static func parse_caller_meta(meta_str: String) -> Dictionary:
 	return {}
 
 
+## Parses a bracket-hover meta URL ("brk:<log>:<char>") into
+## Vector2i(log_index, char_index). Returns Vector2i(-1, -1) when malformed.
+## The strict 3-segment shape keeps it disjoint from caller metas
+## ("<path>:<line>", which may contain ":" inside the path) and filter metas.
+static func parse_bracket_meta(meta_str: String) -> Vector2i:
+	var parts := meta_str.split(":")
+	if (
+		parts.size() == 3
+		and parts[0] == "brk"
+		and parts[1].is_valid_int()
+		and parts[2].is_valid_int()
+	):
+		return Vector2i(int(parts[1]), int(parts[2]))
+	return Vector2i(-1, -1)
+
+
 func _on_log_meta_clicked(meta: Variant) -> void:
 	if meta is String:
 		var meta_str: String = meta
 
 		if meta_str.begins_with("filter:"):
 			_solo_category(meta_str.trim_prefix("filter:"))
+			return
+
+		# Bracket-hover links carry no click action; bail out before caller
+		# parsing so "brk:<n>:<n>" can never be mistaken for a path:line.
+		if parse_bracket_meta(meta_str).x >= 0:
 			return
 
 		var parsed := parse_caller_meta(meta_str)
@@ -761,6 +806,89 @@ func _on_log_meta_clicked(meta: Variant) -> void:
 					# editor; the guard keeps the click path testable headless
 					if Engine.is_editor_hint():
 						EditorInterface.edit_script(res, line_num)
+
+
+## meta_hover_started on one of the [url]-wrapped message brackets: resolve
+## the matching counterpart and light both glyphs up via a display rebuild.
+## Unmatched brackets (no entry in match_brackets) are ignored.
+func _on_bracket_hover_started(meta: Variant) -> void:
+	if not (meta is String):
+		return
+	var target := parse_bracket_meta(meta)
+	if target.x < 0 or target.x >= _all_logs.size():
+		return
+	var matches := _get_bracket_matches(target.x)
+	var mate: int = matches.get(target.y, -1)
+	if mate == -1:
+		return
+	_bracket_hover = {"meta": meta, "log": target.x, "pair": [target.y, mate]}
+	_schedule_display_rebuild()
+
+
+## Clears the highlight when the bracket just left matches the active one.
+## Exact-meta comparison keeps ordering safe: if a new hover starts before
+## the old hover's ended event arrives, the old event cannot clear it.
+func _on_bracket_hover_ended(meta: Variant) -> void:
+	if _bracket_hover.is_empty() or not (meta is String):
+		return
+	if _bracket_hover.get("meta", "") != meta:
+		return
+	_bracket_hover.clear()
+	_schedule_display_rebuild()
+
+
+## Safety net for cases where meta_hover_ended may not fire (e.g. content
+## scrolling beneath a stationary cursor): drop the bracket highlight once
+## the pointer sits over a different log line than the hovered pair.
+func _maybe_clear_bracket_hover_for_line(log_idx: int) -> void:
+	if _bracket_hover.is_empty() or _bracket_hover.get("log", -1) == log_idx:
+		return
+	_bracket_hover.clear()
+	_schedule_display_rebuild()
+
+
+## Returns the bracket-pair map for a log, computing and caching it inside
+## log_data on first use ("_bracket_matches", mirroring "_log_tags").
+## Messages never change once logged, so the cache needs no invalidation.
+func _get_bracket_matches(log_index: int) -> Dictionary[int, int]:
+	var log_data: Dictionary = _all_logs[log_index]
+	if not log_data.has("_bracket_matches"):
+		log_data["_bracket_matches"] = (DLoggerPanelFormat.match_brackets(
+			log_data.get("message", "")
+		))
+	return log_data["_bracket_matches"]
+
+
+## Re-reads the bracket-highlight opacity from EditorSettings. A stand-in
+## `es` can be injected for tests; without one (and inside the editor) the
+## real EditorSettings are used. Returns true when the effective value
+## changed, so callers can decide whether a display rebuild is needed.
+func _refresh_bracket_highlight_setting(es: Object = null) -> bool:
+	var setting := DLoggerConstants.EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT
+	var value: Variant = null
+	if es != null:
+		if es.has_setting(setting):
+			value = es.get_setting(setting)
+	elif Engine.is_editor_hint():
+		var editor_es := EditorInterface.get_editor_settings()
+		if editor_es.has_setting(setting):
+			value = editor_es.get_setting(setting)
+	if value == null:
+		return false
+	var opacity := clampi(int(value), 0, 100)
+	if opacity == _bracket_highlight_opacity:
+		return false
+	_bracket_highlight_opacity = opacity
+	return true
+
+
+## Live-updates the highlight while the user drags the opacity slider in
+## Editor Settings; only rebuilds when a pair is currently lit.
+func _on_bracket_highlight_setting_changed() -> void:
+	if not _refresh_bracket_highlight_setting():
+		return
+	if not _bracket_hover.is_empty():
+		_schedule_display_rebuild()
 
 
 func _toggle_log_selection(log_index: int) -> void:
@@ -788,7 +916,7 @@ func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 		var is_selected := (
 			log_index >= 0 and _selected_log_indices.has(log_index)
 		)
-		var bbcode_msg := _format_log(log_data, is_selected)
+		var bbcode_msg := _format_log(log_data, is_selected, log_index)
 		if is_selected:
 			bbcode_msg = "[bgcolor=#44686868]{0}[/bgcolor]".format([bbcode_msg])
 		log_display.append_text(bbcode_msg + "\n")
@@ -800,13 +928,21 @@ func _format_log_plain(log_data: Dictionary) -> String:
 	return DLoggerPanelFormat.format_log_plain(log_data)
 
 
-func _format_log(log_data: Dictionary, is_selected: bool = false) -> String:
+func _format_log(
+	log_data: Dictionary, is_selected: bool = false, log_index: int = -1
+) -> String:
+	var bracket_hover: Array = []
+	if log_index >= 0 and _bracket_hover.get("log", -1) == log_index:
+		bracket_hover = _bracket_hover.get("pair", [])
 	return DLoggerPanelFormat.format_log(
 		log_data,
 		_search,
 		relative_checkbox.button_pressed,
 		_get_max_log_time(),
-		is_selected
+		is_selected,
+		log_index,
+		bracket_hover,
+		DLoggerPanelFormat.bracket_hover_bg(_bracket_highlight_opacity)
 	)
 
 
@@ -1015,6 +1151,7 @@ func _on_search_text_changed(new_text: String) -> void:
 func clear_logs() -> void:
 	_all_logs.clear()
 	_selected_log_indices.clear()
+	_bracket_hover.clear()
 	log_display.clear()
 	_displayed_line_map.clear()
 	_hovered_line_idx = -1

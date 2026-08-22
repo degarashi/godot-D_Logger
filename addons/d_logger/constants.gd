@@ -16,6 +16,7 @@ const EDITOR_SETTING_FILE_PATH := "d_logger/log_file_path"
 const EDITOR_SETTING_AUTO_ACTIVATE_PANEL := "d_logger/auto_activate_panel"
 const EDITOR_SETTING_AUTO_CLEAR_ON_START := "d_logger/auto_clear_on_start"
 const EDITOR_SETTING_PAUSE_ON_ERROR := "d_logger/pause_on_error"
+const EDITOR_SETTING_PANEL_BRACKET_HIGHLIGHT := "d_logger/panel_bracket_highlight_opacity"
 
 # --- Runtime Settings Paths (Accessed via ProjectSettings, but may be synced from EditorSettings) ---
 const SETTING_ENABLE_CONSOLE := "debug/d_logger/enable_console_log"
@@ -27,6 +28,9 @@ const SETTING_PAUSE_ON_ERROR := "debug/d_logger/pause_on_error"
 # --- Default Values ---
 const DEFAULT_PREFIX := "D-Logger"
 const DEFAULT_FILE_PATH := "user://debug.log"
+# Default opacity (%) of the panel's matching-bracket hover highlight.
+# 40% reproduces the original hardcoded "#44686868" background look.
+const DEFAULT_BRACKET_HIGHLIGHT := 40
 
 # --- File Logging ---
 # Maximum log file size before rotating to <path><LOG_FILE_BACKUP_SUFFIX>

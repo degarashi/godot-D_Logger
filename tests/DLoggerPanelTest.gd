@@ -829,6 +829,195 @@ func test_parse_caller_meta_garbage_ignored() -> void:
 	panel.free()
 
 
+# ------------- [bracket-pair hover] -------------
+func test_parse_bracket_meta_valid() -> void:
+	var panel := await _instantiate_panel()
+	var target: Vector2i = panel.parse_bracket_meta("brk:12:34")
+	assert_int(target.x).is_equal(12)
+	assert_int(target.y).is_equal(34)
+	panel.free()
+
+
+func test_parse_bracket_meta_rejects_foreign_metas() -> void:
+	var panel := await _instantiate_panel()
+	# Caller metas may contain ":" inside paths and still end in a number,
+	# so only the strict "brk:<int>:<int>" shape may ever parse.
+	for meta in [
+		"res://game.gd:12",
+		"C:/x/s.gd:3",
+		"/a/b.gd:1",
+		"filter:System",
+		"",
+		"brk",
+		"brk:",
+		"brk:a:b",
+		"brk:1:2:3",
+	]:
+		var target: Vector2i = panel.parse_bracket_meta(meta)
+		assert_int(target.x).is_equal(-1)
+	panel.free()
+
+
+func test_bracket_hover_started_highlights_matching_pair() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("value=(1+2)"))  # parens at char 6 and 10
+	panel.log_display.meta_hover_started.emit("brk:0:6")
+	assert_dict(panel._bracket_hover).contains_key_value("log", 0)
+	assert_array(panel._bracket_hover["pair"]).contains_exactly([6, 10])
+	panel.free()
+
+
+func test_bracket_hover_started_ignores_unmatched_bracket() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("lone ( paren"))
+	panel.log_display.meta_hover_started.emit("brk:0:5")
+	assert_dict(panel._bracket_hover).is_empty()
+	panel.free()
+
+
+func test_bracket_hover_started_rejects_unknown_log() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	panel.log_display.meta_hover_started.emit("brk:99:0")
+	assert_dict(panel._bracket_hover).is_empty()
+	panel.free()
+
+
+func test_bracket_hover_ended_clears_active_highlight() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	panel.log_display.meta_hover_started.emit("brk:0:0")
+	assert_bool(not panel._bracket_hover.is_empty()).is_true()
+	panel.log_display.meta_hover_ended.emit("brk:0:0")
+	assert_dict(panel._bracket_hover).is_empty()
+	panel.free()
+
+
+func test_bracket_hover_ended_stale_meta_keeps_new_highlight() -> void:
+	# Moving between two brackets on one line can deliver started(new)
+	# before ended(old); the late old event must not clear the new pair.
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(a) (b)"))
+	panel.log_display.meta_hover_started.emit("brk:0:4")
+	panel.log_display.meta_hover_ended.emit("brk:0:0")
+	assert_bool(not panel._bracket_hover.is_empty()).is_true()
+	panel.free()
+
+
+func test_bracket_hover_cleared_when_pointer_leaves_line() -> void:
+	var panel := await _instantiate_panel()
+	panel._bracket_hover = {"meta": "brk:0:0", "log": 0, "pair": [0, 2]}
+	panel._maybe_clear_bracket_hover_for_line(1)
+	assert_dict(panel._bracket_hover).is_empty()
+	panel._bracket_hover = {"meta": "brk:0:0", "log": 0, "pair": [0, 2]}
+	panel._maybe_clear_bracket_hover_for_line(0)
+	assert_bool(not panel._bracket_hover.is_empty()).is_true()
+	panel.free()
+
+
+func test_format_log_reflects_active_bracket_hover_state() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	panel.log_display.meta_hover_started.emit("brk:0:0")
+	var rendered: String = panel._format_log(panel._all_logs[0], false, 0)
+	var expected_bg := DLoggerPanelFormat.bracket_hover_bg(
+		panel._bracket_highlight_opacity
+	)
+	assert_str(rendered).contains("[bgcolor=%s]" % expected_bg)
+	assert_str(rendered).contains("[color=#ff5555]")
+	panel.free()
+
+
+# ------------- [bracket highlight opacity setting] -------------
+class StubSettings:
+	extends RefCounted
+
+	var values: Dictionary = {}
+
+	func has_setting(name: String) -> bool:
+		return values.has(name)
+
+	func get_setting(name: String) -> Variant:
+		return values.get(name, null)
+
+
+const _HL_SETTING = "d_logger/panel_bracket_highlight_opacity"
+
+
+func test_refresh_bracket_highlight_reads_editor_setting() -> void:
+	var panel := await _instantiate_panel()
+	var stub := StubSettings.new()
+	stub.values[_HL_SETTING] = 75
+	assert_bool(panel._refresh_bracket_highlight_setting(stub)).is_true()
+	assert_int(panel._bracket_highlight_opacity).is_equal(75)
+	panel.free()
+
+
+func test_refresh_bracket_highlight_clamps_to_0_100() -> void:
+	var panel := await _instantiate_panel()
+	var stub := StubSettings.new()
+	stub.values[_HL_SETTING] = 250
+	panel._refresh_bracket_highlight_setting(stub)
+	assert_int(panel._bracket_highlight_opacity).is_equal(100)
+	stub.values[_HL_SETTING] = -20
+	panel._refresh_bracket_highlight_setting(stub)
+	assert_int(panel._bracket_highlight_opacity).is_equal(0)
+	panel.free()
+
+
+func test_refresh_bracket_highlight_unchanged_returns_false() -> void:
+	var panel := await _instantiate_panel()
+	var stub := StubSettings.new()
+	stub.values[_HL_SETTING] = panel._bracket_highlight_opacity
+	assert_bool(panel._refresh_bracket_highlight_setting(stub)).is_false()
+	panel.free()
+
+
+func test_refresh_bracket_highlight_missing_setting_is_noop() -> void:
+	var panel := await _instantiate_panel()
+	var default_opacity: int = panel._bracket_highlight_opacity
+	(
+		assert_bool(
+			panel._refresh_bracket_highlight_setting(StubSettings.new())
+		)
+		. is_false()
+	)
+	assert_int(panel._bracket_highlight_opacity).is_equal(default_opacity)
+	panel.free()
+
+
+func test_format_log_uses_configured_highlight_opacity() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	panel._bracket_highlight_opacity = 90
+	panel._bracket_hover = {"meta": "brk:0:0", "log": 0, "pair": [0, 2]}
+	var rendered: String = panel._format_log(panel._all_logs[0], false, 0)
+	# Expectation derived via the same helper so the test pins the plumbing,
+	# not the hex rounding of a specific opacity value.
+	var expected_bg := DLoggerPanelFormat.bracket_hover_bg(90)
+	assert_str(rendered).contains("[bgcolor=%s]" % expected_bg)
+	panel.free()
+
+
+func test_clear_logs_resets_bracket_hover_state() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	panel.log_display.meta_hover_started.emit("brk:0:0")
+	assert_bool(not panel._bracket_hover.is_empty()).is_true()
+	panel.clear_logs()
+	assert_dict(panel._bracket_hover).is_empty()
+	panel.free()
+
+
+func test_meta_click_bracket_meta_is_noop() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("(x)"))
+	# Bracket links carry no click action and must never be mistaken for a
+	# "<path>:<line>" caller meta.
+	panel._on_log_meta_clicked("brk:0:0")
+	panel.free()
+
+
 func test_meta_click_caller_link_resolves_real_script() -> void:
 	var panel := await _instantiate_panel()
 	# A real plugin script must pass the file_exists/load gate and reach
