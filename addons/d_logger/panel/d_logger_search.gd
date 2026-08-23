@@ -112,6 +112,13 @@ func highlight(text: String) -> String:
 		result += text.substr(last_end)
 		return result
 
+	# Offsets found in lower_text are reused to slice the ORIGINAL text.
+	# This is safe because Godot's String.to_lower() maps every character
+	# 1:1 (it does not apply full Unicode folding, e.g. U+0130 becomes
+	# the single char "i"), so lower_text always has the same length as
+	# text. Pinned by test_highlight_case_insensitive_unicode_offsets;
+	# if the engine ever adopts expanding case mappings, these indices
+	# would have to be remapped onto the original string instead.
 	var lower_text := text.to_lower()
 	var lower_query := q.to_lower()
 	var result: String = ""

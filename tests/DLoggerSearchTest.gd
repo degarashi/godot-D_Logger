@@ -101,6 +101,18 @@ func test_highlight_regex() -> void:
 	assert_str(search.highlight("xaabz")).contains("[color=black]aab[/color]")
 
 
+func test_highlight_case_insensitive_unicode_offsets() -> void:
+	# Godot's to_lower() is a 1:1 char mapping (U+0130 -> single "i"), so
+	# offsets found in the lowercased text are valid slices of the
+	# original. Exact equality pins that no misalignment creeps in for
+	# characters whose case mapping differs under full Unicode folding.
+	var search := DLoggerSearch.new()
+	search.query = "abc"
+	assert_str(search.highlight("\u0130ABC\u0130")).is_equal(
+		"\u0130[bgcolor=yellow][color=black]ABC[/color][/bgcolor]\u0130"
+	)
+
+
 # ------------- [reset] -------------
 func test_reset_clears_state() -> void:
 	var search := DLoggerSearch.new()
