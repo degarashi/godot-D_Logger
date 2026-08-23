@@ -18,11 +18,18 @@ func _ready() -> void:
 
 # ------------- [Private Method] -------------
 func _find_logger() -> void:
-	var logger := DLoggerFunc.find_logger_from_ancestor(self)
-	if logger:
-		_logger = (
-			logger.get_logger() if logger.has_method(&"get_logger") else logger
+	var found := DLoggerFunc.find_logger_from_ancestor(self)
+	if found:
+		# Unwrap container nodes (e.g. DLoggerNode) to their inner
+		# RefCounted logger so the typed assignment below stays valid.
+		var candidate: Variant = (
+			found.get_logger() if found.has_method(&"get_logger") else found
 		)
+		# Only a DLoggerClass fits the typed _logger field; foreign
+		# duck-typed implementations are skipped instead of erroring
+		# on assignment.
+		if candidate is DLoggerClass:
+			_logger = candidate
 
 	if _logger:
 		on_log_found.emit(_logger)

@@ -7,6 +7,45 @@ const _NODE = preload("res://addons/d_logger/d_logger_node.gd")
 const _CLASS = preload("res://addons/d_logger/d_logger.gd")
 
 
+## A custom object implementing the duck-typed logger interface but NOT
+## extending DLoggerClass.
+class ForeignLogger:
+	extends RefCounted
+
+	func is_debug_enabled() -> bool:
+		return true
+
+	func is_info_enabled() -> bool:
+		return true
+
+	func is_warn_enabled() -> bool:
+		return true
+
+	func is_error_enabled() -> bool:
+		return true
+
+	func debug(_msg: String) -> bool:
+		return true
+
+	func info(_msg: String) -> bool:
+		return true
+
+	func warn(_msg: String) -> bool:
+		return true
+
+	func error(_msg: String) -> bool:
+		return true
+
+
+## A plain Node exposing a foreign logger via get_logger().
+class ForeignHostNode:
+	extends Node
+	var logger := ForeignLogger.new()
+
+	func get_logger() -> Object:
+		return logger
+
+
 # ------------- [Constructor] -------------
 func test_init() -> void:
 	var finder := _FINDER.new()
@@ -190,6 +229,30 @@ func test_finder_with_direct_logger_object() -> void:
 	assert_object(finder.get_logger()).is_null()
 
 	finder.free()
+	parent.free()
+
+
+func test_finder_skips_foreign_duck_typed_logger() -> void:
+	# A custom object implementing the logger interface but NOT extending
+	# DLoggerClass cannot be stored in the typed _logger field; the finder
+	# must skip it without erroring on assignment.
+	var parent := Node.new()
+	var host := ForeignHostNode.new()
+	parent.add_child(host)
+
+	var emitted: Array = []
+	var finder := _FINDER.new()
+	finder.on_log_found.connect(
+		func(logger: Variant) -> void: emitted.append(logger)
+	)
+	parent.add_child(finder)
+	finder._ready()
+
+	assert_object(finder.get_logger()).is_null()
+	assert_int(emitted.size()).is_equal(0)
+
+	finder.free()
+	host.free()
 	parent.free()
 
 
