@@ -261,9 +261,12 @@ func add_log(log_data: Dictionary) -> void:
 			var level := log_data.get("level", "DEBUG")
 			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_refresh_stats_label()
-			# In relative mode, rebuild all timestamps against the new max.
+			# In relative mode every timestamp depends on the latest max
+			# time, so the whole display must be rebuilt. Coalesce it like
+			# stacked-log updates: rebuilding per incoming log would cost
+			# O(n) each and O(n^2) under a log flood.
 			if relative_checkbox.button_pressed:
-				_rebuild_log_display_preserve_scroll()
+				_schedule_display_rebuild()
 			else:
 				_append_formatted_log(log_data, log_idx)
 

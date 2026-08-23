@@ -1300,6 +1300,30 @@ func test_relative_toggle_rebuilds_display() -> void:
 	panel.free()
 
 
+func test_add_log_relative_mode_coalesces_rebuild() -> void:
+	var panel := await _instantiate_panel()
+	panel.relative_checkbox.button_pressed = true
+
+	var first := _make_log("first")
+	first["time"] = 1.0
+	panel.add_log(first)
+	# Rebuilding the whole display per incoming log would be O(n^2) under
+	# a flood; the rebuild must be deferred (pending flag set), not run
+	# synchronously inside add_log.
+	assert_bool(panel._rebuild_pending).is_true()
+	await get_tree().process_frame
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+
+	var second := _make_log("second")
+	second["time"] = 5.0
+	panel.add_log(second)
+	await get_tree().process_frame
+	assert_int(panel._displayed_line_map.size()).is_equal(2)
+	# Both timestamps are rendered against the new max time (5.0).
+	assert_str(panel.log_display.get_parsed_text()).contains("-4.000s")
+	panel.free()
+
+
 # ------------- [_get_max_log_time] -------------
 func test_get_max_log_time_empty() -> void:
 	var panel := await _instantiate_panel()
