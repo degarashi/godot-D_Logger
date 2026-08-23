@@ -113,6 +113,46 @@ func test_highlight_case_insensitive_unicode_offsets() -> void:
 	)
 
 
+# ------------- [highlight - BBCode safety] -------------
+func test_highlight_skips_matches_inside_injected_tags() -> void:
+	# highlight() receives the BBCode-transformed message; matches that
+	# land entirely inside an injected [..] tag must not be wrapped,
+	# since that would corrupt the markup.
+	var search := DLoggerSearch.new()
+	search.query = "color"
+	var transformed := "[color=#ff5555]([/color]x[color=#ff5555])[/color]"
+	assert_str(search.highlight(transformed)).is_equal(transformed)
+
+
+func test_highlights_literal_text_outside_tags() -> void:
+	var search := DLoggerSearch.new()
+	search.query = "x"
+	(
+		assert_str(
+			search.highlight(
+				"[color=#ff5555]([/color]x[color=#ff5555])[/color]"
+			)
+		)
+		. is_equal(
+			(
+				"[color=#ff5555]([/color]"
+				+ "[bgcolor=yellow][color=black]x[/color][/bgcolor]"
+				+ "[color=#ff5555])[/color]"
+			)
+		)
+	)
+
+
+func test_highlight_regex_crossing_tag_boundary_is_skipped() -> void:
+	# "\(.": the second char of the match is the opening bracket of the
+	# injected [/color] tag; wrapping the match would slice mid-tag.
+	var search := DLoggerSearch.new()
+	search.query = "\\(.\\)"
+	search.compile()
+	var transformed := "[color=#ff5555]([/color]x[color=#ff5555])[/color]"
+	assert_str(search.highlight(transformed)).is_equal(transformed)
+
+
 # ------------- [reset] -------------
 func test_reset_clears_state() -> void:
 	var search := DLoggerSearch.new()

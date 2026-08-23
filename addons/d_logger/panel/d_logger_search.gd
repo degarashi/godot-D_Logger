@@ -70,8 +70,35 @@ func matches(message: String, category: String, prefix: String) -> bool:
 	return q in message or q in category or q in prefix
 
 
+## Collects the [start, end) span of every "[..]" group in t. highlight()
+## receives the BBCode-transformed message, in which every literal "["
+## belongs to markup (injected tags or the escaped [lb]/[rb] tokens), so
+## these spans fully describe the regions a highlight wrap must never cut.
+func _tag_spans(t: String) -> Array[Vector2i]:
+	var spans: Array[Vector2i] = []
+	var idx := t.find("[")
+	while idx >= 0:
+		var close := t.find("]", idx)
+		if close < 0:
+			spans.append(Vector2i(idx, t.length()))
+			break
+		spans.append(Vector2i(idx, close + 1))
+		idx = t.find("[", close + 1)
+	return spans
+
+
+func _overlaps_tag(spans: Array[Vector2i], start: int, end: int) -> bool:
+	for span in spans:
+		if start < span.y and end > span.x:
+			return true
+	return false
+
+
 ## Highlights occurrences of the query in the given text using BBCode.
 ## Wraps each match with a yellow background and black text for visibility.
+## The input is the BBCode-transformed message text: matches that intersect
+## an injected [..] tag are left unhighlighted, because wrapping them would
+## slice mid-tag and corrupt the markup.
 func highlight(text: String) -> String:
 	if is_empty():
 		return text
@@ -80,33 +107,43 @@ func highlight(text: String) -> String:
 		var matches := regex.search_all(text)
 		if matches.is_empty():
 			return text
+		var tag_spans := _tag_spans(text)
 		var result: String = ""
 		var last_end: int = 0
 		for match: RegExMatch in matches:
 			var start := match.get_start()
 			var end := match.get_end()
 			result += text.substr(last_end, start - last_end)
-			result += (
-				"[bgcolor=yellow][color=black]"
-				+ text.substr(start, end - start)
-				+ "[/color][/bgcolor]"
-			)
+			if _overlaps_tag(tag_spans, start, end):
+				# The match crosses an injected [..] tag boundary; wrapping
+				# it would slice mid-tag and corrupt the BBCode.
+				result += text.substr(start, end - start)
+			else:
+				result += (
+					"[bgcolor=yellow][color=black]"
+					+ text.substr(start, end - start)
+					+ "[/color][/bgcolor]"
+				)
 			last_end = end
 		result += text.substr(last_end)
 		return result
 
 	var q := query
 	if case_sensitive:
+		var tag_spans := _tag_spans(text)
 		var result: String = ""
 		var last_end: int = 0
 		var pos: int = text.find(q, last_end)
 		while pos >= 0:
 			result += text.substr(last_end, pos - last_end)
-			result += (
-				"[bgcolor=yellow][color=black]"
-				+ text.substr(pos, q.length())
-				+ "[/color][/bgcolor]"
-			)
+			if _overlaps_tag(tag_spans, pos, pos + q.length()):
+				result += text.substr(pos, q.length())
+			else:
+				result += (
+					"[bgcolor=yellow][color=black]"
+					+ text.substr(pos, q.length())
+					+ "[/color][/bgcolor]"
+				)
 			last_end = pos + q.length()
 			pos = text.find(q, last_end)
 		result += text.substr(last_end)
@@ -121,16 +158,20 @@ func highlight(text: String) -> String:
 	# would have to be remapped onto the original string instead.
 	var lower_text := text.to_lower()
 	var lower_query := q.to_lower()
+	var tag_spans := _tag_spans(text)
 	var result: String = ""
 	var last_end: int = 0
 	var pos: int = lower_text.find(lower_query, last_end)
 	while pos >= 0:
 		result += text.substr(last_end, pos - last_end)
-		result += (
-			"[bgcolor=yellow][color=black]"
-			+ text.substr(pos, q.length())
-			+ "[/color][/bgcolor]"
-		)
+		if _overlaps_tag(tag_spans, pos, pos + q.length()):
+			result += text.substr(pos, q.length())
+		else:
+			result += (
+				"[bgcolor=yellow][color=black]"
+				+ text.substr(pos, q.length())
+				+ "[/color][/bgcolor]"
+			)
 		last_end = pos + q.length()
 		pos = lower_text.find(lower_query, last_end)
 	result += text.substr(last_end)
