@@ -189,6 +189,43 @@ func test_format_with_mismatched_type_array_for_named() -> void:
 	assert_bool(logger.info("HP={hp}", [100])).is_true()
 
 
+# ------------- [Placeholder Warning Dedupe] -------------
+func test_placeholder_warning_deduplicated_per_template() -> void:
+	# Logging the same template repeatedly must record only one warning
+	# entry so hot loops logging literal braces do not flood the Output.
+	_CLASS._placeholder_warned.clear()
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("Value: {0}", {"hp": 1})).is_true()
+	assert_bool(logger.info("Value: {0}", {"hp": 2})).is_true()
+	assert_int(_CLASS._placeholder_warned.size()).is_equal(1)
+	_CLASS._placeholder_warned.clear()
+
+
+func test_placeholder_warning_distinct_templates_both_recorded() -> void:
+	_CLASS._placeholder_warned.clear()
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	logger.info("A {0}")
+	logger.info("B {name}")
+	assert_int(_CLASS._placeholder_warned.size()).is_equal(2)
+	_CLASS._placeholder_warned.clear()
+
+
+func test_placeholder_warning_cache_bounded() -> void:
+	# Exceeding the warning limit resets the cache wholesale so it cannot
+	# grow unbounded over a long editor session.
+	var prev_limit := _CLASS._warn_limit
+	_CLASS._warn_limit = 4
+	_CLASS._placeholder_warned.clear()
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	for i in 10:
+		logger.info("T%d {x}" % i)
+	assert_int(_CLASS._placeholder_warned.size()).is_less_equal(
+		_CLASS._warn_limit
+	)
+	_CLASS._warn_limit = prev_limit
+	_CLASS._placeholder_warned.clear()
+
+
 # ------------- [Category & Context] -------------
 func test_with_category() -> void:
 	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)

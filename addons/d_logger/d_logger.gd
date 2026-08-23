@@ -11,6 +11,12 @@ const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
 # ------------- [Private Variable] -------------
 static var _editor_panel: Object = null
 static var _export_warning_shown: bool = false
+# Message templates whose unresolved-placeholder warning has already been
+# shown. Deduplicates the warning per call-site template so literal brace
+# text logged in a hot loop (regex quantifiers like \d{2}, config samples)
+# does not flood the Output dock. Bounded by _warn_limit.
+static var _placeholder_warned: PackedStringArray = []
+static var _warn_limit := 128
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
 
@@ -156,9 +162,21 @@ func _dispatch(
 	# here: when values is empty/null, the format step is skipped and
 	# the broken message would go through silently.
 	if DLoggerFunc.has_unresolved_placeholder(final_msg):
-		push_warning(
-			"DLogger: Unresolved format placeholder in message: %s" % final_msg
-		)
+		# Keyed on the pre-format template: identical call sites share a
+		# single warning regardless of the substituted values.
+		if not _placeholder_warned.has(msg):
+			if _placeholder_warned.size() >= _warn_limit:
+				# Simple wholesale reset instead of an LRU: after it,
+				# old templates may warn once more, which is acceptable
+				# for a heuristic warning.
+				_placeholder_warned.clear()
+			_placeholder_warned.append(msg)
+			push_warning(
+				(
+					"DLogger: Unresolved format placeholder in message: %s"
+					% final_msg
+				)
+			)
 
 	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(
 		level, "DEBUG"
