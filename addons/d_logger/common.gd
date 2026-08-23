@@ -243,11 +243,20 @@ static func get_formatted_line(
 	var caller_part := ""
 	if not caller_display.is_empty():
 		if use_bbcode and not caller_url.is_empty():
-			caller_part = " [url=%s]%s[/url]" % [caller_url, caller_display]
+			# Escape both sides of the [url] tag: caller paths and node
+			# names may contain brackets that would otherwise inject
+			# BBCode (same rationale as get_source_string).
+			caller_part = (
+				" [url=%s]%s[/url]"
+				% [escape_bbcode(caller_url), escape_bbcode(caller_display)]
+			)
 		else:
 			caller_part = " " + caller_display
 
-	var ctx_part := " " + ctx_str if not ctx_str.is_empty() else ""
+	# Escape the context string for BBCode output too: Godot node names
+	# allow square brackets, which would otherwise break out of the markup.
+	var safe_ctx := escape_bbcode(ctx_str) if use_bbcode else ctx_str
+	var ctx_part := " " + safe_ctx if not safe_ctx.is_empty() else ""
 
 	# [001.234s][F:123][D-Logger] [main.gd:10] [MyNode] - [WARN] Message
 	return (

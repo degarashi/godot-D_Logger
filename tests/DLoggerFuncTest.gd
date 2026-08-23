@@ -259,6 +259,32 @@ func test_get_formatted_line_with_caller() -> void:
 	assert_str(result).contains("Warning msg")
 
 
+func test_get_formatted_line_bbcode_escapes_caller_and_context() -> void:
+	# Caller paths and node names may contain square brackets; in BBCode
+	# mode they must be escaped so they cannot inject markup.
+	var caller := {"file": "res://[x].gd", "line": 3, "display": "[x].gd:3"}
+	var result := _FUNC.get_formatted_line(
+		2.0, 200, "[D-Logger]", caller, "[Evil[url=]ctx]", "WARN", "msg", true
+	)
+	assert_int(result.count("[url=")).is_equal(1)
+	assert_str(result).contains("url=res://[lb]x[rb].gd:3")
+	assert_str(result).contains("[lb]x[rb].gd:3")
+	assert_str(result).contains("[lb]Evil[lb]url=[rb]ctx[rb]")
+
+
+func test_get_formatted_line_plain_keeps_raw_brackets() -> void:
+	var caller := {"file": "res://[x].gd", "line": 3, "display": "[x].gd:3"}
+	var result := _FUNC.get_formatted_line(
+		2.0, 200, "[D-Logger]", caller, "[Evil[url=]ctx]", "WARN", "msg", false
+	)
+	# Plain mode must not wrap anything in link tags (the raw context
+	# string itself may legitimately contain "[url=", so check for the
+	# closing tag instead).
+	assert_int(result.count("[/url]")).is_equal(0)
+	assert_str(result).contains(" [x].gd:3")
+	assert_str(result).contains(" [Evil[url=]ctx]")
+
+
 # ------------- [find_logger_from_ancestor] -------------
 func test_find_logger_from_ancestor_finds_logger() -> void:
 	var root := Node.new()
