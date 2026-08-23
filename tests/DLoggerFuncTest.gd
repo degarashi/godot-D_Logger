@@ -71,6 +71,22 @@ func test_has_unresolved_placeholder_empty_braces_not_flagged() -> void:
 	assert_bool(_FUNC.has_unresolved_placeholder("empty {} braces")).is_false()
 
 
+func test_has_unresolved_placeholder_after_empty_braces() -> void:
+	# An empty {} pair earlier in the text must not stop detection
+	# of a real placeholder that follows it.
+	assert_bool(_FUNC.has_unresolved_placeholder("empty {} and {0}")).is_true()
+
+
+func test_has_unresolved_placeholder_nested_in_nonkey_body() -> void:
+	# A placeholder nested after a non-key brace region must still be
+	# found once scanning resumes at the next '{'.
+	assert_bool(_FUNC.has_unresolved_placeholder("{ broken {0}")).is_true()
+
+
+func test_has_unresolved_placeholder_empty_braces_alone() -> void:
+	assert_bool(_FUNC.has_unresolved_placeholder("{}")).is_false()
+
+
 func test_has_unresolved_placeholder_no_text_returns_false() -> void:
 	assert_bool(_FUNC.has_unresolved_placeholder("")).is_false()
 

@@ -159,12 +159,12 @@ static func has_unresolved_placeholder(text: String) -> bool:
 	var start := text.find("{")
 	while start >= 0:
 		var end := text.find("}", start)
-		if end <= start + 1:
-			# No closing brace or empty braces: not a placeholder
+		if end < 0:
+			# No closing brace anywhere ahead, so nothing further
+			# can form a placeholder either
 			return false
-		# A placeholder body is a bare key (word chars / digits / _)
 		var body := text.substr(start + 1, end - start - 1)
-		var is_key := true
+		var is_key := body.length() > 0
 		for i in body.length():
 			var c := body[i]
 			if not (
@@ -177,7 +177,11 @@ static func has_unresolved_placeholder(text: String) -> bool:
 				break
 		if is_key:
 			return true
-		start = text.find("{", end)
+		# Not a placeholder ({}, or a non-key body such as a JSON
+		# snippet): resume from the NEXT '{' instead of past the '}',
+		# so placeholders following an empty or nested brace pair are
+		# still detected.
+		start = text.find("{", start + 1)
 	return false
 
 
