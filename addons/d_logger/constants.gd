@@ -40,7 +40,7 @@ const AUTOLOAD_PATH := "res://addons/d_logger/d_logger_node.tscn"
 
 # --- Log Level Labels ---
 # For Enum display in settings
-const MIN_LEVEL_HINT_STRING = "DEBUG:0,INFO:1,WARN:2,ERROR:3"
+const MIN_LEVEL_HINT_STRING: String = "DEBUG:0,INFO:1,WARN:2,ERROR:3"
 
 # LogLevel int -> String label
 const LOG_LEVEL_LABELS := {0: "DEBUG", 1: "INFO", 2: "WARN", 3: "ERROR"}

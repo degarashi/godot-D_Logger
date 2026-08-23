@@ -1,7 +1,11 @@
 class_name DLoggerFunc
 extends Object
 
-# Cache for time/frame to avoid redundant computation across logger chain
+# Cache for time/frame to avoid redundant computation across logger chain.
+# NOT thread-safe by design: _dispatch sets/clears the cache around the
+# synchronous downstream formatting, assuming logging happens on the main
+# thread. Concurrent logging from threads would race on these values
+# (worst case: wrong timestamps), which is acceptable for a debug logger.
 static var _cached_seconds: float = -1.0
 static var _cached_frames: int = -1
 

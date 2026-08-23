@@ -865,8 +865,6 @@ func _apply_font_size() -> void:
 	log_display.add_theme_font_size_override(&"bold_font_size", _log_font_size)
 	if Engine.is_editor_hint():
 		var es := EditorInterface.get_editor_settings()
-		if not es.has_setting(EDITOR_SETTING_FONT_SIZE):
-			es.set_setting(EDITOR_SETTING_FONT_SIZE, _log_font_size)
 		es.set_setting(EDITOR_SETTING_FONT_SIZE, _log_font_size)
 
 
@@ -1019,16 +1017,20 @@ func clear_logs() -> void:
 	_selected_log_indices.clear()
 	log_display.clear()
 	_displayed_line_map.clear()
+	_hovered_line_idx = -1
+	log_display.tooltip_text = ""
 
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
 
-	# Reset search
+	# Reset search. set_pressed_no_signal avoids firing toggled here,
+	# which would trigger redundant rebuilds of the just-cleared display;
+	# _search.reset() already applied the equivalent state changes.
 	_search.reset()
 	search_line_edit.text = ""
-	case_sensitive_checkbox.button_pressed = false
-	regex_checkbox.button_pressed = false
+	case_sensitive_checkbox.set_pressed_no_signal(false)
+	regex_checkbox.set_pressed_no_signal(false)
 
 	# Reset time filter to "All"
 	_active_time_filter = -1.0
