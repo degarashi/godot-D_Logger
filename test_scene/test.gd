@@ -3,8 +3,21 @@ extends Node
 const DLOGGER = preload("res://addons/d_logger/d_logger.gd")
 const _C = preload("uid://cwfe01280qmo7")
 
+# Log-flood settings: after the feature smoke tests, the scene streams many
+# log lines so manual checks (drag-select latency, stacking, trimming) can
+# happen against a realistically full panel (~thousands of rows).
+# Override the total with the D_LOGGER_FLOOD_COUNT environment variable.
+const DEFAULT_FLOOD_COUNT := 2000
+const FLOOD_BATCH_SIZE := 25
+const FLOOD_INTERVAL_SECONDS := 0.02
+
 # Class-level variable
 var logger_custom_prefix: DLOGGER
+
+# Flood state
+var _flood_logger: DLOGGER
+var _flood_sent := 0
+var _flood_target := 0
 
 
 # ------------- [Public Method] -------------
@@ -109,7 +122,88 @@ func _test_caller_info() -> void:
 	# Verify caller info
 	await get_tree().create_timer(0.5).timeout
 	_check_caller_info(logger_custom_prefix)
+	_start_log_flood()
 
 
 func _check_caller_info(p_logger: DLOGGER) -> void:
 	p_logger.warn("Checking line number/caller for warning from sub-function")
+
+
+# ------------- [Log Flood] -------------
+## Streams a large volume of logs over several seconds so the editor panel
+## fills up like in real use. Paced via timers (not one blocking loop) so
+## stacking/rebuild coalescing behaves as it would under live logging.
+func _start_log_flood() -> void:
+	_flood_logger = DLOGGER.new("FLOOD")
+	var env_count := OS.get_environment("D_LOGGER_FLOOD_COUNT")
+	_flood_target = (
+		env_count.to_int()
+		if env_count.is_valid_int() and env_count.to_int() > 0
+		else DEFAULT_FLOOD_COUNT
+	)
+	print(
+		(
+			"Log flood: emitting %d lines (%d per tick, %.0fs)..."
+			% [
+				_flood_target,
+				FLOOD_BATCH_SIZE,
+				_flood_target / float(FLOOD_BATCH_SIZE) * FLOOD_INTERVAL_SECONDS
+			]
+		)
+	)
+	_emit_flood_batch()
+
+
+func _emit_flood_batch() -> void:
+	for i in range(FLOOD_BATCH_SIZE):
+		if _flood_sent >= _flood_target:
+			print("Log flood done: %d lines emitted." % _flood_sent)
+			return
+		_emit_flood_line(_flood_sent)
+		_flood_sent += 1
+	if _flood_sent % 500 == 0:
+		print("Log flood progress: %d / %d" % [_flood_sent, _flood_target])
+	await get_tree().create_timer(FLOOD_INTERVAL_SECONDS).timeout
+	_emit_flood_batch()
+
+
+## Cycles through level/category/shape variants so the panel gets a mix of
+## colors, filter tags, stacked counts and long wrappable lines.
+func _emit_flood_line(index: int) -> void:
+	match index % 8:
+		0:
+			_flood_logger.debug(
+				"Flood {0}: routine heartbeat frame={1}",
+				[index, Engine.get_frames_drawn()]
+			)
+		1:
+			_flood_logger.info(
+				"Player pos ({0}, {1}) inventory [potion (x{2}), sword]",
+				[index % 800, index % 600, index % 9 + 1]
+			)
+		2:
+			_flood_logger.warn(
+				"Slow frame detected: {0} ms", [(index % 40) + 16]
+			)
+		3:
+			# Repeats only every other batch: keeps stacks short enough to
+			# still exercise both append and stacked-rebuild paths.
+			_flood_logger.info("Repeated stackable message")
+		4:
+			_flood_logger.error(
+				"Connection lost to server shard-{0}", [index % 12]
+			)
+		5:
+			_flood_logger.info(
+				'Structured payload {"pos": [{0}, {1}], "bag": [{"id": {2}}]}',
+				[index % 100, index % 50, index % 5]
+			)
+		6:
+			_flood_logger.info(
+				"Long line {0}: %s (end of long line)" % "x".repeat(160),
+				[index]
+			)
+		7:
+			_flood_logger.info(
+				"Flood {0}: multi-tag message", [index], "AI|Combat"
+			)
