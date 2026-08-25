@@ -171,6 +171,105 @@ func test_clear_logs_clears_displayed_line_map() -> void:
 	panel.free()
 
 
+# ------------- [Selection Overlay] -------------
+## Regression guard for the drag-select lag fix: selection changes must
+## never rebuild the RichTextLabel document (clear() + re-append of every
+## line), which cost O(n) per frame at ~1000 lines. The highlight is drawn
+## by an overlay instead, so the document text stays byte-identical.
+func test_toggle_selection_does_not_rebuild_document() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 5)
+	var text_before: String = panel.log_display.get_parsed_text()
+	var paras_before: int = panel.log_display.get_paragraph_count()
+
+	panel._toggle_log_selection(2)
+	panel._toggle_log_selection(2)
+
+	assert_int(panel.log_display.get_paragraph_count()).is_equal(paras_before)
+	assert_str(panel.log_display.get_parsed_text()).is_equal(text_before)
+	panel.free()
+
+
+func test_drag_selection_updates_without_document_rebuild() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 10)
+	var text_before: String = panel.log_display.get_parsed_text()
+
+	panel._is_dragging_selection = true
+	panel._drag_anchor_display_line = 1
+	panel._apply_drag_range(4)
+	assert_bool(panel._selected_log_indices.has(1)).is_true()
+	assert_bool(panel._selected_log_indices.has(4)).is_true()
+	assert_int(panel._selected_log_indices.size()).is_equal(4)
+
+	# Shrinking the range must drop the rows that left it.
+	panel._apply_drag_range(7)
+	assert_int(panel._selected_log_indices.size()).is_equal(7)
+	assert_bool(panel._selected_log_indices.has(1)).is_true()
+	assert_bool(panel._selected_log_indices.has(7)).is_true()
+
+	assert_str(panel.log_display.get_parsed_text()).is_equal(text_before)
+	panel.free()
+
+
+func test_selection_overlay_setup() -> void:
+	var panel := await _instantiate_panel()
+	assert_object(panel._selection_overlay).is_not_null()
+	(
+		assert_bool(panel.log_display.is_ancestor_of(panel._selection_overlay))
+		. is_true()
+	)
+	# The overlay must never intercept mouse input (clicks, drags and
+	# meta links all belong to the RichTextLabel underneath).
+	assert_int(panel._selection_overlay.mouse_filter).is_equal(
+		Control.MOUSE_FILTER_IGNORE
+	)
+	assert_bool(panel._selection_overlay.clip_contents).is_true()
+	panel.free()
+
+
+func test_selection_map_mirrors_displayed_line_map() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("a", "INFO", "D-Logger", "System"))
+	panel.add_log(_make_log("b", "INFO", "D-Logger", "Network"))
+
+	# Hide Network: only log index 0 is displayed.
+	panel._active_filters["Network"] = false
+	panel._rebuild_log_display()
+	assert_int(panel._displayed_line_map.size()).is_equal(1)
+	assert_dict(panel._log_to_display_map).contains_key_value(0, 0)
+
+	# Show both again: the map tracks the refreshed display order.
+	panel._active_filters["Network"] = true
+	panel._rebuild_log_display()
+	assert_dict(panel._log_to_display_map).contains_key_value(0, 0)
+	assert_dict(panel._log_to_display_map).contains_key_value(1, 1)
+	panel.free()
+
+
+func test_clear_logs_clears_selection_map() -> void:
+	var panel := await _instantiate_panel()
+	_populate_logs(panel, 3)
+
+	panel.clear_logs()
+
+	assert_int(panel._log_to_display_map.size()).is_equal(0)
+	panel.free()
+
+
+## Regression guard: incremental add_log appends bypass _rebuild_log_display,
+## so the overlay's map must be updated there too — otherwise highlights
+## only pop in after the next full rebuild (the "delayed highlight" bug).
+func test_selection_map_tracks_incremental_appends() -> void:
+	var panel := await _instantiate_panel()
+	panel.add_log(_make_log("live_0"))
+	panel.add_log(_make_log("live_1"))
+
+	assert_dict(panel._log_to_display_map).contains_key_value(0, 0)
+	assert_dict(panel._log_to_display_map).contains_key_value(1, 1)
+	panel.free()
+
+
 # ------------- [Get Formatted Logs] -------------
 func test_get_formatted_logs_no_selection() -> void:
 	var panel := await _instantiate_panel()

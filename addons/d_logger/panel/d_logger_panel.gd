@@ -12,6 +12,9 @@ const EDITOR_SETTING_FONT_SIZE := "d_logger/panel_font_size"
 const EDITOR_SETTING_LEVEL_FILTER := "d_logger/panel_level_filter"
 const SEARCH_DEBOUNCE_SECONDS := 0.2
 
+# Matches the legacy baked-in selection bgcolor (#44686868, #RRGGBBAA).
+const SELECTION_HIGHLIGHT_COLOR := Color(0.267, 0.408, 0.408, 0.408)
+
 # ------------- [Private Variable] -------------
 var _log_font_size: int = DEFAULT_FONT_SIZE
 var _all_logs: Array[Dictionary] = []
@@ -38,6 +41,15 @@ var _level_presets: Dictionary[String, int] = {
 var _active_level_filter: int = 0
 var _is_right_dragging: bool = false
 var _selected_log_indices: Dictionary = {}
+# log index -> display paragraph index; the inverse of _displayed_line_map,
+# rebuilt alongside it so the selection overlay can locate paragraphs
+# without scanning every displayed line.
+var _log_to_display_map: Dictionary = {}
+# Translucent row highlight drawn above log_display. Selection state lives
+# entirely outside the RichTextLabel document: baking [bgcolor] into each
+# selected line forced clear() + re-append of the whole document on every
+# drag motion, which dominated frame time once logs reached ~1000 lines.
+var _selection_overlay: Control = null
 var _ctrl_held: bool = false
 # Smart auto-scroll: tracks whether the user is at the bottom of the log view
 var _is_auto_scrolling: bool = true
@@ -112,6 +124,7 @@ func _ready() -> void:
 	log_display.meta_hover_started.connect(_on_bracket_hover_started)
 	log_display.meta_hover_ended.connect(_on_bracket_hover_ended)
 	log_display.gui_input.connect(_on_log_display_gui_input)
+	_setup_selection_overlay()
 
 	# Load and apply saved font size (EditorSettings persists between sessions).
 	if Engine.is_editor_hint():
@@ -177,7 +190,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not _selected_log_indices.is_empty():
 			_selected_log_indices.clear()
 			_update_selection_info()
-			_rebuild_log_display()
+			_redraw_selection_overlay()
 			get_viewport().set_input_as_handled()
 			return
 
@@ -280,6 +293,10 @@ func add_log(log_data: Dictionary) -> void:
 			_schedule_display_rebuild()
 		else:
 			_displayed_line_map.append(log_idx)
+			# Keep the selection overlay's inverse map in sync: incremental
+			# appends never go through _rebuild_log_display, and a stale
+			# map makes highlights appear only after the next rebuild.
+			_log_to_display_map[log_idx] = _displayed_line_map.size() - 1
 			var level := log_data.get("level", "DEBUG")
 			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_refresh_stats_label()
@@ -586,7 +603,7 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 						if not _selected_log_indices.is_empty():
 							_selected_log_indices.clear()
 							_update_selection_info()
-							_rebuild_log_display_preserve_scroll()
+							_redraw_selection_overlay()
 					_is_dragging_selection = false
 
 				# NOTE: Do NOT call set_input_as_handled() here.
@@ -602,7 +619,7 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 						if not _selected_log_indices.is_empty():
 							_selected_log_indices.clear()
 							_update_selection_info()
-							_rebuild_log_display_preserve_scroll()
+							_redraw_selection_overlay()
 					_is_dragging_selection = false
 					_drag_last_range = Vector2i(-1, -1)
 					return
@@ -653,71 +670,63 @@ func _on_log_display_gui_input(event: InputEvent) -> void:
 		_drag_moved = true
 		var current_line := _get_line_at_mouse_pos(event.position)
 		if current_line >= 0 and current_line < _displayed_line_map.size():
-			var range_start := mini(_drag_anchor_display_line, current_line)
-			var range_end := maxi(_drag_anchor_display_line, current_line)
-			var map_size := _displayed_line_map.size()
-			range_start = clampi(range_start, 0, map_size - 1)
-			range_end = clampi(range_end, 0, map_size - 1)
-
-			# Skip if the range hasn't changed.
-			if (
-				range_start == _drag_last_range.x
-				and range_end == _drag_last_range.y
-			):
-				return
-
-			# Capture the previous range BEFORE overwriting _drag_last_range
-			# so the diff below can be computed against what was actually
-			# in the selection dict on the previous motion event.
-			var prev_start := _drag_last_range.x
-			var prev_end := _drag_last_range.y
-			_drag_last_range = Vector2i(range_start, range_end)
-
-			# Diff against the previous drag range so per-motion dict work
-			# scales with how much the range moved, not the full range.
-			# A long drag at 60Hz on the 10,000-line cap was hitting
-			# ~600k dict ops/sec; the previous range was reinserted
-			# verbatim on every motion event.
-			if prev_start < 0 or prev_end < 0:
-				# First motion of this drag: insert the full range.
-				# (clear() is the only correct setup for non-additive.)
-				if not _drag_is_additive:
-					_selected_log_indices.clear()
-				for dl in range(range_start, range_end + 1):
-					_selected_log_indices[_displayed_line_map[dl]] = true
-			else:
-				# Subsequent motion: erase what left the range (non-additive
-				# only — additive drags accumulate and never shrink the
-				# selection), then insert only the new slice(s).
-				if not _drag_is_additive:
-					if prev_start < range_start:
-						for dl in range(
-							prev_start, min(prev_end + 1, range_start)
-						):
-							_selected_log_indices.erase(_displayed_line_map[dl])
-					if prev_end > range_end:
-						for dl in range(
-							max(prev_start, range_end + 1), prev_end + 1
-						):
-							_selected_log_indices.erase(_displayed_line_map[dl])
-				if range_start < prev_start:
-					for dl in range(
-						range_start, min(prev_start, range_end + 1)
-					):
-						_selected_log_indices[_displayed_line_map[dl]] = true
-				if range_end > prev_end:
-					for dl in range(
-						max(range_start, prev_end + 1), range_end + 1
-					):
-						_selected_log_indices[_displayed_line_map[dl]] = true
-
-			# Selection state updates immediately (cheap), but the full
-			# display rebuild is frame-coalesced: a single mouse drag can
-			# emit many motion events per frame, and rebuilding the whole
-			# RichTextLabel on each one is O(n) at the 10,000 line limit.
-			_update_selection_info()
-			_schedule_display_rebuild()
+			_apply_drag_range(current_line)
 			accept_event()
+
+
+## Updates the selection for a drag whose pointer now sits over
+## current_display_line. Extracted from the gui_input handler so tests can
+## drive drag updates without synthesizing layout-dependent mouse events.
+func _apply_drag_range(current_display_line: int) -> void:
+	var range_start := mini(_drag_anchor_display_line, current_display_line)
+	var range_end := maxi(_drag_anchor_display_line, current_display_line)
+	var map_size := _displayed_line_map.size()
+	range_start = clampi(range_start, 0, map_size - 1)
+	range_end = clampi(range_end, 0, map_size - 1)
+
+	# Skip if the range hasn't changed.
+	if range_start == _drag_last_range.x and range_end == _drag_last_range.y:
+		return
+
+	# Capture the previous range BEFORE overwriting _drag_last_range
+	# so the diff below can be computed against what was actually
+	# in the selection dict on the previous motion event.
+	var prev_start := _drag_last_range.x
+	var prev_end := _drag_last_range.y
+	_drag_last_range = Vector2i(range_start, range_end)
+
+	# Diff against the previous drag range so per-motion dict work
+	# scales with how much the range moved, not the full range.
+	# A long drag at 60Hz on the 10,000-line cap was hitting
+	# ~600k dict ops/sec; the previous range was reinserted
+	# verbatim on every motion event.
+	if prev_start < 0 or prev_end < 0:
+		# First motion of this drag: insert the full range.
+		# (clear() is the only correct setup for non-additive.)
+		if not _drag_is_additive:
+			_selected_log_indices.clear()
+		for dl in range(range_start, range_end + 1):
+			_selected_log_indices[_displayed_line_map[dl]] = true
+	else:
+		# Subsequent motion: erase what left the range (non-additive
+		# only — additive drags accumulate and never shrink the
+		# selection), then insert only the new slice(s).
+		if not _drag_is_additive:
+			if prev_start < range_start:
+				for dl in range(prev_start, min(prev_end + 1, range_start)):
+					_selected_log_indices.erase(_displayed_line_map[dl])
+			if prev_end > range_end:
+				for dl in range(max(prev_start, range_end + 1), prev_end + 1):
+					_selected_log_indices.erase(_displayed_line_map[dl])
+		if range_start < prev_start:
+			for dl in range(range_start, min(prev_start, range_end + 1)):
+				_selected_log_indices[_displayed_line_map[dl]] = true
+		if range_end > prev_end:
+			for dl in range(max(range_start, prev_end + 1), range_end + 1):
+				_selected_log_indices[_displayed_line_map[dl]] = true
+
+	_update_selection_info()
+	_redraw_selection_overlay()
 
 
 func _get_line_at_mouse_pos(mouse_pos: Vector2) -> int:
@@ -897,7 +906,83 @@ func _toggle_log_selection(log_index: int) -> void:
 	else:
 		_selected_log_indices[log_index] = true
 	_update_selection_info()
-	_rebuild_log_display_preserve_scroll()
+	_redraw_selection_overlay()
+
+
+## Creates the overlay that visualizes row selection on top of log_display.
+## Selection never touches the RichTextLabel document itself, so selecting
+## costs O(selected) per frame instead of an O(n) document rebuild.
+func _setup_selection_overlay() -> void:
+	_selection_overlay = Control.new()
+	_selection_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Scrolled-off highlight rows must not paint over neighbouring controls.
+	_selection_overlay.clip_contents = true
+	_selection_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_selection_overlay.draw.connect(_draw_selection_overlay)
+	log_display.add_child(_selection_overlay)
+	var v_scroll := log_display.get_v_scroll_bar()
+	if v_scroll:
+		v_scroll.value_changed.connect(_on_log_scroll_changed)
+	# Paragraph offsets also shift when the control reflows without any
+	# scroll change (window resize, font size, word wrap).
+	log_display.resized.connect(_redraw_selection_overlay.bind(true))
+
+
+## Scrollbar value_changed forwards a float value; route it through this
+## adapter so the overlay redraw keeps its bool `deferred` signature.
+func _on_log_scroll_changed(_value: float) -> void:
+	_redraw_selection_overlay()
+
+
+func _redraw_selection_overlay(deferred: bool = false) -> void:
+	if _selection_overlay == null:
+		return
+	if deferred:
+		# Layout settles one frame later; redraw then so paragraph
+		# offsets and heights read from a settled document.
+		_selection_overlay.queue_redraw.call_deferred()
+	else:
+		_selection_overlay.queue_redraw()
+
+
+func _draw_selection_overlay() -> void:
+	if _selected_log_indices.is_empty() or _selection_overlay == null:
+		return
+	var para_count := log_display.get_paragraph_count()
+	if para_count <= 0:
+		return
+	var v_scroll := log_display.get_v_scroll_bar()
+	var scroll_y := v_scroll.value if v_scroll else 0.0
+	var style := log_display.get_theme_stylebox(&"normal")
+	var top_padding := style.content_margin_top if style else 0.0
+	var width := maxf(_selection_overlay.size.x, 1.0)
+	for log_idx: int in _selected_log_indices:
+		var para: int = _log_to_display_map.get(log_idx, -1)
+		if para < 0 or para >= para_count:
+			continue
+		var y_top := float(log_display.get_paragraph_offset(para))
+		var y_bottom := (
+			float(log_display.get_paragraph_offset(para + 1))
+			if para + 1 < para_count
+			else float(log_display.get_content_height())
+		)
+		var height := y_bottom - y_top
+		# Layout may lag a rebuild by one frame; skip degenerate rects
+		# rather than drawing garbage (the deferred redraw fixes it up).
+		if height <= 0.0:
+			continue
+		_selection_overlay.draw_rect(
+			Rect2(0.0, top_padding + y_top - scroll_y, width, height),
+			SELECTION_HIGHLIGHT_COLOR
+		)
+
+
+## Rebuilds the log-index -> display-paragraph inverse of
+## _displayed_line_map used by the selection overlay.
+func _refresh_selection_map() -> void:
+	_log_to_display_map.clear()
+	for dl in range(_displayed_line_map.size()):
+		_log_to_display_map[_displayed_line_map[dl]] = dl
 
 
 func _update_selection_info() -> void:
@@ -913,12 +998,11 @@ func _update_selection_info() -> void:
 
 func _append_formatted_log(log_data: Dictionary, log_index: int = -1) -> void:
 	if log_display:
-		var is_selected := (
-			log_index >= 0 and _selected_log_indices.has(log_index)
-		)
-		var bbcode_msg := _format_log(log_data, is_selected, log_index)
-		if is_selected:
-			bbcode_msg = "[bgcolor=#44686868]{0}[/bgcolor]".format([bbcode_msg])
+		# Selection is NOT baked into the document (see _setup_selection_
+		# overlay): the is_selected flag stays supported by _format_log for
+		# callers/tests that need it, but the live display always renders
+		# unselected text and lets the overlay highlight rows.
+		var bbcode_msg := _format_log(log_data, false, log_index)
 		log_display.append_text(bbcode_msg + "\n")
 		if _is_auto_scrolling:
 			call_deferred("_scroll_to_bottom")
@@ -999,6 +1083,8 @@ func _apply_font_size() -> void:
 		&"normal_font_size", _log_font_size
 	)
 	log_display.add_theme_font_size_override(&"bold_font_size", _log_font_size)
+	# Reflow shifts paragraph offsets; redraw once layout has settled.
+	_redraw_selection_overlay(true)
 	if Engine.is_editor_hint():
 		var es := EditorInterface.get_editor_settings()
 		es.set_setting(EDITOR_SETTING_FONT_SIZE, _log_font_size)
@@ -1041,7 +1127,9 @@ func _rebuild_log_display() -> void:
 			var level: String = log_data.get("level", "DEBUG")
 			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
 			_append_formatted_log(log_data, i)
+	_refresh_selection_map()
 	_refresh_stats_label()
+	_redraw_selection_overlay(true)
 	if _is_auto_scrolling:
 		call_deferred("_scroll_to_bottom")
 
@@ -1106,6 +1194,8 @@ func _on_word_wrap_toggled(button_pressed: bool) -> void:
 		if button_pressed
 		else TextServer.AUTOWRAP_OFF
 	)
+	# Wrapping changes paragraph heights without a document rebuild.
+	_redraw_selection_overlay(true)
 
 
 func _on_regex_toggled(button_pressed: bool) -> void:
@@ -1151,6 +1241,7 @@ func _on_search_text_changed(new_text: String) -> void:
 func clear_logs() -> void:
 	_all_logs.clear()
 	_selected_log_indices.clear()
+	_log_to_display_map.clear()
 	_bracket_hover.clear()
 	log_display.clear()
 	_displayed_line_map.clear()
