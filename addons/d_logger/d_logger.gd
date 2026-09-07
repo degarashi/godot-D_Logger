@@ -17,6 +17,7 @@ static var _export_warning_shown: bool = false
 # does not flood the Output dock. Bounded by _warn_limit.
 static var _placeholder_warned: PackedStringArray = []
 static var _warn_limit := 128
+static var _static_fallback: DLoggerClass = null
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
 
@@ -285,6 +286,111 @@ func is_warn_enabled() -> bool:
 
 func is_error_enabled() -> bool:
 	return _min_level <= DLoggerConstants.LogLevel.ERROR
+
+
+# ------------- [Static Facade - headless-safe] -------------
+## Returns the effective logger: Autoload instance when available,
+## otherwise a process-wide fallback with forced console output.
+## Headless `-s` contexts have no Autoload, so this avoids
+## `Identifier not found: DLogger` and still prints.
+static func get_static_logger() -> DLoggerClass:
+	var loop: Object = Engine.get_main_loop()
+	if loop is SceneTree:
+		var root: Window = (loop as SceneTree).root
+		if root != null:
+			var node: Node = root.get_node_or_null(
+				DLoggerConstants.AUTOLOAD_NAME
+			)
+			if node != null:
+				var lg: Object = DLoggerFunc.get_logger(node)
+				if lg is DLoggerClass:
+					return lg as DLoggerClass
+	if _static_fallback == null:
+		_static_fallback = DLoggerClass.new(
+			null, DLoggerConstants.LogLevel.DEBUG, true, ""
+		)
+		# Force console output regardless of ProjectSettings / build type.
+		_static_fallback._dispatcher.clear()
+		_static_fallback._dispatcher.add(_DLOGGER_FULL.new())
+		_static_fallback._min_level = DLoggerConstants.LogLevel.DEBUG
+		_static_fallback._prefix = _static_fallback.get_prefix()
+	return _static_fallback
+
+
+static func is_static_available() -> bool:
+	var loop: Object = Engine.get_main_loop()
+	if loop is SceneTree:
+		var root: Window = (loop as SceneTree).root
+		if root != null:
+			return root.get_node_or_null(DLoggerConstants.AUTOLOAD_NAME) != null
+	return false
+
+
+static func static_log(
+	level: String,
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
+) -> bool:
+	var lg: DLoggerClass = get_static_logger()
+	match level:
+		"debug":
+			return lg.debug(msg, v, cat, ctx, p, p_caller_info)
+		"info":
+			return lg.info(msg, v, cat, ctx, p, p_caller_info)
+		"warn":
+			return lg.warn(msg, v, cat, ctx, p, p_caller_info)
+		"error":
+			return lg.error(msg, v, cat, ctx, p, p_caller_info)
+		_:
+			return lg.info(msg, v, cat, ctx, p, p_caller_info)
+
+
+static func static_debug(
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
+) -> bool:
+	return get_static_logger().debug(msg, v, cat, ctx, p, p_caller_info)
+
+
+static func static_info(
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
+) -> bool:
+	return get_static_logger().info(msg, v, cat, ctx, p, p_caller_info)
+
+
+static func static_warn(
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
+) -> bool:
+	return get_static_logger().warn(msg, v, cat, ctx, p, p_caller_info)
+
+
+static func static_error(
+	msg: String,
+	v: Variant = [],
+	cat: String = "",
+	ctx: Object = null,
+	p: String = "",
+	p_caller_info: Variant = null
+) -> bool:
+	return get_static_logger().error(msg, v, cat, ctx, p, p_caller_info)
 
 
 # Use assert(log.debug(...)) if you want to disable output in release builds.
