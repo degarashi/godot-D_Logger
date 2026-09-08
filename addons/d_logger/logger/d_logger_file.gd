@@ -39,7 +39,10 @@ func _init(path: String) -> void:
 ## DLoggerFile instances on the same path safe: no stale handle position
 ## can overwrite another instance's data. Closing also flushes, so every
 ## line reaches disk immediately (stronger than the previous
-## flush-on-WARN/ERROR behavior).
+## flush-on-WARN/ERROR behavior). Cost: one open/close pair per line,
+## so sustained log floods pay syscall overhead on every write. This is
+## accepted for crash safety over raw throughput; throttle floods with
+## the minimum-level setting instead.
 func _open_for_append() -> FileAccess:
 	var file: FileAccess
 	if not FileAccess.file_exists(_file_path):
