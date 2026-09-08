@@ -198,7 +198,7 @@ class RebuildSpy:
 
 	var setup_calls := 0
 
-	func setup_logger() -> void:
+	func setup_logger(force_console: bool = false) -> void:
 		setup_calls += 1
 
 

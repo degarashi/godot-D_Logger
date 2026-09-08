@@ -39,7 +39,8 @@ func _init(
 	p_prefix: Variant = null,
 	p_min_lvl: int = DLoggerConstants.LogLevel.NOT_SPECIFIED,
 	p_console_enabled: Variant = null,
-	p_file_path: String = ""
+	p_file_path: String = "",
+	p_force_console: bool = false
 ) -> void:
 	assert(DLoggerFunc.is_logger(self))
 	if p_prefix is String:
@@ -54,12 +55,13 @@ func _init(
 
 	_override_file_path = p_file_path
 
-	setup_logger()
+	setup_logger(p_force_console)
 
 
 # ------------- [Internal Methods] -------------
-## Sets up the logger configuration
-func setup_logger() -> void:
+## Sets up the logger configuration. When force_console is true,
+## console output is added regardless of ProjectSettings/build type.
+func setup_logger(force_console: bool = false) -> void:
 	# Reset dispatcher state
 	_dispatcher.clear()
 
@@ -77,7 +79,7 @@ func setup_logger() -> void:
 	var is_debug := OS.is_debug_build()
 
 	# Add Console Logger
-	if is_debug and console_enabled:
+	if force_console or (is_debug and console_enabled):
 		_dispatcher.add(_DLOGGER_FULL.new())
 
 	# Add File Logger
@@ -313,14 +315,11 @@ static func get_static_logger() -> DLoggerClass:
 	if autoload_logger != null:
 		return autoload_logger
 	if _static_fallback == null:
+		# Forced console regardless of ProjectSettings/build type,
+		# so headless `-s` contexts still print.
 		_static_fallback = DLoggerClass.new(
-			null, DLoggerConstants.LogLevel.DEBUG, true, ""
+			null, DLoggerConstants.LogLevel.DEBUG, true, "", true
 		)
-		# Force console output regardless of ProjectSettings / build type.
-		_static_fallback._dispatcher.clear()
-		_static_fallback._dispatcher.add(_DLOGGER_FULL.new())
-		_static_fallback._min_level = DLoggerConstants.LogLevel.DEBUG
-		_static_fallback._prefix = _static_fallback.get_prefix()
 	return _static_fallback
 
 
@@ -328,8 +327,10 @@ static func is_static_available() -> bool:
 	return _find_autoload_logger() != null
 
 
+## Dispatches to the matching level; unknown levels warn and
+## fall back to INFO so no message is silently lost.
 static func static_log(
-	level: String,
+	level: int,
 	msg: String,
 	v: Variant = [],
 	cat: String = "",
@@ -339,15 +340,20 @@ static func static_log(
 ) -> bool:
 	var lg: DLoggerClass = get_static_logger()
 	match level:
-		"debug":
+		DLoggerConstants.LogLevel.DEBUG:
 			return lg.debug(msg, v, cat, ctx, p, p_caller_info)
-		"info":
+		DLoggerConstants.LogLevel.INFO:
 			return lg.info(msg, v, cat, ctx, p, p_caller_info)
-		"warn":
+		DLoggerConstants.LogLevel.WARN:
 			return lg.warn(msg, v, cat, ctx, p, p_caller_info)
-		"error":
+		DLoggerConstants.LogLevel.ERROR:
 			return lg.error(msg, v, cat, ctx, p, p_caller_info)
 		_:
+			push_warning(
+				"DLogger: Unknown log level '{0}', falling back to INFO".format(
+					[level]
+				)
+			)
 			return lg.info(msg, v, cat, ctx, p, p_caller_info)
 
 
