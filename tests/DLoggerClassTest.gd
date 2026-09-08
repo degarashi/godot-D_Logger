@@ -206,9 +206,23 @@ func test_placeholder_warning_deduplicated_per_template() -> void:
 func test_placeholder_warning_distinct_templates_both_recorded() -> void:
 	_CLASS._placeholder_warned.clear()
 	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
-	logger.info("A {0}")
-	logger.info("B {name}")
+	# Mismatched value types so formatting is attempted but unresolved
+	logger.info("A {0}", {"k": 1})
+	logger.info("B {name}", [1])
 	assert_int(_CLASS._placeholder_warned.size()).is_equal(2)
+	_CLASS._placeholder_warned.clear()
+
+
+func test_no_placeholder_warning_without_values() -> void:
+	# Literal braces without values (JSON, regex quantifiers) must not
+	# warn: they are indistinguishable from real placeholders, so the
+	# warning only fires when values were actually passed.
+	_CLASS._placeholder_warned.clear()
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
+	assert_bool(logger.info("A {0}")).is_true()
+	assert_bool(logger.info("B {name}")).is_true()
+	assert_bool(logger.info("regex \\d{2} quantifier")).is_true()
+	assert_int(_CLASS._placeholder_warned.size()).is_equal(0)
 	_CLASS._placeholder_warned.clear()
 
 
@@ -220,7 +234,8 @@ func test_placeholder_warning_cache_bounded() -> void:
 	_CLASS._placeholder_warned.clear()
 	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG)
 	for i in 10:
-		logger.info("T%d {x}" % i)
+		# Mismatched value type so each template records a warning
+		logger.info("T%d {x}" % i, {"y": 1})
 	assert_int(_CLASS._placeholder_warned.size()).is_less_equal(
 		_CLASS._warn_limit
 	)

@@ -161,16 +161,17 @@ func _dispatch(
 				final_msg = msg.format([values])
 				formatted = true
 
-	# Warn when placeholders survived — either because the caller passed
-	# a value type that does not match the placeholder style (e.g. a
-	# Dictionary for positional {0}, or an Array for named {name}), or
-	# because no values were provided at all (empty Array/Dict, or
-	# null). String.format() silently leaves placeholders untouched
-	# either way, which would otherwise log a broken message with no
-	# visible error. The formatted flag is intentionally not checked
-	# here: when values is empty/null, the format step is skipped and
-	# the broken message would go through silently.
-	if DLoggerFunc.has_unresolved_placeholder(final_msg):
+	# Warn only when the caller actually passed values (formatted) yet
+	# placeholders survived: the value type does not match the
+	# placeholder style (e.g. a Dictionary for positional {0}, or an
+	# Array for named {name}). Messages logged without values are
+	# skipped on purpose: literal braces in user text (JSON snippets,
+	# regex quantifiers like \d{2}) are indistinguishable from
+	# placeholders, and warning on them would flag every such log once.
+	# Trade-off: forgetting to pass values for a real placeholder no
+	# longer warns — accepted because String.format() offers no escape
+	# syntax to tell the two cases apart.
+	if formatted and DLoggerFunc.has_unresolved_placeholder(final_msg):
 		# Keyed on the pre-format template: identical call sites share a
 		# single warning regardless of the substituted values.
 		if not _placeholder_warned.has(msg):
