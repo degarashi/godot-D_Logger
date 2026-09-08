@@ -17,7 +17,8 @@ static var _export_warning_shown: bool = false
 # does not flood the Output dock. Bounded by _warn_limit.
 static var _placeholder_warned: PackedStringArray = []
 static var _warn_limit := 128
-static var _static_fallback: DLoggerClass = null
+## Variant to avoid a cyclic self-reference during class loading.
+static var _static_fallback: Variant = null
 # Snapshot of the runtime d_logger settings at fallback creation.
 # get_static_logger() rebuilds the fallback via setup_logger(true) only
 # when one of these actually changed (same guard as DLoggerNode, which
@@ -330,8 +331,8 @@ static func get_static_logger() -> DLoggerClass:
 		var current: Dictionary = DLoggerFunc.collect_d_logger_settings()
 		if current != _static_settings_snapshot:
 			_static_settings_snapshot = current
-			_static_fallback.setup_logger(true)
-	return _static_fallback
+			(_static_fallback as DLoggerClass).setup_logger(true)
+	return _static_fallback as DLoggerClass
 
 
 static func is_static_available() -> bool:
