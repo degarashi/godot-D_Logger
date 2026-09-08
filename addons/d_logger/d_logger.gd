@@ -39,7 +39,7 @@ var _has_console_override := false
 var _has_prefix_override := false
 
 var _prefix: String = ""
-var _min_level: int = 0
+var _min_level: int = DLoggerConstants.LogLevel.DEBUG
 
 
 # ------------- [Constructor] -------------
@@ -288,7 +288,10 @@ func get_prefix() -> String:
 func get_min_level() -> int:
 	if _override_min_level != DLoggerConstants.LogLevel.NOT_SPECIFIED:
 		return _override_min_level
-	return ProjectSettings.get_setting(DLoggerConstants.SETTING_MIN_LEVEL, 0)
+	return ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_MIN_LEVEL,
+		DLoggerConstants.LogLevel.DEBUG
+	)
 
 
 func is_debug_enabled() -> bool:
