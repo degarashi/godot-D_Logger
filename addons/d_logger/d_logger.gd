@@ -368,6 +368,8 @@ static func static_log(
 			return lg.info(msg, v, cat, ctx, p, p_caller_info)
 
 
+## Logs at DEBUG via the static logger. The caller is attributed
+## to the call site outside the addon (addon frames are skipped).
 static func static_debug(
 	msg: String,
 	v: Variant = [],
@@ -379,6 +381,8 @@ static func static_debug(
 	return get_static_logger().debug(msg, v, cat, ctx, p, p_caller_info)
 
 
+## Logs at INFO via the static logger. The caller is attributed
+## to the call site outside the addon (addon frames are skipped).
 static func static_info(
 	msg: String,
 	v: Variant = [],
@@ -390,6 +394,8 @@ static func static_info(
 	return get_static_logger().info(msg, v, cat, ctx, p, p_caller_info)
 
 
+## Logs at WARN via the static logger. The caller is attributed
+## to the call site outside the addon (addon frames are skipped).
 static func static_warn(
 	msg: String,
 	v: Variant = [],
@@ -401,6 +407,8 @@ static func static_warn(
 	return get_static_logger().warn(msg, v, cat, ctx, p, p_caller_info)
 
 
+## Logs at ERROR via the static logger. The caller is attributed
+## to the call site outside the addon (addon frames are skipped).
 static func static_error(
 	msg: String,
 	v: Variant = [],
@@ -422,18 +430,22 @@ static func static_get_min_level() -> int:
 	return get_static_logger().get_min_level()
 
 
+## Returns true when DEBUG is enabled on the static logger.
 static func static_is_debug_enabled() -> bool:
 	return get_static_logger().is_debug_enabled()
 
 
+## Returns true when INFO is enabled on the static logger.
 static func static_is_info_enabled() -> bool:
 	return get_static_logger().is_info_enabled()
 
 
+## Returns true when WARN is enabled on the static logger.
 static func static_is_warn_enabled() -> bool:
 	return get_static_logger().is_warn_enabled()
 
 
+## Returns true when ERROR is enabled on the static logger.
 static func static_is_error_enabled() -> bool:
 	return get_static_logger().is_error_enabled()
 
