@@ -44,19 +44,11 @@ static func _create_logger_from_settings(
 	)
 
 
-## Collects the runtime d_logger settings currently present in ProjectSettings.
+## Collects the runtime d_logger settings currently present in
+## ProjectSettings. Delegates to DLoggerFunc so the key list is shared
+## with the static fallback refresh in DLoggerClass.
 static func _collect_d_logger_settings() -> Dictionary:
-	var result := {}
-	for key: String in [
-		DLoggerConstants.SETTING_PREFIX,
-		DLoggerConstants.SETTING_ENABLE_CONSOLE,
-		DLoggerConstants.SETTING_MIN_LEVEL,
-		DLoggerConstants.SETTING_ENABLE_FILE,
-		DLoggerConstants.SETTING_FILE_PATH,
-	]:
-		if ProjectSettings.has_setting(key):
-			result[key] = ProjectSettings.get_setting(key)
-	return result
+	return DLoggerFunc.collect_d_logger_settings()
 
 
 # ------------- [Private Method] -------------

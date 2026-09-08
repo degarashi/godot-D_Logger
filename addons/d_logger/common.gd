@@ -320,3 +320,21 @@ static func is_autoload_ours(
 		return true
 	var uid := ResourceLoader.get_resource_uid(expected_path)
 	return uid != -1 and current == ResourceUID.id_to_text(uid)
+
+
+## Collects the runtime d_logger settings currently present in
+## ProjectSettings. Shared by DLoggerNode (rebuild guard) and
+## DLoggerClass (static fallback refresh) so the key list stays
+## in one place.
+static func collect_d_logger_settings() -> Dictionary:
+	var result := {}
+	for key: String in [
+		DLoggerConstants.SETTING_PREFIX,
+		DLoggerConstants.SETTING_ENABLE_CONSOLE,
+		DLoggerConstants.SETTING_MIN_LEVEL,
+		DLoggerConstants.SETTING_ENABLE_FILE,
+		DLoggerConstants.SETTING_FILE_PATH,
+	]:
+		if ProjectSettings.has_setting(key):
+			result[key] = ProjectSettings.get_setting(key)
+	return result

@@ -18,6 +18,11 @@ static var _export_warning_shown: bool = false
 static var _placeholder_warned: PackedStringArray = []
 static var _warn_limit := 128
 static var _static_fallback: DLoggerClass = null
+# Snapshot of the runtime d_logger settings at fallback creation.
+# get_static_logger() rebuilds the fallback via setup_logger(true) only
+# when one of these actually changed (same guard as DLoggerNode, which
+# additionally avoids spurious file session markers).
+static var _static_settings_snapshot: Dictionary = {}
 var _dispatcher := _LOG_ARRAY.new()
 var _initialized := false
 
@@ -320,6 +325,12 @@ static func get_static_logger() -> DLoggerClass:
 		_static_fallback = DLoggerClass.new(
 			null, DLoggerConstants.LogLevel.DEBUG, true, "", true
 		)
+		_static_settings_snapshot = DLoggerFunc.collect_d_logger_settings()
+	else:
+		var current: Dictionary = DLoggerFunc.collect_d_logger_settings()
+		if current != _static_settings_snapshot:
+			_static_settings_snapshot = current
+			_static_fallback.setup_logger(true)
 	return _static_fallback
 
 
