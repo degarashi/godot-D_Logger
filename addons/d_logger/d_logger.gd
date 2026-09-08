@@ -7,6 +7,8 @@ const _DLOGGER_FILE = preload("uid://b3v27qs0f6a5e")
 const _DLOGGER_FULL = preload("uid://bqce6prqiumic")
 const _DLOGGER_QUIET = preload("uid://c253k62cylfjd")
 const _LOG_ARRAY = preload("uid://c62dc0e0882d8")
+## Default spike threshold for benchmark(): one frame budget at 60fps.
+const DEFAULT_SPIKE_THRESHOLD_MS := 16.0
 
 # ------------- [Private Variable] -------------
 static var _editor_panel: Object = null
@@ -455,7 +457,9 @@ static func static_is_error_enabled() -> bool:
 ## Measures the execution time of a callable via the static logger.
 ## See benchmark() for details.
 static func static_benchmark(
-	name: String, callable: Callable, spike_threshold_ms: float = 16.0
+	name: String,
+	callable: Callable,
+	spike_threshold_ms: float = DEFAULT_SPIKE_THRESHOLD_MS
 ) -> Variant:
 	return get_static_logger().benchmark(name, callable, spike_threshold_ms)
 
@@ -525,11 +529,16 @@ func error(
 
 # ------------- [Benchmark] -------------
 ## Measures the execution time of a callable and logs the result.
-## Normal results are logged at INFO (category "PERF"); when the elapsed time
-## exceeds `spike_threshold_ms` (default 16ms, one frame budget) the result
-## is logged at WARN instead. Returns the callable's return value unchanged.
+## Normal results are logged at INFO (category "PERF"), so they are
+## hidden when the minimum level is WARN or higher; when the elapsed
+## time exceeds `spike_threshold_ms` (default
+## DEFAULT_SPIKE_THRESHOLD_MS, one frame budget) the result is logged
+## at WARN instead and stays visible. Returns the callable's return
+## value unchanged.
 func benchmark(
-	name: String, callable: Callable, spike_threshold_ms: float = 16.0
+	name: String,
+	callable: Callable,
+	spike_threshold_ms: float = DEFAULT_SPIKE_THRESHOLD_MS
 ) -> Variant:
 	if not callable.is_valid():
 		# Bound callables can outlive their object; bail out with an error
