@@ -312,6 +312,13 @@ func is_error_enabled() -> bool:
 
 
 # ------------- [Static Facade - headless-safe] -------------
+## Sets the editor panel receiving direct log calls inside the editor.
+## Managed by the EditorPlugin lifecycle; kept behind a setter so the
+## static wiring point stays explicit and testable.
+static func set_editor_panel(panel: Object) -> void:
+	_editor_panel = panel
+
+
 ## Returns the effective logger: Autoload instance when available,
 ## otherwise a process-wide fallback with forced console output.
 ## Headless `-s` contexts have no Autoload, so this avoids

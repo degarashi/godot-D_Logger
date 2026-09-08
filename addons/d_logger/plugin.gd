@@ -24,7 +24,7 @@ func _enter_tree() -> void:
 	# --- add bottom panel ---
 	_panel_instance = PANEL_SCENE.instantiate()
 	add_control_to_bottom_panel(_panel_instance, "D-Logger")
-	DLoggerClass._editor_panel = _panel_instance
+	DLoggerClass.set_editor_panel(_panel_instance)
 
 	# --- Registering the debugger plugin ---
 	_debugger_instance = DEBUGGER_PLUGIN.new(_panel_instance)
@@ -43,7 +43,7 @@ func _exit_tree() -> void:
 	if _panel_instance:
 		remove_control_from_bottom_panel(_panel_instance)
 		_panel_instance.queue_free()
-		DLoggerClass._editor_panel = null
+		DLoggerClass.set_editor_panel(null)
 
 
 ## Removes the autoload singleton when the plugin is disabled. Runs only on
