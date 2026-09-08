@@ -119,7 +119,15 @@ func setup_logger(force_console: bool = false) -> void:
 	# `debug/d_logger/...` keys to project.godot, this exported build
 	# silently ends up with DLoggerQuiet only. Surface this once per
 	# session in debug exports so the user has a chance to notice.
-	if not _export_warning_shown and not Engine.is_editor_hint() and is_debug:
+	# Headless `-s` script runs are excluded: they have no game loop or
+	# export packaging involved, and the static fallback already forces
+	# console output there, so the warning would only be noise.
+	if (
+		not _export_warning_shown
+		and not Engine.is_editor_hint()
+		and is_debug
+		and DisplayServer.get_name() != "headless"
+	):
 		if not console_enabled and not file_enabled:
 			push_warning(
 				(
