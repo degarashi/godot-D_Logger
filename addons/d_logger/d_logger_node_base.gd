@@ -18,7 +18,10 @@ func get_logger() -> DLoggerClass:
 
 
 # ------------- [Forwarding Methods] -------------
-# These allow using the node directly as a _logger if needed
+# These allow using the node directly as a _logger if needed.
+# A missing _logger (before _ready) still returns true: the log calls
+# double as assert() conditions, and failing an assert for "logger not
+# ready yet" would be worse than dropping one early log line.
 func is_debug_enabled() -> bool:
 	return _logger.is_debug_enabled() if _logger else false
 
