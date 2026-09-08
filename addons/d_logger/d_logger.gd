@@ -401,6 +401,40 @@ static func static_error(
 	return get_static_logger().error(msg, v, cat, ctx, p, p_caller_info)
 
 
+## Returns the effective prefix of the static logger.
+static func static_get_prefix() -> String:
+	return get_static_logger().get_prefix()
+
+
+## Returns the effective minimum level of the static logger.
+static func static_get_min_level() -> int:
+	return get_static_logger().get_min_level()
+
+
+static func static_is_debug_enabled() -> bool:
+	return get_static_logger().is_debug_enabled()
+
+
+static func static_is_info_enabled() -> bool:
+	return get_static_logger().is_info_enabled()
+
+
+static func static_is_warn_enabled() -> bool:
+	return get_static_logger().is_warn_enabled()
+
+
+static func static_is_error_enabled() -> bool:
+	return get_static_logger().is_error_enabled()
+
+
+## Measures the execution time of a callable via the static logger.
+## See benchmark() for details.
+static func static_benchmark(
+	name: String, callable: Callable, spike_threshold_ms: float = 16.0
+) -> Variant:
+	return get_static_logger().benchmark(name, callable, spike_threshold_ms)
+
+
 # Use assert(log.debug(...)) if you want to disable output in release builds.
 
 
