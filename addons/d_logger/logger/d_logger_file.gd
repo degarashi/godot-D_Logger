@@ -9,6 +9,12 @@ var _file_path: String
 # one push_error per attempted log line — flooding the editor
 # Output at the exact moment the user is trying to capture errors.
 var _init_failed: bool = false
+# Latched to true after the first failed rotation. Without this, a
+# permanently unrenamable file would emit one push_error per write
+# once over the size limit — the same flood pattern as _init_failed.
+# Cleared on the next successful rotation so a transient failure
+# warns once per failure episode rather than once per session.
+var _rotate_failed: bool = false
 
 
 # ------------- [Callbacks] -------------
@@ -79,8 +85,16 @@ func _rotate_log_file() -> void:
 	if DirAccess.rename_absolute(_file_path, backup_path) != OK:
 		# Keep appending to the current file if rotation fails; the size
 		# check will retry on the next write.
-		push_error("DLoggerFile: Failed to rotate log file to %s" % backup_path)
+		if not _rotate_failed:
+			push_error(
+				"DLoggerFile: Failed to rotate log file to %s"
+				% backup_path
+			)
+			_rotate_failed = true
 		return
+
+	# Rename succeeded: a previous failure episode is over.
+	_rotate_failed = false
 
 	# Start a fresh log file and write the rotation marker
 	var file := FileAccess.open(_file_path, FileAccess.WRITE)
@@ -91,12 +105,14 @@ func _rotate_log_file() -> void:
 		)
 		file.close()
 	else:
-		push_error(
-			(
-				"DLoggerFile: Failed to reopen log file after rotation: %s"
-				% _file_path
+		if not _rotate_failed:
+			push_error(
+				(
+					"DLoggerFile: Failed to reopen log file after rotation: %s"
+					% _file_path
+				)
 			)
-		)
+			_rotate_failed = true
 
 
 # ------------- [Output] -------------
