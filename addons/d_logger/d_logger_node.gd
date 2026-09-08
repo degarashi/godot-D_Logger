@@ -5,17 +5,17 @@ extends DLoggerNodeBase
 # ------------- [Exports] -------------
 @export var _init_param: DLoggerInitParam
 
-# Snapshot of the runtime d_logger ProjectSettings values. ProjectSettings.
-# settings_changed fires for ANY setting change (resolution, quality, other
-# plugins...), so the logger is rebuilt only when one of these actually
-# changed. Otherwise every unrelated set_setting() would rebuild the logger
-# chain and append a spurious "=== New Session Started ===" file marker.
-var _d_logger_settings_snapshot: Dictionary = {}
+# Watches the runtime d_logger ProjectSettings values. ProjectSettings.
+# settings_changed fires for ANY setting change, so the logger is rebuilt
+# only when a d_logger key actually drifted. Otherwise every unrelated
+# set_setting() would rebuild the logger chain and append a spurious
+# "=== New Session Started ===" file marker.
+var _settings_watcher := DLoggerSettingsWatcher.new()
 
 
 # ------------- [Callbacks] -------------
 func _enter_tree() -> void:
-	_d_logger_settings_snapshot = _collect_d_logger_settings()
+	_settings_watcher.refresh()
 	if not ProjectSettings.settings_changed.is_connected(_on_settings_changed):
 		ProjectSettings.settings_changed.connect(_on_settings_changed)
 
@@ -56,18 +56,9 @@ static func _console_override_to_variant(value: int) -> Variant:
 			return null
 
 
-## Collects the runtime d_logger settings currently present in
-## ProjectSettings. Delegates to DLoggerFunc so the key list is shared
-## with the static fallback refresh in DLoggerClass.
-static func _collect_d_logger_settings() -> Dictionary:
-	return DLoggerFunc.collect_d_logger_settings()
-
-
 # ------------- [Private Method] -------------
 func _on_settings_changed() -> void:
-	var current := _collect_d_logger_settings()
-	if current == _d_logger_settings_snapshot:
+	if not _settings_watcher.poll():
 		return
-	_d_logger_settings_snapshot = current
 	if _logger:
 		_logger.setup_logger()
