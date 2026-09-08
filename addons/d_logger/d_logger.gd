@@ -293,7 +293,7 @@ func is_error_enabled() -> bool:
 ## otherwise a process-wide fallback with forced console output.
 ## Headless `-s` contexts have no Autoload, so this avoids
 ## `Identifier not found: DLogger` and still prints.
-static func get_static_logger() -> DLoggerClass:
+static func _find_autoload_logger() -> DLoggerClass:
 	var loop: Object = Engine.get_main_loop()
 	if loop is SceneTree:
 		var root: Window = (loop as SceneTree).root
@@ -305,6 +305,13 @@ static func get_static_logger() -> DLoggerClass:
 				var lg: Object = DLoggerFunc.get_logger(node)
 				if lg is DLoggerClass:
 					return lg as DLoggerClass
+	return null
+
+
+static func get_static_logger() -> DLoggerClass:
+	var autoload_logger: DLoggerClass = _find_autoload_logger()
+	if autoload_logger != null:
+		return autoload_logger
 	if _static_fallback == null:
 		_static_fallback = DLoggerClass.new(
 			null, DLoggerConstants.LogLevel.DEBUG, true, ""
@@ -318,12 +325,7 @@ static func get_static_logger() -> DLoggerClass:
 
 
 static func is_static_available() -> bool:
-	var loop: Object = Engine.get_main_loop()
-	if loop is SceneTree:
-		var root: Window = (loop as SceneTree).root
-		if root != null:
-			return root.get_node_or_null(DLoggerConstants.AUTOLOAD_NAME) != null
-	return false
+	return _find_autoload_logger() != null
 
 
 static func static_log(
