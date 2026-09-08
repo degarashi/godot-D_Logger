@@ -16,8 +16,9 @@ static var _export_warning_shown: bool = false
 # Message templates whose unresolved-placeholder warning has already been
 # shown. Deduplicates the warning per call-site template so literal brace
 # text logged in a hot loop (regex quantifiers like \d{2}, config samples)
-# does not flood the Output dock. Bounded by _warn_limit.
-static var _placeholder_warned: PackedStringArray = []
+# does not flood the Output dock. A Dictionary used as a set for O(1)
+# lookup. Bounded by _warn_limit.
+static var _placeholder_warned: Dictionary = {}
 static var _warn_limit := 128
 ## Variant to avoid a cyclic self-reference during class loading.
 static var _static_fallback: Variant = null
@@ -190,7 +191,7 @@ func _dispatch(
 				# old templates may warn once more, which is acceptable
 				# for a heuristic warning.
 				_placeholder_warned.clear()
-			_placeholder_warned.append(msg)
+			_placeholder_warned[msg] = true
 			push_warning(
 				(
 					"DLogger: Unresolved format placeholder in message: %s"
