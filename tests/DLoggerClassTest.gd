@@ -3,6 +3,8 @@ extends GdUnitTestSuite
 
 const _CLASS = preload("res://addons/d_logger/d_logger.gd")
 const _CONST = preload("res://addons/d_logger/constants.gd")
+const _FULL = preload("res://addons/d_logger/logger/d_logger_full.gd")
+const _FUNC = preload("res://addons/d_logger/common.gd")
 
 
 # ------------- [Constructor] -------------
@@ -434,3 +436,149 @@ func test_benchmark_invalid_callable_returns_null() -> void:
 	var result: Variant = logger.benchmark("freed_call", bound)
 	assert_object(result).is_null()
 	assert_int(spy.levels.size()).is_equal(0)
+
+
+# ------------- [Static Facade] -------------
+func test_static_logger_never_null() -> void:
+	assert_object(_CLASS.get_static_logger()).is_not_null()
+
+
+func test_static_logger_returns_singleton() -> void:
+	var first: DLoggerClass = _CLASS.get_static_logger()
+	var second: DLoggerClass = _CLASS.get_static_logger()
+	assert_object(first).is_same(second)
+
+
+func test_find_autoload_matches_availability() -> void:
+	# is_static_available() must agree with _find_autoload_logger():
+	# a node that yields no valid logger counts as unavailable.
+	var found: DLoggerClass = _CLASS._find_autoload_logger()
+	assert_bool(_CLASS.is_static_available()).is_equal(found != null)
+
+
+func test_static_logger_returns_autoload_logger_when_available() -> void:
+	if not _CLASS.is_static_available():
+		# Headless -s contexts have no Autoload; nothing to compare.
+		return
+	var node: Node = get_tree().root.get_node_or_null(_CONST.AUTOLOAD_NAME)
+	assert_object(node).is_not_null()
+	assert_object(_CLASS.get_static_logger()).is_same(_FUNC.get_logger(node))
+
+
+func test_static_wrappers_return_true() -> void:
+	var prev_pause: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_PAUSE_ON_ERROR, false
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	assert_bool(_CLASS.static_debug("static debug")).is_true()
+	assert_bool(_CLASS.static_info("static info")).is_true()
+	assert_bool(_CLASS.static_warn("static warn")).is_true()
+	assert_bool(_CLASS.static_error("static error")).is_true()
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, prev_pause)
+	get_tree().paused = false
+
+
+func test_static_log_each_level_returns_true() -> void:
+	var prev_pause: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_PAUSE_ON_ERROR, false
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, false)
+	assert_bool(_CLASS.static_log(_CONST.LogLevel.DEBUG, "s debug")).is_true()
+	assert_bool(_CLASS.static_log(_CONST.LogLevel.INFO, "s info")).is_true()
+	assert_bool(_CLASS.static_log(_CONST.LogLevel.WARN, "s warn")).is_true()
+	assert_bool(_CLASS.static_log(_CONST.LogLevel.ERROR, "s error")).is_true()
+	ProjectSettings.set_setting(_CONST.SETTING_PAUSE_ON_ERROR, prev_pause)
+	get_tree().paused = false
+
+
+func test_static_log_routes_to_matching_level() -> void:
+	var prev_level: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_MIN_LEVEL, 0
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.DEBUG)
+	var lg: DLoggerClass = _CLASS.get_static_logger()
+	var spy := LevelSpy.new()
+	lg._dispatcher.add(spy)
+	_CLASS.static_log(_CONST.LogLevel.WARN, "route warn")
+	lg._dispatcher._list.erase(spy)
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, prev_level)
+	assert_int(spy.levels.size()).is_equal(1)
+	assert_str(spy.levels[0]).is_equal("WARN")
+
+
+func test_static_log_invalid_level_falls_back_to_info() -> void:
+	var prev_level: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_MIN_LEVEL, 0
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, _CONST.LogLevel.DEBUG)
+	var lg: DLoggerClass = _CLASS.get_static_logger()
+	var spy := LevelSpy.new()
+	lg._dispatcher.add(spy)
+	assert_bool(_CLASS.static_log(999, "route invalid")).is_true()
+	lg._dispatcher._list.erase(spy)
+	ProjectSettings.set_setting(_CONST.SETTING_MIN_LEVEL, prev_level)
+	assert_int(spy.levels.size()).is_equal(1)
+	assert_str(spy.levels[0]).is_equal("INFO")
+
+
+func test_static_guards_match_logger() -> void:
+	var lg: DLoggerClass = _CLASS.get_static_logger()
+	assert_bool(_CLASS.static_is_debug_enabled()).is_equal(
+		lg.is_debug_enabled()
+	)
+	assert_bool(_CLASS.static_is_info_enabled()).is_equal(lg.is_info_enabled())
+	assert_bool(_CLASS.static_is_warn_enabled()).is_equal(lg.is_warn_enabled())
+	assert_bool(_CLASS.static_is_error_enabled()).is_equal(
+		lg.is_error_enabled()
+	)
+
+
+func test_static_getters_match_logger() -> void:
+	var lg: DLoggerClass = _CLASS.get_static_logger()
+	assert_str(_CLASS.static_get_prefix()).is_equal(lg.get_prefix())
+	assert_int(_CLASS.static_get_min_level()).is_equal(lg.get_min_level())
+
+
+func test_static_benchmark_returns_callable_result() -> void:
+	var result: Variant = _CLASS.static_benchmark(
+		"static_bm", func() -> int: return 7
+	)
+	assert_int(result).is_equal(7)
+
+
+func test_static_prefix_tracks_settings() -> void:
+	# Regression for the stale-fallback fix: the effective prefix must
+	# follow runtime settings (via node rebuild or fallback refresh).
+	var prev: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_PREFIX, _CONST.DEFAULT_PREFIX
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_PREFIX, "STATIC_TRACK")
+	await get_tree().process_frame
+	assert_str(_CLASS.static_get_prefix()).is_equal("STATIC_TRACK")
+	ProjectSettings.set_setting(_CONST.SETTING_PREFIX, prev)
+	await get_tree().process_frame
+	assert_str(_CLASS.static_get_prefix()).is_equal(prev)
+
+
+func _has_console(logger: DLoggerClass) -> bool:
+	for entry: RefCounted in logger._dispatcher._list:
+		if entry is _FULL:
+			return true
+	return false
+
+
+func test_setup_logger_force_console_adds_console() -> void:
+	var prev_console: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_ENABLE_CONSOLE, false
+	)
+	var prev_file: Variant = ProjectSettings.get_setting(
+		_CONST.SETTING_ENABLE_FILE, false
+	)
+	ProjectSettings.set_setting(_CONST.SETTING_ENABLE_CONSOLE, false)
+	ProjectSettings.set_setting(_CONST.SETTING_ENABLE_FILE, false)
+	var logger := _CLASS.new("TEST", _CONST.LogLevel.DEBUG, false)
+	assert_bool(_has_console(logger)).is_false()
+	logger.setup_logger(true)
+	assert_bool(_has_console(logger)).is_true()
+	ProjectSettings.set_setting(_CONST.SETTING_ENABLE_CONSOLE, prev_console)
+	ProjectSettings.set_setting(_CONST.SETTING_ENABLE_FILE, prev_file)
