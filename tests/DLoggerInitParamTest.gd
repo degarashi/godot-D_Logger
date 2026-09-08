@@ -11,8 +11,14 @@ func test_init_default() -> void:
 	assert_object(param).is_not_null()
 	assert_str(param.prefix_override).is_equal("")
 	assert_int(param.min_level_override).is_equal(_CONST.LogLevel.NOT_SPECIFIED)
-	assert_object(param.console_enabled_override).is_null()
 	assert_str(param.file_path_override).is_equal("")
+
+
+func test_init_default_console_uses_project_settings() -> void:
+	var param := _PARAM.new()
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.USE_PROJECT_SETTINGS
+	)
 
 
 func test_init_with_prefix() -> void:
@@ -27,12 +33,16 @@ func test_init_with_min_level() -> void:
 
 func test_init_with_console_enabled() -> void:
 	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, true)
-	assert_bool(param.console_enabled_override).is_true()
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.ENABLED
+	)
 
 
 func test_init_with_console_disabled() -> void:
 	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, false)
-	assert_bool(param.console_enabled_override).is_false()
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.DISABLED
+	)
 
 
 func test_init_with_file_path() -> void:
@@ -48,7 +58,9 @@ func test_init_with_all_params() -> void:
 	)
 	assert_str(param.prefix_override).is_equal("NETWORK")
 	assert_int(param.min_level_override).is_equal(_CONST.LogLevel.INFO)
-	assert_bool(param.console_enabled_override).is_true()
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.ENABLED
+	)
 	assert_str(param.file_path_override).is_equal("user://network.log")
 
 
@@ -67,8 +79,25 @@ func test_min_level_override_mutable() -> void:
 
 func test_console_enabled_override_mutable() -> void:
 	var param := _PARAM.new()
-	param.console_enabled_override = true
-	assert_bool(param.console_enabled_override).is_true()
+	param.console_enabled_override = _PARAM.ConsoleOverride.ENABLED
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.ENABLED
+	)
+
+
+func test_console_override_accepts_tristate_int() -> void:
+	# The enum members are ints, so inspector-serialized values map back
+	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, 0)
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.DISABLED
+	)
+
+
+func test_console_override_invalid_falls_back_to_default() -> void:
+	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, 42)
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.USE_PROJECT_SETTINGS
+	)
 
 
 func test_file_path_override_mutable() -> void:
@@ -90,7 +119,9 @@ func test_can_duplicate() -> void:
 	var duplicate := param.duplicate()
 	assert_str(duplicate.prefix_override).is_equal("TEST")
 	assert_int(duplicate.min_level_override).is_equal(_CONST.LogLevel.WARN)
-	assert_bool(duplicate.console_enabled_override).is_true()
+	assert_int(duplicate.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.ENABLED
+	)
 	assert_str(duplicate.file_path_override).is_equal("user://test.log")
 
 
@@ -114,8 +145,11 @@ func test_not_specified_level() -> void:
 
 
 func test_console_override_null() -> void:
-	var param := _PARAM.new()
-	assert_object(param.console_enabled_override).is_null()
+	# Legacy null constructor arg maps to "use ProjectSettings"
+	var param := _PARAM.new("", _CONST.LogLevel.DEBUG, null)
+	assert_int(param.console_enabled_override).is_equal(
+		_PARAM.ConsoleOverride.USE_PROJECT_SETTINGS
+	)
 
 
 func test_empty_file_path() -> void:

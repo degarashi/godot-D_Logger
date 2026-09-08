@@ -39,9 +39,21 @@ static func _create_logger_from_settings(
 	return DLoggerClass.new(
 		param.prefix_override if not param.prefix_override.is_empty() else null,
 		param.min_level_override,
-		param.console_enabled_override,
+		_console_override_to_variant(param.console_enabled_override),
 		param.file_path_override
 	)
+
+
+## Maps the inspector-friendly tri-state to the Variant DLoggerClass
+## expects (null = no override, read from ProjectSettings).
+static func _console_override_to_variant(value: int) -> Variant:
+	match value:
+		DLoggerInitParam.ConsoleOverride.ENABLED:
+			return true
+		DLoggerInitParam.ConsoleOverride.DISABLED:
+			return false
+		_:
+			return null
 
 
 ## Collects the runtime d_logger settings currently present in

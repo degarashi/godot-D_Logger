@@ -94,7 +94,7 @@ func test_autoload_default_param_uses_project_settings_for_console() -> void:
 		preload("res://addons/d_logger/d_logger_node.tscn").instantiate()
 	)
 	var logger := _NODE._create_logger_from_settings(scene._init_param)
-	assert_object(scene._init_param.console_enabled_override).is_null()
+	assert_int(scene._init_param.console_enabled_override).is_equal(-1)
 	assert_bool(logger._has_console_override).is_false()
 	scene.free()
 
@@ -116,6 +116,15 @@ func test_create_logger_from_settings_with_console() -> void:
 	var logger := _NODE._create_logger_from_settings(param)
 	assert_bool(logger._has_console_override).is_true()
 	assert_bool(logger._override_console_enabled).is_false()
+
+
+func test_create_logger_from_settings_with_console_enabled() -> void:
+	var param := _INIT_PARAM.new(
+		"", -1, _INIT_PARAM.ConsoleOverride.ENABLED, ""
+	)
+	var logger := _NODE._create_logger_from_settings(param)
+	assert_bool(logger._has_console_override).is_true()
+	assert_bool(logger._override_console_enabled).is_true()
 
 
 func test_create_logger_from_settings_with_file_path() -> void:
