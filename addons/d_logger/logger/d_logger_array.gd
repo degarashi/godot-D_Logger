@@ -16,6 +16,13 @@ func clear() -> void:
 
 func add(logger: RefCounted) -> void:
 	assert(logger != null, "logger must not be null")
+	# Fail fast here instead of inside the dispatch loop: a non-logger
+	# would otherwise crash mid-dispatch after earlier loggers already
+	# wrote, leaving partial output for a single log call.
+	assert(
+		DLoggerFunc.is_logger(logger),
+		"logger must implement the logger interface"
+	)
 	_list.append(logger)
 
 
