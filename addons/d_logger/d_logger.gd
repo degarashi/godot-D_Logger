@@ -582,6 +582,8 @@ func error(
 
 # ------------- [Benchmark] -------------
 ## Measures the execution time of a callable and logs the result.
+## The callable must take no arguments (it is invoked via
+## `callable.call()`); bind arguments beforehand with `bind()`.
 ## Normal results are logged at INFO (category "PERF"), so they are
 ## hidden when the minimum level is WARN or higher; when the elapsed
 ## time exceeds `spike_threshold_ms` (default
