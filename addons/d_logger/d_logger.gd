@@ -41,6 +41,14 @@ var _has_prefix_override := false
 
 var _prefix: String = ""
 var _min_level: int = DLoggerConstants.LogLevel.DEBUG
+# Reusable outputs across setup_logger() rebuilds. Rebuilding used to
+# construct a new file logger every time, appending a duplicate
+# "=== New Session Started ===" marker per rebuild (bulk settings
+# syncs still emit more than once). Reuse keeps one instance per
+# path epoch; a changed path still constructs a fresh logger.
+var _cached_console: RefCounted = null
+var _cached_file: RefCounted = null
+var _cached_file_path: String = ""
 
 
 # ------------- [Constructor] -------------
@@ -87,11 +95,16 @@ func setup_logger(force_console: bool = false) -> void:
 	)
 	var is_debug := OS.is_debug_build()
 
-	# Add Console Logger
+	# Add Console Logger (reused across rebuilds: stateless, so
+	# keeping the instance only skips a redundant allocation).
 	if force_console or (is_debug and console_enabled):
-		_dispatcher.add(_DLOGGER_FULL.new())
+		if _cached_console == null:
+			_cached_console = _DLOGGER_FULL.new()
+		_dispatcher.add(_cached_console)
 
-	# Add File Logger
+	# Add File Logger (reused while the resolved path is unchanged so
+	# repeated rebuilds neither reopen the file nor duplicate the
+	# session-start marker; a new path still starts a fresh file).
 	if is_debug and file_enabled:
 		var file_path: String = (
 			_override_file_path
@@ -101,7 +114,10 @@ func setup_logger(force_console: bool = false) -> void:
 				DLoggerConstants.DEFAULT_FILE_PATH
 			)
 		)
-		_dispatcher.add(_DLOGGER_FILE.new(file_path))
+		if _cached_file == null or _cached_file_path != file_path:
+			_cached_file = _DLOGGER_FILE.new(file_path)
+			_cached_file_path = file_path
+		_dispatcher.add(_cached_file)
 
 	# Fallback if none are enabled
 	if _dispatcher.is_empty():
