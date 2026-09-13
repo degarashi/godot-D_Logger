@@ -125,13 +125,15 @@ func _rotate_log_file() -> void:
 	# Rename succeeded: a previous failure episode is over.
 	_rotate_failed = false
 
-	# Start a fresh log file and write the rotation marker
+	# Start a fresh log file and write the rotation marker directly:
+	# _write_line() would re-check size and recurse, so store + flush here.
 	_handle = FileAccess.open(_file_path, FileAccess.WRITE)
 	if _handle:
 		var rotation_msg := "=== Log Rotated: {0} ==="
-		_write_line(
+		_handle.store_line(
 			rotation_msg.format([Time.get_datetime_string_from_system()])
 		)
+		_handle.flush()
 	else:
 		if not _rotate_failed:
 			push_error(
