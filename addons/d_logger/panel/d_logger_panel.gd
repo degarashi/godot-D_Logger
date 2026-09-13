@@ -20,6 +20,12 @@ var _log_font_size: int = DEFAULT_FONT_SIZE
 var _all_logs: Array[Dictionary] = []
 # category (String) -> is_active (bool)
 var _active_filters: Dictionary[String, bool] = {}
+# category (String) -> live log count. Bounds filter-bar growth: without
+# this, one-off categories accumulate buttons forever because trimming
+# only drops old logs. Counts are incremented per stored (non-stacked)
+# log and decremented per trimmed log, so pruning stays O(trim batch)
+# instead of rescanning the 10k cap.
+var _filter_ref_counts: Dictionary[String, int] = {}
 var _search := DLoggerSearch.new()
 # Incremented on every search input; a pending debounced rebuild is superseded
 # when the token it captured no longer matches.
@@ -243,7 +249,8 @@ func add_log(log_data: Dictionary) -> void:
 	var tags := _get_log_tags(log_data)
 	log_data["_log_tags"] = tags
 
-	# Add new category buttons if they don't exist yet
+	# Ensure filter buttons exist even for stacked logs (no count
+	# change there: the stored entry already accounts for the tags).
 	for tag in tags:
 		if not _active_filters.has(tag):
 			_add_filter_button(tag)
@@ -270,11 +277,14 @@ func add_log(log_data: Dictionary) -> void:
 	if not is_stacked:
 		log_data["count"] = 1
 		_all_logs.append(log_data)
+		_track_filter_tags(tags)
 
 	# Limit the number of logs stored
 	if _all_logs.size() > MAX_LOG_COUNT:
 		# Trim a batch of logs to avoid rebuilding too frequently
+		var removed: Array = _all_logs.slice(0, LOG_TRIM_BATCH_SIZE)
 		_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
+		_untrack_filter_tags(removed)
 		# Selection indices are invalidated by trimming
 		_selected_log_indices.clear()
 		# Bracket-hover state references a log index too
@@ -367,6 +377,50 @@ func _add_filter_button(category: String) -> void:
 	btn.tooltip_text = "Toggle filter | Alt+Click to solo"
 	_update_button_style(btn, true)
 	filter_container.add_child(btn)
+
+
+## Increments the live-log count per tag for a newly stored log.
+func _track_filter_tags(tags: Array[String]) -> void:
+	for tag in tags:
+		_filter_ref_counts[tag] = int(
+			_filter_ref_counts.get(tag, 0)
+		) + 1
+
+
+## Decrements counts for trimmed logs and removes buttons whose tag no
+## longer has any live log. A reappearing tag is re-added as enabled
+## (same as any new tag); preserving a prior toggle across expiry
+## would keep dead buttons around, defeating the prune.
+func _untrack_filter_tags(removed: Array) -> void:
+	for log_data in removed:
+		if not (log_data is Dictionary):
+			continue
+		var tags: Array = (log_data as Dictionary).get(
+			"_log_tags", []
+		)
+		if tags.is_empty():
+			tags = _get_log_tags(log_data as Dictionary)
+		for tag in tags:
+			var left: int = int(
+				_filter_ref_counts.get(tag, 0)
+			) - 1
+			if left <= 0:
+				_filter_ref_counts.erase(tag)
+				_remove_filter_button(tag)
+			else:
+				_filter_ref_counts[tag] = left
+
+
+## Removes one filter button and its active state. No-op when the tag
+## was already gone (e.g. cleared while a trim was in flight).
+func _remove_filter_button(category: String) -> void:
+	_active_filters.erase(category)
+	for child in filter_container.get_children():
+		var btn := child as Button
+		if btn and btn.text == category:
+			filter_container.remove_child(btn)
+			btn.queue_free()
+			break
 
 
 func _setup_time_option_button() -> void:
@@ -1251,6 +1305,7 @@ func clear_logs() -> void:
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
+	_filter_ref_counts.clear()
 
 	# Reset search. set_pressed_no_signal avoids firing toggled here,
 	# which would trigger redundant rebuilds of the just-cleared display;
