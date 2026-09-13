@@ -3,6 +3,10 @@ extends DLoggerBase
 
 # ------------- [Private Variable] -------------
 var _file_path: String
+# Persistent append handle. Reused across writes so a log flood pays
+# seek + store + flush per line instead of an open/close handshake per
+# line. Repositioned with seek_end() before every write (see _write_line).
+var _handle: FileAccess = null
 # Latched to true after the first failed open. Without this, a
 # misconfigured path (e.g. a res:// file in an exported PCK where
 # DirAccess.make_dir_recursive_absolute silently no-ops) would emit
@@ -27,31 +31,26 @@ func _init(path: String) -> void:
 	if not dir_path.is_empty() and not DirAccess.dir_exists_absolute(dir_path):
 		DirAccess.make_dir_recursive_absolute(dir_path)
 
-	# Write the session start marker (opens/closes the file itself)
+	_open_handle()
+
+	# Write the session start marker
 	var session_msg := "=== New Session Started: {0} ==="
 	_write_line(session_msg.format([Time.get_datetime_string_from_system()]))
 
 
 # ------------- [Private Method] -------------
-## Opens the log file for appending. The file is created if it does not
-## exist yet, and the cursor is positioned at the end. Returns null on
-## failure. Opening and closing the file on every write keeps multiple
-## DLoggerFile instances on the same path safe: no stale handle position
-## can overwrite another instance's data. Closing also flushes, so every
-## line reaches disk immediately (stronger than the previous
-## flush-on-WARN/ERROR behavior). Cost: one open/close pair per line,
-## so sustained log floods pay syscall overhead on every write. This is
-## accepted for crash safety over raw throughput; throttle floods with
-## the minimum-level setting instead.
-func _open_for_append() -> FileAccess:
-	var file: FileAccess
+## Opens (or reopens) the persistent append handle. The file is created
+## when missing, otherwise the cursor is positioned at the end. Returns
+## false on failure, warning only once per session via _init_failed.
+func _open_handle() -> bool:
+	_close_handle()
 	if not FileAccess.file_exists(_file_path):
-		file = FileAccess.open(_file_path, FileAccess.WRITE)
+		_handle = FileAccess.open(_file_path, FileAccess.WRITE)
 	else:
-		file = FileAccess.open(_file_path, FileAccess.READ_WRITE)
-		if file:
-			file.seek_end()
-	if file == null:
+		_handle = FileAccess.open(_file_path, FileAccess.READ_WRITE)
+		if _handle:
+			_handle.seek_end()
+	if _handle == null:
 		# Only push once. The latch avoids per-line push_error spam
 		# when the path is permanently bad (e.g. a res:// target in
 		# an exported PCK, where the parent dir cannot be created).
@@ -59,23 +58,46 @@ func _open_for_append() -> FileAccess:
 			var error_msg := "DLoggerFile: Failed to open file for appending: {0}"
 			push_error(error_msg.format([_file_path]))
 			_init_failed = true
-	return file
+		return false
+	return true
+
+
+## Closes the persistent handle without dropping it on failure paths:
+## callers reopen right away so later writes are not silently lost.
+func _close_handle() -> void:
+	if _handle:
+		_handle.close()
+		_handle = null
 
 
 func _write_line(line: String) -> void:
-	var file := _open_for_append()
-	if file == null:
+	# Reopen when the handle is missing (first open failed or a rotation
+	# closed it): transient failures recover on the next write, while the
+	# latch in _open_handle keeps the warning to once per session.
+	if _handle == null and not _open_handle():
 		return
 
-	if file.get_length() > DLoggerConstants.MAX_LOG_FILE_SIZE:
-		file.close()
-		_rotate_log_file()
-		file = _open_for_append()
-		if file == null:
+	# Recreate when deleted externally: a persistent handle would
+	# otherwise keep writing to an unlinked inode invisible to readers.
+	if not FileAccess.file_exists(_file_path):
+		if not _open_handle():
 			return
 
-	file.store_line(line)
-	file.close()
+	if _handle.get_length() > DLoggerConstants.MAX_LOG_FILE_SIZE:
+		_rotate_log_file()
+		if _handle == null:
+			return
+
+	# Re-seek on every write: sibling DLoggerFile instances on the same
+	# path append concurrently, so a cached end position would overwrite
+	# their data.
+	_handle.seek_end()
+	_handle.store_line(line)
+	# Flush per line: same process-crash durability as the previous
+	# open/close-per-write (OS buffers survive a process crash) without
+	# the open/close handshake. Throttle floods with the minimum-level
+	# setting instead.
+	_handle.flush()
 
 
 ## Rotates the current log file to <path><LOG_FILE_BACKUP_SUFFIX> and starts
@@ -85,6 +107,9 @@ func _rotate_log_file() -> void:
 	var backup_path := _file_path + DLoggerConstants.LOG_FILE_BACKUP_SUFFIX
 	if FileAccess.file_exists(backup_path):
 		DirAccess.remove_absolute(backup_path)
+	# The handle must be closed before renaming: the OS may lock the
+	# open file, and its position belongs to the pre-rotation generation.
+	_close_handle()
 	if DirAccess.rename_absolute(_file_path, backup_path) != OK:
 		# Keep appending to the current file if rotation fails; the size
 		# check will retry on the next write.
@@ -93,19 +118,20 @@ func _rotate_log_file() -> void:
 				"DLoggerFile: Failed to rotate log file to %s" % backup_path
 			)
 			_rotate_failed = true
+		# Resume appending so later writes are not silently dropped.
+		_open_handle()
 		return
 
 	# Rename succeeded: a previous failure episode is over.
 	_rotate_failed = false
 
 	# Start a fresh log file and write the rotation marker
-	var file := FileAccess.open(_file_path, FileAccess.WRITE)
-	if file:
+	_handle = FileAccess.open(_file_path, FileAccess.WRITE)
+	if _handle:
 		var rotation_msg := "=== Log Rotated: {0} ==="
-		file.store_line(
+		_write_line(
 			rotation_msg.format([Time.get_datetime_string_from_system()])
 		)
-		file.close()
 	else:
 		if not _rotate_failed:
 			push_error(
@@ -129,7 +155,6 @@ func _output(
 	p_seconds: float = -1.0,
 	p_frames: int = -1
 ) -> void:
-	# Every write opens and closes the file, which flushes to disk
 	_write_line(
 		DLoggerFunc.format_log(
 			msg,
