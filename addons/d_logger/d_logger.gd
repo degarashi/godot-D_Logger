@@ -23,7 +23,7 @@ static var _warn_limit := 128
 ## Variant to avoid a cyclic self-reference during class loading.
 static var _static_fallback: Variant = null
 # Watches the runtime d_logger settings for the static fallback.
-# get_static_logger() rebuilds the fallback via setup_logger(true) only
+# get_static_logger() rebuilds the fallback via setup_logger() only
 # when poll() reports drift (same guard as DLoggerNode, which
 # additionally avoids spurious file session markers).
 static var _settings_watcher: DLoggerSettingsWatcher = null
@@ -319,10 +319,9 @@ static func set_editor_panel(panel: Object) -> void:
 	_editor_panel = panel
 
 
-## Returns the effective logger: Autoload instance when available,
-## otherwise a process-wide fallback with forced console output.
-## Headless `-s` contexts have no Autoload, so this avoids
-## `Identifier not found: DLogger` and still prints.
+## Returns the Autoload logger when available, otherwise null.
+## Callers wanting the fallback behavior should use
+## get_static_logger() instead.
 static func _find_autoload_logger() -> DLoggerClass:
 	var loop: Object = Engine.get_main_loop()
 	if loop is SceneTree:
@@ -338,19 +337,41 @@ static func _find_autoload_logger() -> DLoggerClass:
 	return null
 
 
+## Returns true when the static fallback must force console output
+## regardless of settings: headless `-s` contexts have no Autoload
+## and default settings leave console disabled, so without forcing
+## they would print nothing. Static so the decision is testable
+## without building a fallback instance.
+static func _should_force_fallback_console() -> bool:
+	return DisplayServer.get_name() == "headless"
+
+
+## Returns the effective logger: Autoload instance when available,
+## otherwise a process-wide fallback. Headless `-s` contexts have
+## no Autoload, so the fallback avoids
+## `Identifier not found: DLogger` and still prints (console is
+## forced there only; elsewhere the fallback follows
+## ProjectSettings like DLoggerNode).
 static func get_static_logger() -> DLoggerClass:
 	var autoload_logger: DLoggerClass = _find_autoload_logger()
 	if autoload_logger != null:
 		return autoload_logger
+	var force_console := _should_force_fallback_console()
 	if _static_fallback == null:
-		# Forced console regardless of ProjectSettings/build type,
-		# so headless `-s` contexts still print.
+		# No console override (null): non-headless runs follow
+		# ProjectSettings; headless forces console via the flag.
 		_static_fallback = DLoggerClass.new(
-			null, DLoggerConstants.LogLevel.DEBUG, true, "", true
+			null,
+			DLoggerConstants.LogLevel.DEBUG,
+			null,
+			"",
+			force_console
 		)
 		_settings_watcher = DLoggerSettingsWatcher.new()
 	elif _settings_watcher.poll():
-		(_static_fallback as DLoggerClass).setup_logger(true)
+		(_static_fallback as DLoggerClass).setup_logger(
+			force_console
+		)
 	return _static_fallback as DLoggerClass
 
 
