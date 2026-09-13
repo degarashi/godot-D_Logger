@@ -60,103 +60,145 @@ func _init(
 	p_force_console: bool = false
 ) -> void:
 	assert(DLoggerFunc.is_logger(self))
-	if p_prefix is String:
-		_override_prefix = p_prefix
-		_has_prefix_override = true
-
-	_override_min_level = p_min_lvl
-
-	if p_console_enabled is bool:
-		_override_console_enabled = p_console_enabled
-		_has_console_override = true
-
-	_override_file_path = p_file_path
-
+	_store_overrides(p_prefix, p_min_lvl, p_console_enabled, p_file_path)
 	setup_logger(p_force_console)
 
 
-# ------------- [Internal Methods] -------------
+## Stores constructor overrides without touching the dispatcher, so _init
+## stays a thin orchestration of store + rebuild.
+func _store_overrides(
+	p_prefix: Variant,
+	p_min_lvl: int,
+	p_console_enabled: Variant,
+	p_file_path: String
+) -> void:
+	if p_prefix is String:
+		_override_prefix = p_prefix
+		_has_prefix_override = true
+	_override_min_level = p_min_lvl
+	if p_console_enabled is bool:
+		_override_console_enabled = p_console_enabled
+		_has_console_override = true
+	_override_file_path = p_file_path
+
+
+# ------------- [Setup] -------------
 ## Sets up the logger configuration. When force_console is true,
 ## console output is added regardless of ProjectSettings/build type.
 func setup_logger(force_console: bool = false) -> void:
 	# Reset dispatcher state
 	_dispatcher.clear()
 
-	var console_enabled: bool = (
-		_override_console_enabled
-		if _has_console_override
-		else ProjectSettings.get_setting(
-			DLoggerConstants.SETTING_ENABLE_CONSOLE, false
-		)
-	)
-
-	var file_enabled: bool = ProjectSettings.get_setting(
-		DLoggerConstants.SETTING_ENABLE_FILE, false
-	)
+	var console_enabled := _is_console_enabled()
+	var file_enabled := _is_file_enabled()
 	var is_debug := OS.is_debug_build()
 
-	# Add Console Logger (reused across rebuilds: stateless, so
-	# keeping the instance only skips a redundant allocation).
-	if force_console or (is_debug and console_enabled):
-		if _cached_console == null:
-			_cached_console = _DLOGGER_FULL.new()
-		_dispatcher.add(_cached_console)
-
-	# Add File Logger (reused while the resolved path is unchanged so
-	# repeated rebuilds neither reopen the file nor duplicate the
-	# session-start marker; a new path still starts a fresh file).
-	if is_debug and file_enabled:
-		var file_path: String = (
-			_override_file_path
-			if not _override_file_path.is_empty()
-			else ProjectSettings.get_setting(
-				DLoggerConstants.SETTING_FILE_PATH,
-				DLoggerConstants.DEFAULT_FILE_PATH
-			)
-		)
-		if _cached_file == null or _cached_file_path != file_path:
-			_cached_file = _DLOGGER_FILE.new(file_path)
-			_cached_file_path = file_path
-		_dispatcher.add(_cached_file)
-
-	# Fallback if none are enabled
-	if _dispatcher.is_empty():
-		_dispatcher.add(_DLOGGER_QUIET.new())
+	_build_console_logger(force_console, console_enabled, is_debug)
+	_build_file_logger(file_enabled, is_debug)
+	_ensure_fallback_logger()
 
 	_prefix = get_prefix()
 	_min_level = get_min_level()
 	_initialized = true
 
-	# --- Export-build log-sink detection ---
-	# In an exported runtime, EditorSettings (d_logger/...) are not available
-	# and the in-memory mirror from DLoggerSettingsManager never persists
-	# to project.godot (see AGENTS.md anti-pattern: never call
-	# ProjectSettings.save() in plugin code). If the user only set the
-	# file/console toggles in the editor and never wrote the corresponding
-	# `debug/d_logger/...` keys to project.godot, this exported build
-	# silently ends up with DLoggerQuiet only. Surface this once per
-	# session in debug exports so the user has a chance to notice.
-	# Headless `-s` script runs are excluded: they have no game loop or
-	# export packaging involved, and the static fallback already forces
-	# console output there, so the warning would only be noise.
-	if (
-		not _export_warning_shown
-		and not Engine.is_editor_hint()
-		and is_debug
-		and DisplayServer.get_name() != "headless"
-	):
-		if not console_enabled and not file_enabled:
-			push_warning(
-				(
-					"DLogger: No log output configured for this exported debug build. "
-					+ "Editor settings are not auto-persisted to project.godot. "
-					+ "Add `debug/d_logger/enable_console_log = true` and/or "
-					+ "`debug/d_logger/enable_file_log = true` to project.godot to enable."
-				)
+	_maybe_warn_export_no_sink(console_enabled, file_enabled, is_debug)
+
+
+## Resolves the effective console toggle: explicit override wins,
+## otherwise the runtime ProjectSettings value is used.
+func _is_console_enabled() -> bool:
+	if _has_console_override:
+		return _override_console_enabled
+	return ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_ENABLE_CONSOLE, false
+	)
+
+
+## Resolves the effective file toggle from runtime ProjectSettings.
+func _is_file_enabled() -> bool:
+	return ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_ENABLE_FILE, false
+	)
+
+
+## Resolves the effective file path: explicit override wins,
+## otherwise the runtime ProjectSettings value is used.
+func _resolve_file_path() -> String:
+	if not _override_file_path.is_empty():
+		return _override_file_path
+	return ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_FILE_PATH, DLoggerConstants.DEFAULT_FILE_PATH
+	)
+
+
+## Adds the console logger when forced or enabled in a debug build.
+## The instance is reused across rebuilds: it is stateless, so reuse
+## only skips a redundant allocation.
+func _build_console_logger(
+	force_console: bool, console_enabled: bool, is_debug: bool
+) -> void:
+	if not (force_console or (is_debug and console_enabled)):
+		return
+	if _cached_console == null:
+		_cached_console = _DLOGGER_FULL.new()
+	_dispatcher.add(_cached_console)
+
+
+## Adds the file logger when enabled in a debug build. The instance is
+## reused while the resolved path is unchanged so repeated rebuilds
+## neither reopen the file nor duplicate the session-start marker;
+## a new path still starts a fresh file.
+func _build_file_logger(file_enabled: bool, is_debug: bool) -> void:
+	if not (is_debug and file_enabled):
+		return
+	var file_path := _resolve_file_path()
+	if _cached_file == null or _cached_file_path != file_path:
+		_cached_file = _DLOGGER_FILE.new(file_path)
+		_cached_file_path = file_path
+	_dispatcher.add(_cached_file)
+
+
+## Guarantees at least one sink so no log call crashes on an empty
+## dispatcher; the quiet fallback only surfaces WARN/ERROR.
+func _ensure_fallback_logger() -> void:
+	if _dispatcher.is_empty():
+		_dispatcher.add(_DLOGGER_QUIET.new())
+
+
+## Warns once per session when an exported debug build has no sink.
+## In an exported runtime, EditorSettings (d_logger/...) are not available
+## and the in-memory mirror from DLoggerSettingsManager never persists
+## to project.godot (see AGENTS.md anti-pattern: never call
+## ProjectSettings.save() in plugin code). If the user only set the
+## file/console toggles in the editor and never wrote the corresponding
+## `debug/d_logger/...` keys to project.godot, this exported build
+## silently ends up with DLoggerQuiet only. Headless `-s` script runs are
+## excluded: they have no game loop or export packaging involved, and the
+## static fallback already forces console output there.
+func _maybe_warn_export_no_sink(
+	console_enabled: bool, file_enabled: bool, is_debug: bool
+) -> void:
+	if _export_warning_shown:
+		return
+	if Engine.is_editor_hint():
+		return
+	if not is_debug:
+		return
+	if DisplayServer.get_name() == "headless":
+		return
+	if not console_enabled and not file_enabled:
+		push_warning(
+			(
+				"DLogger: No log output configured for this exported debug build. "
+				+ "Editor settings are not auto-persisted to project.godot. "
+				+ "Add `debug/d_logger/enable_console_log = true` and/or "
+				+ "`debug/d_logger/enable_file_log = true` to project.godot to enable."
 			)
-		_export_warning_shown = true
+		)
+	_export_warning_shown = true
 
 
+# ------------- [Dispatch] -------------
 func _dispatch(
 	level: int,
 	msg: String,
@@ -170,67 +212,113 @@ func _dispatch(
 	DLoggerFunc.clear_time_cache()
 
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
-	var final_msg := msg
-	var formatted := false
-
-	match typeof(values):
-		TYPE_DICTIONARY:
-			if not (values as Dictionary).is_empty():
-				final_msg = msg.format(values)
-				formatted = true
-		TYPE_ARRAY:
-			if not (values as Array).is_empty():
-				final_msg = msg.format(values)
-				formatted = true
-		_:
-			# If not null and a primitive value is passed
-			if values != null:
-				final_msg = msg.format([values])
-				formatted = true
-
-	# Warn only when the caller actually passed values (formatted) yet
-	# placeholders survived: the value type does not match the
-	# placeholder style (e.g. a Dictionary for positional {0}, or an
-	# Array for named {name}). Messages logged without values are
-	# skipped on purpose: literal braces in user text (JSON snippets,
-	# regex quantifiers like \d{2}) are indistinguishable from
-	# placeholders, and warning on them would flag every such log once.
-	# Trade-off: forgetting to pass values for a real placeholder no
-	# longer warns — accepted because String.format() offers no escape
-	# syntax to tell the two cases apart.
-	if formatted and DLoggerFunc.has_unresolved_placeholder(final_msg):
-		# Keyed on the pre-format template: identical call sites share a
-		# single warning regardless of the substituted values.
-		if not _placeholder_warned.has(msg):
-			if _placeholder_warned.size() >= _warn_limit:
-				# Simple wholesale reset instead of an LRU: after it,
-				# old templates may warn once more, which is acceptable
-				# for a heuristic warning.
-				_placeholder_warned.clear()
-			_placeholder_warned[msg] = true
-			push_warning(
-				(
-					"DLogger: Unresolved format placeholder in message: %s"
-					% final_msg
-				)
-			)
+	var applied := _apply_values(msg, values)
+	var final_msg: String = applied[0]
+	var formatted: bool = applied[1]
+	_maybe_warn_unresolved_placeholder(msg, final_msg, formatted)
 
 	var level_str: String = DLoggerConstants.LOG_LEVEL_LABELS.get(
 		level, "DEBUG"
 	)
 
 	# Pre-calculate caller info for performance (one time per log)
-	var caller_info: Variant = (
-		p_caller_info
-		if p_caller_info != null
-		else DLoggerFunc.get_caller_info(level_str)
-	)
+	var caller_info: Variant = _resolve_caller_info(level_str, p_caller_info)
 
 	# Pre-compute time/frame once for all downstream loggers and debug_data
 	var seconds: float = Time.get_ticks_msec() / 1000.0
 	var frames: int = Engine.get_frames_drawn()
 	DLoggerFunc.set_time_cache(seconds, frames)
 
+	_forward_to_dispatcher(
+		level, final_msg, category, context, pref, caller_info
+	)
+	_maybe_pause_on_error(level)
+
+	DLoggerFunc.clear_time_cache()
+	_send_to_editor(
+		level_str,
+		final_msg,
+		category,
+		context,
+		caller_info,
+		pref,
+		seconds,
+		frames
+	)
+
+
+## Applies String.format() to the template. Returns [message, formatted]
+## where formatted reports whether values were actually passed, so the
+## caller can distinguish literal braces (no values) from a type mismatch
+## (values passed but placeholders survived). An Array return avoids a
+## Dictionary allocation on every log call in hot paths.
+static func _apply_values(msg: String, values: Variant) -> Array:
+	match typeof(values):
+		TYPE_DICTIONARY:
+			if not (values as Dictionary).is_empty():
+				return [msg.format(values), true]
+		TYPE_ARRAY:
+			if not (values as Array).is_empty():
+				return [msg.format(values), true]
+		_:
+			# If not null and a primitive value is passed
+			if values != null:
+				return [msg.format([values]), true]
+	return [msg, false]
+
+
+## Warns only when the caller actually passed values (formatted) yet
+## placeholders survived: the value type does not match the
+## placeholder style (e.g. a Dictionary for positional {0}, or an
+## Array for named {name}). Messages logged without values are
+## skipped on purpose: literal braces in user text (JSON snippets,
+## regex quantifiers like \d{2}) are indistinguishable from
+## placeholders, and warning on them would flag every such log once.
+## Trade-off: forgetting to pass values for a real placeholder no
+## longer warns — accepted because String.format() offers no escape
+## syntax to tell the two cases apart.
+static func _maybe_warn_unresolved_placeholder(
+	template: String, final_msg: String, formatted: bool
+) -> void:
+	if not formatted:
+		return
+	if not DLoggerFunc.has_unresolved_placeholder(final_msg):
+		return
+	# Keyed on the pre-format template: identical call sites share a
+	# single warning regardless of the substituted values.
+	if _placeholder_warned.has(template):
+		return
+	if _placeholder_warned.size() >= _warn_limit:
+		# Simple wholesale reset instead of an LRU: after it,
+		# old templates may warn once more, which is acceptable
+		# for a heuristic warning.
+		_placeholder_warned.clear()
+	_placeholder_warned[template] = true
+	push_warning(
+		"DLogger: Unresolved format placeholder in message: %s" % final_msg
+	)
+
+
+## Returns the explicit caller info when provided, otherwise captures it
+## once per log so downstream loggers share the same value.
+static func _resolve_caller_info(
+	level_str: String, p_caller_info: Variant
+) -> Variant:
+	if p_caller_info != null:
+		return p_caller_info
+	return DLoggerFunc.get_caller_info(level_str)
+
+
+## Forwards the already-formatted message to the dispatcher. Values are
+## always empty here because formatting happened in _apply_values().
+func _forward_to_dispatcher(
+	level: int,
+	final_msg: String,
+	category: String,
+	context: Object,
+	pref: String,
+	caller_info: Variant
+) -> void:
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
 			_dispatcher.debug(
@@ -249,48 +337,62 @@ func _dispatch(
 				final_msg, [], category, context, pref, caller_info
 			)
 
-			# Pause the tree if enabled. Skipped in editor because a
-			# @tool script that fires an error would otherwise pause
-			# the editor's own main loop (EditorSceneTree is a
-			# SceneTree), freezing the whole editor.
-			if (
-				OS.is_debug_build()
-				and not Engine.is_editor_hint()
-				and ProjectSettings.get_setting(
-					DLoggerConstants.SETTING_PAUSE_ON_ERROR, false
-				)
-			):
-				var tree := Engine.get_main_loop() as SceneTree
-				if tree:
-					tree.paused = true
 
-	DLoggerFunc.clear_time_cache()
+## Pauses the tree on ERROR when enabled. Skipped in editor because a
+## @tool script that fires an error would otherwise pause the editor's
+## own main loop (EditorSceneTree is a SceneTree), freezing the editor.
+func _maybe_pause_on_error(level: int) -> void:
+	if level != DLoggerConstants.LogLevel.ERROR:
+		return
+	if not OS.is_debug_build():
+		return
+	if Engine.is_editor_hint():
+		return
+	if not ProjectSettings.get_setting(
+		DLoggerConstants.SETTING_PAUSE_ON_ERROR, false
+	):
+		return
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree:
+		tree.paused = true
 
-	# --- Process of sending to the editor debugger ---
-	# Debug builds always reach the panel (direct call or via debugger).
-	# Release builds also send when a debugger is attached (e.g., remote
-	# debugging an exported game) — console/file output stays disabled there.
-	# When nothing is listening the dictionary is not built at all.
-	if EngineDebugger.is_active() or _editor_panel:
-		# Pack the message to be sent to the editor side into a dictionary
-		var debug_data: Dictionary = {
-			"message": final_msg,
-			"category": category,
-			"level": level_str,
-			"context_str":
-			DLoggerFunc.get_object_string(context) if context else "",
-			"caller_info": caller_info,
-			"prefix": pref,
-			"time": seconds,
-			"frame": frames
-		}
 
-		if EngineDebugger.is_active():
-			# Send data through a unique communication channel named 'd_logger:log'
-			EngineDebugger.send_message("d_logger:log", [debug_data])
-		elif _editor_panel and _editor_panel.has_method("add_log"):
-			# Direct call to the panel when running inside the editor
-			_editor_panel.add_log(debug_data)
+## Sends the log to the editor panel. Debug builds always reach the panel
+## (direct call or via debugger). Release builds also send when a debugger
+## is attached (e.g., remote debugging an exported game) — console/file
+## output stays disabled there. When nothing is listening the dictionary
+## is not built at all.
+func _send_to_editor(
+	level_str: String,
+	final_msg: String,
+	category: String,
+	context: Object,
+	caller_info: Variant,
+	pref: String,
+	seconds: float,
+	frames: int
+) -> void:
+	if not (EngineDebugger.is_active() or _editor_panel):
+		return
+	# Pack the message to be sent to the editor side into a dictionary
+	var debug_data: Dictionary = {
+		"message": final_msg,
+		"category": category,
+		"level": level_str,
+		"context_str":
+		DLoggerFunc.get_object_string(context) if context else "",
+		"caller_info": caller_info,
+		"prefix": pref,
+		"time": seconds,
+		"frame": frames
+	}
+
+	if EngineDebugger.is_active():
+		# Send data through a unique communication channel named 'd_logger:log'
+		EngineDebugger.send_message("d_logger:log", [debug_data])
+	elif _editor_panel and _editor_panel.has_method("add_log"):
+		# Direct call to the panel when running inside the editor
+		_editor_panel.add_log(debug_data)
 
 
 # ------------- [Public Method] -------------
@@ -306,25 +408,29 @@ func get_min_level() -> int:
 	if _override_min_level != DLoggerConstants.LogLevel.NOT_SPECIFIED:
 		return _override_min_level
 	return ProjectSettings.get_setting(
-		DLoggerConstants.SETTING_MIN_LEVEL,
-		DLoggerConstants.LogLevel.DEBUG
+		DLoggerConstants.SETTING_MIN_LEVEL, DLoggerConstants.LogLevel.DEBUG
 	)
 
 
+## Single comparison behind is_* so the threshold rule lives in one place.
+func _is_level_enabled(level: int) -> bool:
+	return _min_level <= level
+
+
 func is_debug_enabled() -> bool:
-	return _min_level <= DLoggerConstants.LogLevel.DEBUG
+	return _is_level_enabled(DLoggerConstants.LogLevel.DEBUG)
 
 
 func is_info_enabled() -> bool:
-	return _min_level <= DLoggerConstants.LogLevel.INFO
+	return _is_level_enabled(DLoggerConstants.LogLevel.INFO)
 
 
 func is_warn_enabled() -> bool:
-	return _min_level <= DLoggerConstants.LogLevel.WARN
+	return _is_level_enabled(DLoggerConstants.LogLevel.WARN)
 
 
 func is_error_enabled() -> bool:
-	return _min_level <= DLoggerConstants.LogLevel.ERROR
+	return _is_level_enabled(DLoggerConstants.LogLevel.ERROR)
 
 
 # ------------- [Static Facade - headless-safe] -------------
@@ -374,20 +480,19 @@ static func get_static_logger() -> DLoggerClass:
 		return autoload_logger
 	var force_console := _should_force_fallback_console()
 	if _static_fallback == null:
-		# No console override (null): non-headless runs follow
-		# ProjectSettings; headless forces console via the flag.
+		# No prefix/level/console override (null/NOT_SPECIFIED):
+		# non-headless runs follow ProjectSettings like DLoggerNode;
+		# headless forces console via the flag only.
 		_static_fallback = DLoggerClass.new(
 			null,
-			DLoggerConstants.LogLevel.DEBUG,
+			DLoggerConstants.LogLevel.NOT_SPECIFIED,
 			null,
 			"",
 			force_console
 		)
 		_settings_watcher = DLoggerSettingsWatcher.new()
 	elif _settings_watcher.poll():
-		(_static_fallback as DLoggerClass).setup_logger(
-			force_console
-		)
+		(_static_fallback as DLoggerClass).setup_logger(force_console)
 	return _static_fallback as DLoggerClass
 
 
@@ -435,7 +540,9 @@ static func static_debug(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return get_static_logger().debug(msg, v, cat, ctx, p, p_caller_info)
+	return static_log(
+		DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 ## Logs at INFO via the static logger. The caller is attributed
@@ -448,7 +555,9 @@ static func static_info(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return get_static_logger().info(msg, v, cat, ctx, p, p_caller_info)
+	return static_log(
+		DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 ## Logs at WARN via the static logger. The caller is attributed
@@ -461,7 +570,9 @@ static func static_warn(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return get_static_logger().warn(msg, v, cat, ctx, p, p_caller_info)
+	return static_log(
+		DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 ## Logs at ERROR via the static logger. The caller is attributed
@@ -474,7 +585,9 @@ static func static_error(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	return get_static_logger().error(msg, v, cat, ctx, p, p_caller_info)
+	return static_log(
+		DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 ## Returns the effective prefix of the static logger.
@@ -520,6 +633,23 @@ static func static_benchmark(
 # Use assert(log.debug(...)) if you want to disable output in release builds.
 
 
+## Shared gate behind debug/info/warn/error: filtered levels still return
+## true so the calls double as assert() conditions without failing when
+## the level is disabled.
+func _log(
+	level: int,
+	msg: String,
+	v: Variant,
+	cat: String,
+	ctx: Object,
+	p: String,
+	p_caller_info: Variant
+) -> bool:
+	if _is_level_enabled(level):
+		_dispatch(level, msg, v, cat, ctx, p, p_caller_info)
+	return true
+
+
 func debug(
 	msg: String,
 	v: Variant = [],
@@ -528,11 +658,9 @@ func debug(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	if is_debug_enabled():
-		_dispatch(
-			DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info
-		)
-	return true
+	return _log(
+		DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 func info(
@@ -543,11 +671,9 @@ func info(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	if is_info_enabled():
-		_dispatch(
-			DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info
-		)
-	return true
+	return _log(
+		DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 func warn(
@@ -558,11 +684,9 @@ func warn(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	if is_warn_enabled():
-		_dispatch(
-			DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info
-		)
-	return true
+	return _log(
+		DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 func error(
@@ -573,11 +697,9 @@ func error(
 	p: String = "",
 	p_caller_info: Variant = null
 ) -> bool:
-	if is_error_enabled():
-		_dispatch(
-			DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info
-		)
-	return true
+	return _log(
+		DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info
+	)
 
 
 # ------------- [Benchmark] -------------
