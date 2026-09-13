@@ -27,14 +27,11 @@ var _active_filters: Dictionary[String, bool] = {}
 # instead of rescanning the 10k cap.
 var _filter_ref_counts: Dictionary[String, int] = {}
 var _search := DLoggerSearch.new()
-# Incremented on every search input; a pending debounced rebuild is superseded
-# when the token it captured no longer matches.
-var _search_rebuild_token := 0
-# Incremented on every copy/save press; a pending label restore is
-# superseded when its token no longer matches, so rapid presses can
-# never strand a stale "Copied!"/"Saved!" label on the button.
-var _copy_feedback_token := 0
-var _save_feedback_token := 0
+# Guards for deferred work: claiming supersedes any pending search rebuild
+# or button label restore, so rapid repeats can never apply a stale update.
+var _search_guard := DLoggerDeferredToken.new()
+var _copy_guard := DLoggerDeferredToken.new()
+var _save_guard := DLoggerDeferredToken.new()
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
 var _time_presets: Dictionary[String, float] = {
@@ -253,76 +250,97 @@ func _on_visibility_changed() -> void:
 func add_log(log_data: Dictionary) -> void:
 	var tags := _get_log_tags(log_data)
 	log_data["_log_tags"] = tags
+	_ensure_filter_buttons(tags)
 
-	# Ensure filter buttons exist even for stacked logs (no count
-	# change there: the stored entry already accounts for the tags).
-	for tag in tags:
-		if not _active_filters.has(tag):
-			_add_filter_button(tag)
-
-	# --- Log Stacking Logic ---
-	var is_stacked := false
-	if not _all_logs.is_empty():
-		var last_log: Dictionary = _all_logs[-1]
-		# Check if current log is identical to the last one (excluding time/frame/count)
-		if (
-			last_log.get("message") == log_data.get("message")
-			and last_log.get("level") == log_data.get("level")
-			and last_log.get("prefix") == log_data.get("prefix")
-			and last_log.get("category") == log_data.get("category")
-			and last_log.get("caller_info") == log_data.get("caller_info")
-			and last_log.get("context_str") == log_data.get("context_str")
-		):
-			last_log["count"] = last_log.get("count", 1) + 1
-			# Update time/frame to the latest one
-			last_log["time"] = log_data.get("time", 0.0)
-			last_log["frame"] = log_data.get("frame", 0)
-			is_stacked = true
-
+	var is_stacked := _try_stack_log(log_data)
 	if not is_stacked:
 		log_data["count"] = 1
 		_all_logs.append(log_data)
 		_track_filter_tags(tags)
 
-	# Limit the number of logs stored
-	if _all_logs.size() > MAX_LOG_COUNT:
-		# Trim a batch of logs to avoid rebuilding too frequently
-		var removed: Array = _all_logs.slice(0, LOG_TRIM_BATCH_SIZE)
-		_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
-		_untrack_filter_tags(removed)
-		# Selection indices are invalidated by trimming
-		_selected_log_indices.clear()
-		# Bracket-hover state references a log index too
-		_bracket_hover.clear()
-		_update_selection_info()
-		_rebuild_log_display()
+	if _trim_overflow():
 		return  # Display already rebuilt, no need to append
 
 	if _should_display_log(log_data):
-		var log_idx := _all_logs.size() - 1
-		if is_stacked:
-			# Only the last line changes, but full rebuild is more reliable
-			# than remove_paragraph + append_text, which can cause visual
-			# glitches in Godot's RichTextLabel. Coalesce rebuilds so a flood
-			# of identical logs doesn't trigger an O(n) rebuild per log.
-			_schedule_display_rebuild()
-		else:
-			_displayed_line_map.append(log_idx)
-			# Keep the selection overlay's inverse map in sync: incremental
-			# appends never go through _rebuild_log_display, and a stale
-			# map makes highlights appear only after the next rebuild.
-			_log_to_display_map[log_idx] = _displayed_line_map.size() - 1
-			var level := log_data.get("level", "DEBUG")
-			_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
-			_refresh_stats_label()
-			# In relative mode every timestamp depends on the latest max
-			# time, so the whole display must be rebuilt. Coalesce it like
-			# stacked-log updates: rebuilding per incoming log would cost
-			# O(n) each and O(n^2) under a log flood.
-			if relative_checkbox.button_pressed:
-				_schedule_display_rebuild()
-			else:
-				_append_formatted_log(log_data, log_idx)
+		_append_visible_log(log_data, is_stacked)
+
+
+## Adds filter buttons for unseen tags. Runs even for stacked logs (no
+## count change there: the stored entry already accounts for the tags).
+func _ensure_filter_buttons(tags: Array[String]) -> void:
+	for tag in tags:
+		if not _active_filters.has(tag):
+			_add_filter_button(tag)
+
+
+## Folds the log into the last stored entry when identical (excluding
+## time/frame/count) and refreshes its timestamp. Returns true when stacked.
+func _try_stack_log(log_data: Dictionary) -> bool:
+	if _all_logs.is_empty():
+		return false
+	var last_log: Dictionary = _all_logs[-1]
+	# Check if current log is identical to the last one (excluding time/frame/count)
+	if (
+		last_log.get("message") == log_data.get("message")
+		and last_log.get("level") == log_data.get("level")
+		and last_log.get("prefix") == log_data.get("prefix")
+		and last_log.get("category") == log_data.get("category")
+		and last_log.get("caller_info") == log_data.get("caller_info")
+		and last_log.get("context_str") == log_data.get("context_str")
+	):
+		last_log["count"] = last_log.get("count", 1) + 1
+		# Update time/frame to the latest one
+		last_log["time"] = log_data.get("time", 0.0)
+		last_log["frame"] = log_data.get("frame", 0)
+		return true
+	return false
+
+
+## Trims the oldest batch once over the cap, pruning dead filter buttons
+## and invalidating index-based state. Returns true when trimming rebuilt
+## the display (callers then skip the incremental append).
+func _trim_overflow() -> bool:
+	# Limit the number of logs stored
+	if _all_logs.size() <= MAX_LOG_COUNT:
+		return false
+	# Trim a batch of logs to avoid rebuilding too frequently
+	var removed: Array = _all_logs.slice(0, LOG_TRIM_BATCH_SIZE)
+	_all_logs = _all_logs.slice(LOG_TRIM_BATCH_SIZE)
+	_untrack_filter_tags(removed)
+	# Selection indices are invalidated by trimming
+	_selected_log_indices.clear()
+	# Bracket-hover state references a log index too
+	_bracket_hover.clear()
+	_update_selection_info()
+	_rebuild_log_display()
+	return true
+
+
+## Appends one stored log to the display. Stacked lines and relative
+## timestamps coalesce into a full rebuild instead: per-log rebuilds cost
+## O(n) each, O(n^2) under a flood.
+func _append_visible_log(log_data: Dictionary, is_stacked: bool) -> void:
+	var log_idx := _all_logs.size() - 1
+	if is_stacked:
+		# Only the last line changes, but full rebuild is more reliable
+		# than remove_paragraph + append_text, which can cause visual
+		# glitches in Godot's RichTextLabel.
+		_schedule_display_rebuild()
+		return
+	_displayed_line_map.append(log_idx)
+	# Keep the selection overlay's inverse map in sync: incremental
+	# appends never go through _rebuild_log_display, and a stale
+	# map makes highlights appear only after the next rebuild.
+	_log_to_display_map[log_idx] = _displayed_line_map.size() - 1
+	var level := log_data.get("level", "DEBUG")
+	_stats_level_counts[level] = _stats_level_counts.get(level, 0) + 1
+	_refresh_stats_label()
+	# In relative mode every timestamp depends on the latest max time,
+	# so the whole display must be rebuilt instead of appending.
+	if relative_checkbox.button_pressed:
+		_schedule_display_rebuild()
+	else:
+		_append_formatted_log(log_data, log_idx)
 
 
 # ------------- [Private Method] -------------
@@ -387,9 +405,7 @@ func _add_filter_button(category: String) -> void:
 ## Increments the live-log count per tag for a newly stored log.
 func _track_filter_tags(tags: Array[String]) -> void:
 	for tag in tags:
-		_filter_ref_counts[tag] = int(
-			_filter_ref_counts.get(tag, 0)
-		) + 1
+		_filter_ref_counts[tag] = int(_filter_ref_counts.get(tag, 0)) + 1
 
 
 ## Decrements counts for trimmed logs and removes buttons whose tag no
@@ -400,15 +416,11 @@ func _untrack_filter_tags(removed: Array) -> void:
 	for log_data in removed:
 		if not (log_data is Dictionary):
 			continue
-		var tags: Array = (log_data as Dictionary).get(
-			"_log_tags", []
-		)
+		var tags: Array = (log_data as Dictionary).get("_log_tags", [])
 		if tags.is_empty():
 			tags = _get_log_tags(log_data as Dictionary)
 		for tag in tags:
-			var left: int = int(
-				_filter_ref_counts.get(tag, 0)
-			) - 1
+			var left: int = int(_filter_ref_counts.get(tag, 0)) - 1
 			if left <= 0:
 				_filter_ref_counts.erase(tag)
 				_remove_filter_button(tag)
@@ -1283,21 +1295,35 @@ func _on_search_text_changed(new_text: String) -> void:
 
 	# Debounce the display rebuild: rebuilding per keystroke clears and
 	# reformats up to 10k lines. Empty queries rebuild immediately so
-	# clearing feels instant; later keystrokes supersede any pending rebuild.
-	_search_rebuild_token += 1
+	# clearing feels instant; claiming first still supersedes any pending
+	# rebuild from earlier keystrokes.
+	var claimed := _search_guard.claim()
 	if new_text.is_empty():
 		_rebuild_log_display()
 		return
-	var token := _search_rebuild_token
 	await get_tree().create_timer(SEARCH_DEBOUNCE_SECONDS).timeout
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
-	if token != _search_rebuild_token:
+	if not _search_guard.is_current(claimed):
 		return
 	_rebuild_log_display()
 
 
 func clear_logs() -> void:
+	_reset_log_storage()
+	_reset_filter_ui()
+	_reset_search_ui()
+	_restore_level_filter()
+
+	for level: String in _stats_level_counts:
+		_stats_level_counts[level] = 0
+	_refresh_stats_label()
+	_update_selection_info()
+	_reset_auto_scroll()
+
+
+## Drops stored logs and index-based view state (selection, hover, maps).
+func _reset_log_storage() -> void:
 	_all_logs.clear()
 	_selected_log_indices.clear()
 	_log_to_display_map.clear()
@@ -1307,14 +1333,20 @@ func clear_logs() -> void:
 	_hovered_line_idx = -1
 	log_display.tooltip_text = ""
 
+
+## Removes filter buttons and their live-log counts.
+func _reset_filter_ui() -> void:
 	for child: Node in filter_container.get_children():
 		child.queue_free()
 	_active_filters.clear()
 	_filter_ref_counts.clear()
 
-	# Reset search. set_pressed_no_signal avoids firing toggled here,
-	# which would trigger redundant rebuilds of the just-cleared display;
-	# _search.reset() already applied the equivalent state changes.
+
+## Resets search widgets and the time preset to "All".
+## set_pressed_no_signal avoids firing toggled here, which would trigger
+## redundant rebuilds of the just-cleared display; _search.reset()
+## already applied the equivalent state changes.
+func _reset_search_ui() -> void:
 	_search.reset()
 	search_line_edit.text = ""
 	case_sensitive_checkbox.set_pressed_no_signal(false)
@@ -1324,7 +1356,9 @@ func clear_logs() -> void:
 	_active_time_filter = -1.0
 	time_option_button.select(0)
 
-	# Restore saved level filter from EditorSettings
+
+## Restores the persisted level filter from EditorSettings.
+func _restore_level_filter() -> void:
 	var saved_level := 0
 	if Engine.is_editor_hint():
 		var es := EditorInterface.get_editor_settings()
@@ -1336,10 +1370,11 @@ func clear_logs() -> void:
 			level_option_button.select(i)
 			break
 
-	for level: String in _stats_level_counts:
-		_stats_level_counts[level] = 0
-	_refresh_stats_label()
-	_update_selection_info()
+
+## Public scroll reset for the EditorPlugin lifecycle (session start
+## without clearing). Kept separate from _reset_auto_scroll so external
+## callers never depend on a private method.
+func reset_auto_scroll() -> void:
 	_reset_auto_scroll()
 
 
@@ -1388,16 +1423,24 @@ func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 	)
 	_show_toast(toast_msg)
 
-	var original_text := copy_button.text
-	copy_button.text = "Copied!"
-	_copy_feedback_token += 1
-	var token := _copy_feedback_token
+	_flash_button_text(copy_button, "Copied!", _copy_guard)
+
+
+## Briefly swaps a button label, restoring it after a delay. The guard
+## supersedes pending restores so rapid presses can never strand a stale
+## flash label on the button.
+func _flash_button_text(
+	button: Button, flash_text: String, guard: DLoggerDeferredToken
+) -> void:
+	var original_text := button.text
+	button.text = flash_text
+	var claimed := guard.claim()
 	await get_tree().create_timer(1.0).timeout
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
-	if token != _copy_feedback_token:
+	if not guard.is_current(claimed):
 		return
-	copy_button.text = original_text
+	button.text = original_text
 
 
 func _show_toast(message: String) -> void:
@@ -1476,16 +1519,7 @@ func _on_save_pressed() -> void:
 	var result = _save_to_file(file_path, formatted_logs)
 
 	if result == OK:
-		var original_text := save_button.text
-		save_button.text = "Saved!"
-		_save_feedback_token += 1
-		var token := _save_feedback_token
-		await get_tree().create_timer(1.0).timeout
-		if not is_instance_valid(self) or not is_inside_tree():
-			return
-		if token != _save_feedback_token:
-			return
-		save_button.text = original_text
+		_flash_button_text(save_button, "Saved!", _save_guard)
 	else:
 		push_error("Failed to save logs to %s" % file_path)
 

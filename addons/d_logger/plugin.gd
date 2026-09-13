@@ -84,7 +84,7 @@ func _on_debugger_session_started() -> void:
 			var panel := _panel_instance
 			var reset_auto_scroll := func() -> void:
 				if is_instance_valid(panel):
-					panel._reset_auto_scroll()
+					panel.reset_auto_scroll()
 			reset_auto_scroll.call_deferred()
 
 	# Show the panel when debug session starts
