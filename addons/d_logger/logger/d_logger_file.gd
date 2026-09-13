@@ -124,10 +124,12 @@ func _rotate_log_file() -> void:
 		DirAccess.remove_absolute(backup_path)
 	# The handle must be closed before renaming: the OS may lock the
 	# open file, and its position belongs to the pre-rotation generation.
+	# Note: on Windows another process or sibling instance holding the
+	# file open can still fail the rename with a sharing violation.
 	_close_handle()
 	if DirAccess.rename_absolute(_file_path, backup_path) != OK:
-		# Keep appending to the current file if rotation fails; the size
-		# check will retry on the next write.
+		# Keep appending to the current file if rotation fails (e.g.
+		# Windows sharing violation); the size check retries on next write.
 		if not _rotate_failed:
 			push_error(
 				"DLoggerFile: Failed to rotate log file to %s" % backup_path
