@@ -42,20 +42,60 @@ func _output(
 	context: Object,
 	prefix: String,
 	p_caller_info: Variant,
-	level: String
+	level: String,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> void:
 	# Fan out to children via their own level-gated entry points, so each
 	# child (e.g. DLoggerQuiet suppressing DEBUG/INFO) applies its filter.
+	# The dispatcher-computed timestamp travels with the call so all
+	# children share one reading instead of sampling the clock per sink.
 	match level:
 		"DEBUG":
 			for l in _list:
-				l.debug(msg, values, category, context, prefix, p_caller_info)
+				l.debug(
+					msg,
+					values,
+					category,
+					context,
+					prefix,
+					p_caller_info,
+					p_seconds,
+					p_frames
+				)
 		"INFO":
 			for l in _list:
-				l.info(msg, values, category, context, prefix, p_caller_info)
+				l.info(
+					msg,
+					values,
+					category,
+					context,
+					prefix,
+					p_caller_info,
+					p_seconds,
+					p_frames
+				)
 		"WARN":
 			for l in _list:
-				l.warn(msg, values, category, context, prefix, p_caller_info)
+				l.warn(
+					msg,
+					values,
+					category,
+					context,
+					prefix,
+					p_caller_info,
+					p_seconds,
+					p_frames
+				)
 		"ERROR":
 			for l in _list:
-				l.error(msg, values, category, context, prefix, p_caller_info)
+				l.error(
+					msg,
+					values,
+					category,
+					context,
+					prefix,
+					p_caller_info,
+					p_seconds,
+					p_frames
+				)

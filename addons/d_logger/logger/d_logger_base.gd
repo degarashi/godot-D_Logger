@@ -26,16 +26,33 @@ func is_error_enabled() -> bool:
 
 
 # ------------- [Log Methods - Template Pattern] -------------
+# Time/frame are explicit trailing arguments (computed once per log by
+# the dispatcher and threaded through) rather than a static cache, so
+# every log carries its own timestamp down the chain. Negative sentinels
+# mean "not provided": direct callers fall back to a live reading inside
+# DLoggerFunc.format_log().
 func debug(
 	msg: String,
 	values: Variant = [],
 	category: String = "",
 	context: Object = null,
 	prefix: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	if is_debug_enabled():
-		_output(msg, values, category, context, prefix, p_caller_info, "DEBUG")
+		_output(
+			msg,
+			values,
+			category,
+			context,
+			prefix,
+			p_caller_info,
+			"DEBUG",
+			p_seconds,
+			p_frames
+		)
 	return true
 
 
@@ -45,10 +62,22 @@ func info(
 	category: String = "",
 	context: Object = null,
 	prefix: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	if is_info_enabled():
-		_output(msg, values, category, context, prefix, p_caller_info, "INFO")
+		_output(
+			msg,
+			values,
+			category,
+			context,
+			prefix,
+			p_caller_info,
+			"INFO",
+			p_seconds,
+			p_frames
+		)
 	return true
 
 
@@ -58,10 +87,22 @@ func warn(
 	category: String = "",
 	context: Object = null,
 	prefix: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	if is_warn_enabled():
-		_output(msg, values, category, context, prefix, p_caller_info, "WARN")
+		_output(
+			msg,
+			values,
+			category,
+			context,
+			prefix,
+			p_caller_info,
+			"WARN",
+			p_seconds,
+			p_frames
+		)
 	return true
 
 
@@ -71,10 +112,22 @@ func error(
 	category: String = "",
 	context: Object = null,
 	prefix: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	if is_error_enabled():
-		_output(msg, values, category, context, prefix, p_caller_info, "ERROR")
+		_output(
+			msg,
+			values,
+			category,
+			context,
+			prefix,
+			p_caller_info,
+			"ERROR",
+			p_seconds,
+			p_frames
+		)
 	return true
 
 
@@ -88,6 +141,8 @@ func _output(
 	context: Object,
 	prefix: String,
 	p_caller_info: Variant,
-	level: String
+	level: String,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> void:
 	pass

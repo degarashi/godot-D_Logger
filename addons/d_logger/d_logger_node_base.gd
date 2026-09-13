@@ -22,6 +22,8 @@ func get_logger() -> DLoggerClass:
 # A missing _logger (before _ready) still returns true: the log calls
 # double as assert() conditions, and failing an assert for "logger not
 # ready yet" would be worse than dropping one early log line.
+# The trailing timestamp arguments mirror DLoggerBase: callers normally
+# omit them and the dispatcher samples the clock instead.
 func is_debug_enabled() -> bool:
 	return _logger.is_debug_enabled() if _logger else false
 
@@ -44,10 +46,14 @@ func debug(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return (
-		_logger.debug(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+		_logger.debug(msg, v, cat, ctx, p, p_caller_info, p_seconds, p_frames)
+		if _logger
+		else true
 	)
 
 
@@ -57,9 +63,15 @@ func info(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
-	return _logger.info(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+	return (
+		_logger.info(msg, v, cat, ctx, p, p_caller_info, p_seconds, p_frames)
+		if _logger
+		else true
+	)
 
 
 func warn(
@@ -68,9 +80,15 @@ func warn(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
-	return _logger.warn(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+	return (
+		_logger.warn(msg, v, cat, ctx, p, p_caller_info, p_seconds, p_frames)
+		if _logger
+		else true
+	)
 
 
 func error(
@@ -79,19 +97,21 @@ func error(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return (
-		_logger.error(msg, v, cat, ctx, p, p_caller_info) if _logger else true
+		_logger.error(msg, v, cat, ctx, p, p_caller_info, p_seconds, p_frames)
+		if _logger
+		else true
 	)
 
 
 func benchmark(
 	name: String,
 	callable: Callable,
-	spike_threshold_ms: float = (
-		DLoggerClass.DEFAULT_SPIKE_THRESHOLD_MS
-	)
+	spike_threshold_ms: float = DLoggerClass.DEFAULT_SPIKE_THRESHOLD_MS
 ) -> Variant:
 	return (
 		_logger.benchmark(name, callable, spike_threshold_ms)

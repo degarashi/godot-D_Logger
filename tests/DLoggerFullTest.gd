@@ -194,22 +194,18 @@ func test_output_unknown_level_fallback() -> void:
 
 
 func test_bbcode_consistency_across_levels() -> void:
-	_FUNC.set_time_cache(1.0, 100)
 	var logger := _FULL.new()
 	# All levels should succeed without error
 	assert_bool(logger.debug("debug")).is_true()
 	assert_bool(logger.info("info")).is_true()
 	assert_bool(logger.warn("warn")).is_true()
 	assert_bool(logger.error("error")).is_true()
-	_FUNC.clear_time_cache()
 
 
 func test_bbcode_with_category_context() -> void:
-	_FUNC.set_time_cache(2.0, 200)
 	var logger := _FULL.new()
 	var node := Node.new()
 	logger._output("cat msg", [], "Network", node, "", null, "INFO")
 	logger._output("cat msg", [], "AI|Combat", node, "CUSTOM", null, "WARN")
 	node.free()
 	assert_bool(true).is_true()
-	_FUNC.clear_time_cache()

@@ -206,11 +206,10 @@ func _dispatch(
 	category: String,
 	context: Object,
 	p_prefix: String,
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> void:
-	# Clear any stale cache from a previous failed _dispatch call
-	DLoggerFunc.clear_time_cache()
-
 	var pref := p_prefix if not p_prefix.is_empty() else _prefix
 	var applied := _apply_values(msg, values)
 	var final_msg: String = applied[0]
@@ -224,17 +223,20 @@ func _dispatch(
 	# Pre-calculate caller info for performance (one time per log)
 	var caller_info: Variant = _resolve_caller_info(level_str, p_caller_info)
 
-	# Pre-compute time/frame once for all downstream loggers and debug_data
-	var seconds: float = Time.get_ticks_msec() / 1000.0
-	var frames: int = Engine.get_frames_drawn()
-	DLoggerFunc.set_time_cache(seconds, frames)
+	# Sample time/frame once per log and thread it through the dispatcher
+	# and the editor payload, so all sinks share one reading without
+	# sampling the clock per sink or sharing state across dispatches.
+	# A forwarded reading (>= 0) is reused; otherwise sample here.
+	var seconds: float = (
+		p_seconds if p_seconds >= 0.0 else Time.get_ticks_msec() / 1000.0
+	)
+	var frames: int = p_frames if p_frames >= 0 else Engine.get_frames_drawn()
 
 	_forward_to_dispatcher(
-		level, final_msg, category, context, pref, caller_info
+		level, final_msg, category, context, pref, caller_info, seconds, frames
 	)
 	_maybe_pause_on_error(level)
 
-	DLoggerFunc.clear_time_cache()
 	_send_to_editor(
 		level_str,
 		final_msg,
@@ -310,31 +312,62 @@ static func _resolve_caller_info(
 
 
 ## Forwards the already-formatted message to the dispatcher. Values are
-## always empty here because formatting happened in _apply_values().
+## always empty here because formatting happened in _apply_values(). The
+## sampled timestamp travels along so every sink formats the same reading.
 func _forward_to_dispatcher(
 	level: int,
 	final_msg: String,
 	category: String,
 	context: Object,
 	pref: String,
-	caller_info: Variant
+	caller_info: Variant,
+	seconds: float,
+	frames: int
 ) -> void:
 	match level:
 		DLoggerConstants.LogLevel.DEBUG:
 			_dispatcher.debug(
-				final_msg, [], category, context, pref, caller_info
+				final_msg,
+				[],
+				category,
+				context,
+				pref,
+				caller_info,
+				seconds,
+				frames
 			)
 		DLoggerConstants.LogLevel.INFO:
 			_dispatcher.info(
-				final_msg, [], category, context, pref, caller_info
+				final_msg,
+				[],
+				category,
+				context,
+				pref,
+				caller_info,
+				seconds,
+				frames
 			)
 		DLoggerConstants.LogLevel.WARN:
 			_dispatcher.warn(
-				final_msg, [], category, context, pref, caller_info
+				final_msg,
+				[],
+				category,
+				context,
+				pref,
+				caller_info,
+				seconds,
+				frames
 			)
 		DLoggerConstants.LogLevel.ERROR:
 			_dispatcher.error(
-				final_msg, [], category, context, pref, caller_info
+				final_msg,
+				[],
+				category,
+				context,
+				pref,
+				caller_info,
+				seconds,
+				frames
 			)
 
 
@@ -635,7 +668,8 @@ static func static_benchmark(
 
 ## Shared gate behind debug/info/warn/error: filtered levels still return
 ## true so the calls double as assert() conditions without failing when
-## the level is disabled.
+## the level is disabled. The trailing timestamp mirrors DLoggerBase so
+## node wrappers can forward a sampled reading; callers normally omit it.
 func _log(
 	level: int,
 	msg: String,
@@ -643,10 +677,14 @@ func _log(
 	cat: String,
 	ctx: Object,
 	p: String,
-	p_caller_info: Variant
+	p_caller_info: Variant,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	if _is_level_enabled(level):
-		_dispatch(level, msg, v, cat, ctx, p, p_caller_info)
+		_dispatch(
+			level, msg, v, cat, ctx, p, p_caller_info, p_seconds, p_frames
+		)
 	return true
 
 
@@ -656,10 +694,20 @@ func debug(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return _log(
-		DLoggerConstants.LogLevel.DEBUG, msg, v, cat, ctx, p, p_caller_info
+		DLoggerConstants.LogLevel.DEBUG,
+		msg,
+		v,
+		cat,
+		ctx,
+		p,
+		p_caller_info,
+		p_seconds,
+		p_frames
 	)
 
 
@@ -669,10 +717,20 @@ func info(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return _log(
-		DLoggerConstants.LogLevel.INFO, msg, v, cat, ctx, p, p_caller_info
+		DLoggerConstants.LogLevel.INFO,
+		msg,
+		v,
+		cat,
+		ctx,
+		p,
+		p_caller_info,
+		p_seconds,
+		p_frames
 	)
 
 
@@ -682,10 +740,20 @@ func warn(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return _log(
-		DLoggerConstants.LogLevel.WARN, msg, v, cat, ctx, p, p_caller_info
+		DLoggerConstants.LogLevel.WARN,
+		msg,
+		v,
+		cat,
+		ctx,
+		p,
+		p_caller_info,
+		p_seconds,
+		p_frames
 	)
 
 
@@ -695,10 +763,20 @@ func error(
 	cat: String = "",
 	ctx: Object = null,
 	p: String = "",
-	p_caller_info: Variant = null
+	p_caller_info: Variant = null,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> bool:
 	return _log(
-		DLoggerConstants.LogLevel.ERROR, msg, v, cat, ctx, p, p_caller_info
+		DLoggerConstants.LogLevel.ERROR,
+		msg,
+		v,
+		cat,
+		ctx,
+		p,
+		p_caller_info,
+		p_seconds,
+		p_frames
 	)
 
 

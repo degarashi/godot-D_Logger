@@ -390,7 +390,9 @@ class LevelSpy:
 		context: Object,
 		prefix: String,
 		p_caller_info: Variant,
-		level: String
+		level: String,
+		p_seconds: float = -1.0,
+		p_frames: int = -1
 	) -> void:
 		levels.append(level)
 		messages.append(msg)

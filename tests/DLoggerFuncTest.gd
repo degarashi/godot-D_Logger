@@ -190,54 +190,57 @@ func test_get_source_string_multiple_tags() -> void:
 
 # ------------- [format_log] -------------
 func test_format_log_basic() -> void:
-	_FUNC.set_time_cache(1.5, 100)
-	var result := _FUNC.format_log("Hello", "", "INFO", null, "D-Logger")
+	var result := _FUNC.format_log(
+		"Hello", "", "INFO", null, "D-Logger", null, 1.5, 100
+	)
 	assert_str(result).contains("Hello")
 	assert_str(result).contains("INFO")
 	assert_str(result).contains("D-Logger")
-	_FUNC.clear_time_cache()
 
 
 func test_format_log_with_category() -> void:
-	_FUNC.set_time_cache(2.0, 200)
 	var result := _FUNC.format_log(
-		"Test msg", "Network", "WARN", null, "D-Logger"
+		"Test msg", "Network", "WARN", null, "D-Logger", null, 2.0, 200
 	)
 	assert_str(result).contains("Test msg")
 	assert_str(result).contains("Network")
 	assert_str(result).contains("WARN")
-	_FUNC.clear_time_cache()
 
 
 func test_format_log_with_context() -> void:
-	_FUNC.set_time_cache(3.0, 300)
 	var node := Node.new()
 	node.name = "Player"
-	var result := _FUNC.format_log("Msg", "", "ERROR", node, "D-Logger")
+	var result := _FUNC.format_log(
+		"Msg", "", "ERROR", node, "D-Logger", null, 3.0, 300
+	)
 	assert_str(result).contains("Msg")
 	assert_str(result).contains("Player")
-	_FUNC.clear_time_cache()
 	node.free()
 
 
 func test_format_log_with_caller_info() -> void:
-	_FUNC.set_time_cache(4.0, 400)
 	var caller := {"file": "test.gd", "line": 42, "display": "[test.gd:42]"}
 	var result := _FUNC.format_log(
-		"Caller test", "", "WARN", null, "D-Logger", caller
+		"Caller test", "", "WARN", null, "D-Logger", caller, 4.0, 400
 	)
 	assert_str(result).contains("Caller test")
 	assert_str(result).contains("test.gd")
-	_FUNC.clear_time_cache()
 
 
-# ------------- [time_cache] -------------
-func test_time_cache_set_and_clear() -> void:
-	_FUNC.set_time_cache(5.0, 500)
-	_FUNC.clear_time_cache()
-	# After clear, format_log should compute fresh values
-	var result := _FUNC.format_log("After clear", "", "INFO", null, "D-Logger")
-	assert_str(result).contains("After clear")
+# ------------- [explicit time] -------------
+func test_format_log_explicit_time_is_used() -> void:
+	# Time travels as an explicit argument now (no static cache):
+	# the given reading must appear verbatim in the formatted line.
+	var result := _FUNC.format_log(
+		"Timed", "", "INFO", null, "D-Logger", null, 5.0, 500
+	)
+	assert_str(result).contains("[  5.000s][F:500]")
+
+
+func test_format_log_without_time_computes_live() -> void:
+	# Without explicit time, format_log falls back to a live reading.
+	var result := _FUNC.format_log("Live", "", "INFO", null, "D-Logger")
+	assert_str(result).contains("Live")
 
 
 # ------------- [get_formatted_line] -------------

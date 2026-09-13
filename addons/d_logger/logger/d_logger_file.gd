@@ -90,8 +90,7 @@ func _rotate_log_file() -> void:
 		# check will retry on the next write.
 		if not _rotate_failed:
 			push_error(
-				"DLoggerFile: Failed to rotate log file to %s"
-				% backup_path
+				"DLoggerFile: Failed to rotate log file to %s" % backup_path
 			)
 			_rotate_failed = true
 		return
@@ -126,11 +125,20 @@ func _output(
 	context: Object,
 	prefix: String,
 	p_caller_info: Variant,
-	level: String
+	level: String,
+	p_seconds: float = -1.0,
+	p_frames: int = -1
 ) -> void:
 	# Every write opens and closes the file, which flushes to disk
 	_write_line(
 		DLoggerFunc.format_log(
-			msg, category, level, context, prefix, p_caller_info
+			msg,
+			category,
+			level,
+			context,
+			prefix,
+			p_caller_info,
+			p_seconds,
+			p_frames
 		)
 	)
