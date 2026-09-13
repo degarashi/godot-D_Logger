@@ -131,9 +131,8 @@ func _rotate_log_file() -> void:
 		# Keep appending to the current file if rotation fails (e.g.
 		# Windows sharing violation); the size check retries on next write.
 		if not _rotate_failed:
-			push_error(
-				"DLoggerFile: Failed to rotate log file to %s" % backup_path
-			)
+			var rotate_msg := "DLoggerFile: Failed to rotate log file to {0}"
+			push_error(rotate_msg.format([backup_path]))
 			_rotate_failed = true
 		# Resume appending so later writes are not silently dropped.
 		_open_handle()
@@ -154,12 +153,8 @@ func _rotate_log_file() -> void:
 		_writes_since_exist_check = 0
 	else:
 		if not _rotate_failed:
-			push_error(
-				(
-					"DLoggerFile: Failed to reopen log file after rotation: %s"
-					% _file_path
-				)
-			)
+			var reopen_msg := "DLoggerFile: Failed to reopen log file after rotation: {0}"
+			push_error(reopen_msg.format([_file_path]))
 			_rotate_failed = true
 
 
