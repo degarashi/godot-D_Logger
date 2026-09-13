@@ -30,6 +30,11 @@ var _search := DLoggerSearch.new()
 # Incremented on every search input; a pending debounced rebuild is superseded
 # when the token it captured no longer matches.
 var _search_rebuild_token := 0
+# Incremented on every copy/save press; a pending label restore is
+# superseded when its token no longer matches, so rapid presses can
+# never strand a stale "Copied!"/"Saved!" label on the button.
+var _copy_feedback_token := 0
+var _save_feedback_token := 0
 var _is_rebuilding: bool = false
 # Time presets: name -> duration in seconds (-1.0 = show all)
 var _time_presets: Dictionary[String, float] = {
@@ -1385,8 +1390,12 @@ func _copy_to_clipboard(text: String, log_count: int = 0) -> void:
 
 	var original_text := copy_button.text
 	copy_button.text = "Copied!"
+	_copy_feedback_token += 1
+	var token := _copy_feedback_token
 	await get_tree().create_timer(1.0).timeout
 	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if token != _copy_feedback_token:
 		return
 	copy_button.text = original_text
 
@@ -1469,8 +1478,12 @@ func _on_save_pressed() -> void:
 	if result == OK:
 		var original_text := save_button.text
 		save_button.text = "Saved!"
+		_save_feedback_token += 1
+		var token := _save_feedback_token
 		await get_tree().create_timer(1.0).timeout
 		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		if token != _save_feedback_token:
 			return
 		save_button.text = original_text
 	else:
