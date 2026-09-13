@@ -2,6 +2,10 @@
 extends DLoggerBase
 
 # ------------- [Private Variable] -------------
+# How often (in writes) to verify the file still exists on disk.
+# External deletion is abnormal, so the per-write stat is amortized:
+# most writes skip file_exists, recovery lags by at most INTERVAL lines.
+const _EXIST_CHECK_INTERVAL := 30
 var _file_path: String
 # Persistent append handle. Reused across writes so a log flood pays
 # seek + store + flush per line instead of an open/close handshake per
@@ -19,6 +23,7 @@ var _init_failed: bool = false
 # Cleared on the next successful rotation so a transient failure
 # warns once per failure episode rather than once per session.
 var _rotate_failed: bool = false
+var _writes_since_exist_check: int = 0
 
 
 # ------------- [Callbacks] -------------
@@ -59,6 +64,7 @@ func _open_handle() -> bool:
 			push_error(error_msg.format([_file_path]))
 			_init_failed = true
 		return false
+	_writes_since_exist_check = 0
 	return true
 
 
@@ -77,11 +83,17 @@ func _write_line(line: String) -> void:
 	if _handle == null and not _open_handle():
 		return
 
-	# Recreate when deleted externally: a persistent handle would
-	# otherwise keep writing to an unlinked inode invisible to readers.
-	if not FileAccess.file_exists(_file_path):
-		if not _open_handle():
-			return
+	# Amortized existence check: a persistent handle keeps writing to
+	# an unlinked inode after external deletion, but stat per line
+	# costs a syscall on the hot path. Checking every INTERVAL writes
+	# bounds overhead to 1/INTERVAL while delaying recovery by at most
+	# INTERVAL lines (acceptable for an abnormal case).
+	_writes_since_exist_check += 1
+	if _writes_since_exist_check >= _EXIST_CHECK_INTERVAL:
+		_writes_since_exist_check = 0
+		if not FileAccess.file_exists(_file_path):
+			if not _open_handle():
+				return
 
 	if _handle.get_length() > DLoggerConstants.MAX_LOG_FILE_SIZE:
 		_rotate_log_file()
@@ -98,6 +110,9 @@ func _write_line(line: String) -> void:
 	# the open/close handshake. Throttle floods with the minimum-level
 	# setting instead.
 	_handle.flush()
+	# Reopen on I/O failure so a transient error recovers on next write.
+	if _handle.get_error() != OK:
+		_open_handle()
 
 
 ## Rotates the current log file to <path><LOG_FILE_BACKUP_SUFFIX> and starts
@@ -134,6 +149,7 @@ func _rotate_log_file() -> void:
 			rotation_msg.format([Time.get_datetime_string_from_system()])
 		)
 		_handle.flush()
+		_writes_since_exist_check = 0
 	else:
 		if not _rotate_failed:
 			push_error(
